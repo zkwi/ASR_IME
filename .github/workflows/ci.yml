@@ -34,6 +34,12 @@ jobs:
       - name: Secret scan
         run: npm run scan:secrets
 
+      - name: Secret scan self-test
+        run: npm run test:secrets
+
+      - name: NPM dependency audit
+        run: npm run audit:npm
+
       - name: Rust format check
         working-directory: src-tauri
         run: cargo fmt --check

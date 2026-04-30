@@ -34,6 +34,13 @@ npm run ai:check
 
 ```powershell
 npm run scan:secrets
+npm run scan:secrets:staged
+```
+
+依赖审计可以单独运行：
+
+```powershell
+npm run audit:npm
 ```
 
 可以启用本地 pre-commit 钩子：

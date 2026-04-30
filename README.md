@@ -257,6 +257,12 @@ cargo clippy --all-targets -- -D warnings
 # 本地密钥扫描
 Set-Location ..
 npm run scan:secrets
+
+# 暂存区密钥扫描
+npm run scan:secrets:staged
+
+# npm 依赖审计
+npm run audit:npm
 ```
 
 启用 Git pre-commit 钩子：
@@ -289,6 +295,7 @@ npm run ai:check
 npm run check
 npm run build
 npm run scan:secrets
+npm run test:secrets
 cargo fmt --check
 cargo check
 cargo test

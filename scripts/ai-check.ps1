@@ -20,19 +20,21 @@ function Invoke-CheckedCommand {
   }
 }
 
-Invoke-CheckedCommand "[1/6] Frontend type check" { npm run check }
+Invoke-CheckedCommand "[1/7] Frontend type check" { npm run check }
 
-Invoke-CheckedCommand "[2/6] Frontend build" { npm run build }
+Invoke-CheckedCommand "[2/7] Frontend build" { npm run build }
 
-Invoke-CheckedCommand "[3/6] Secret scan" { npm run scan:secrets }
+Invoke-CheckedCommand "[3/7] Secret scan" { npm run scan:secrets }
+
+Invoke-CheckedCommand "[4/7] Secret scan self-test" { npm run test:secrets }
 
 Push-Location ".\src-tauri"
 try {
-  Invoke-CheckedCommand "[4/6] Rust fmt check" { cargo fmt --check }
+  Invoke-CheckedCommand "[5/7] Rust fmt check" { cargo fmt --check }
 
-  Invoke-CheckedCommand "[5/6] Rust check" { cargo check }
+  Invoke-CheckedCommand "[6/7] Rust check" { cargo check }
 
-  Invoke-CheckedCommand "[6/6] Rust tests" { cargo test }
+  Invoke-CheckedCommand "[7/7] Rust tests" { cargo test }
 } finally {
   Pop-Location
 }

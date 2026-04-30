@@ -186,6 +186,8 @@ Common local checks:
 npm run check
 npm run build
 npm run scan:secrets
+npm run test:secrets
+npm run audit:npm
 Set-Location .\src-tauri
 cargo fmt --check
 cargo check

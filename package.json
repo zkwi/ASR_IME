@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "audit:npm": "npm audit --registry=https://registry.npmjs.org",
     "scan:secrets": "node scripts/scan-secrets.mjs --git-visible",
+    "scan:secrets:staged": "node scripts/scan-secrets.mjs --staged",
+    "test:secrets": "node scripts/test-scan-secrets.mjs",
     "ai:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ai-check.ps1",
     "ai:release-check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ai-release-check.ps1",
     "tauri": "tauri"

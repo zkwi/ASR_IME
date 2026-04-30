@@ -298,7 +298,7 @@ function main() {
       console.log(`${normalize(relative)}:0: Protected local file: do not commit local config/log/state`);
       continue;
     }
-    if (shouldSkip(relative, protectedFilesAreErrors)) continue;
+    if (shouldSkip(relative, protectedFilesAreErrors, filePath)) continue;
     for (const [lineNo, kind, masked] of scanFile(filePath)) {
       findingsCount += 1;
       console.log(`${normalize(relative)}:${lineNo}: ${kind}: ${masked}`);
