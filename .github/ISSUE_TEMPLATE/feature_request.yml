@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a focused VoxType improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Keep it practical and lightweight for a personal desktop app.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Recording / microphone
+        - Doubao ASR
+        - LLM polishing
+        - Clipboard / paste
+        - Hotkey / mouse trigger
+        - Floating captions
+        - Tray / startup
+        - Update / installer
+        - UI / settings
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: tradeoffs
+    attributes:
+      label: Scope check
+      options:
+        - label: This can be implemented without large rewrites or unnecessary new dependencies.
+          required: false
+        - label: This may affect privacy, logs, clipboard, hotkeys, tray, updates, or config defaults.
+          required: false

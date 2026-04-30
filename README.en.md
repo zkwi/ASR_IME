@@ -14,6 +14,9 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - User configuration guide: <https://github.com/zkwi/VoxType/wiki/Setup-Guide-English>
 - Features and usage optimization: <https://github.com/zkwi/VoxType/wiki/Feature-Guide-English>
 - Troubleshooting: <https://github.com/zkwi/VoxType/wiki/Troubleshooting-English>
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- License: [MIT](LICENSE)
 
 ## Main Features
 
@@ -201,6 +204,12 @@ Release check:
 ```powershell
 npm run ai:release-check
 ```
+
+## Contributing
+
+Before opening an Issue or Pull Request, read [CONTRIBUTING.md](CONTRIBUTING.md). Small, focused bug fixes, documentation updates, config examples, and tests are welcome. Changes touching ASR, LLM polishing, clipboard/paste, hotkeys, tray behavior, logs, stats, or config structure should clearly describe their impact and verification steps.
+
+For security or privacy issues, follow [SECURITY.md](SECURITY.md). Do not include real keys, transcripts, personal hotwords, prompts, recent context, raw logs, or Windows username paths in public Issues, Pull Requests, screenshots, or logs.
 
 ## Project Layout
 

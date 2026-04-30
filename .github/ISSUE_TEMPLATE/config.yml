@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup guide
+    url: https://github.com/zkwi/VoxType/wiki/Setup-Guide
+    about: Read the Chinese setup guide before filing configuration issues.
+  - name: Troubleshooting
+    url: https://github.com/zkwi/VoxType/wiki/Troubleshooting
+    about: Common ASR, microphone, paste, update, and installer troubleshooting notes.

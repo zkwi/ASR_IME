@@ -9,9 +9,11 @@ env/
 .coverage.*
 htmlcov/
 .codex/
+.playwright-mcp/
 
 build/
 dist/
+output/
 .svelte-kit/
 node_modules/
 package/

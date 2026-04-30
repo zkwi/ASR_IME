@@ -4,14 +4,18 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const EXCLUDE_DIRS = new Set([
+  ".codex",
   ".git",
   ".idea",
+  ".playwright-mcp",
   ".svelte-kit",
   ".venv",
   "build",
   "dist",
   "env",
+  "logs",
   "node_modules",
+  "output",
   "package",
   "target",
   "venv",
@@ -41,6 +45,8 @@ const BINARY_SUFFIXES = new Set([
 const PROTECTED_LOCAL_FILES = new Set([
   "config.toml",
   "config.local.toml",
+  "hotword_history.jsonl",
+  "recent_context.jsonl",
   "voice_input.log",
   "voice_input_stats.jsonl",
 ]);
@@ -96,8 +102,11 @@ function isProtectedLocalFile(relativePath) {
   const normalized = normalize(relativePath);
   const name = path.basename(normalized);
   if (PROTECTED_LOCAL_FILES.has(name)) return true;
+  if (normalized.startsWith("context/")) return true;
   if (name.endsWith(".local.toml")) return true;
   if (normalized.endsWith("/config.toml")) return true;
+  if (normalized.endsWith("/hotword_history.jsonl")) return true;
+  if (normalized.endsWith("/recent_context.jsonl")) return true;
   if (normalized.endsWith("/voice_input_stats.jsonl")) return true;
   if (name === ".env") return true;
   if (name.startsWith(".env.") && ![".env.example", ".env.sample", ".env.template"].includes(name)) {
@@ -116,11 +125,11 @@ function isProbablyBinary(filePath) {
   }
 }
 
-function shouldSkip(relativePath, includeProtected = false) {
+function shouldSkip(relativePath, includeProtected = false, absolutePath = path.resolve(relativePath)) {
   if (!includeProtected && isProtectedLocalFile(relativePath)) return true;
   const parts = normalize(relativePath).split("/");
   if (parts.some((part) => EXCLUDE_DIRS.has(part))) return true;
-  return isProbablyBinary(path.resolve(relativePath));
+  return isProbablyBinary(absolutePath);
 }
 
 function looksLikePlaceholder(value) {
@@ -214,14 +223,14 @@ function scanFile(filePath) {
   return findings;
 }
 
-function walkFiles(root) {
+function walkFiles(root, base = root) {
   const files = [];
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const fullPath = path.join(root, entry.name);
-    const relative = path.relative(root, fullPath);
+    const relative = path.relative(base, fullPath);
     if (entry.isDirectory()) {
-      if (!EXCLUDE_DIRS.has(entry.name)) files.push(...walkFiles(fullPath));
-    } else if (!shouldSkip(relative)) {
+      if (!EXCLUDE_DIRS.has(entry.name)) files.push(...walkFiles(fullPath, base));
+    } else if (!shouldSkip(relative, false, fullPath)) {
       files.push(fullPath);
     }
   }

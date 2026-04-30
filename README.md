@@ -14,6 +14,9 @@
 - 用户配置指南：<https://github.com/zkwi/VoxType/wiki/Setup-Guide>
 - 功能特性与使用优化：<https://github.com/zkwi/VoxType/wiki/Feature-Guide>
 - 常见问题与排障：<https://github.com/zkwi/VoxType/wiki/Troubleshooting>
+- 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全策略：[SECURITY.md](SECURITY.md)
+- 许可证：[MIT](LICENSE)
 
 ## 界面预览
 
@@ -319,6 +322,12 @@ npm run ai:release-check
 ```
 
 发布或合并前应同步更新 `CHANGELOG.md` 的 `[Unreleased]` 或对应版本段，记录用户可见变化、主链路保护和维护性调整。
+
+## 开源协作
+
+提交 Issue 或 PR 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。本项目欢迎小而明确的 bug 修复、文档改进、配置样例优化和测试补充；涉及 ASR、LLM、剪贴板、热键、托盘、日志、统计或配置结构的改动，请在 PR 描述中明确说明影响范围和验证方式。
+
+安全和隐私问题请参考 [SECURITY.md](SECURITY.md)。公开 Issue、PR、截图和日志中不要包含真实密钥、识别正文、个人热词、prompt、最近上下文或 Windows 用户名路径。
 
 ## 界面与适配
 
