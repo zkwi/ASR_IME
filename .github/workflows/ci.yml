@@ -40,6 +40,12 @@ jobs:
       - name: NPM dependency audit
         run: npm run audit:npm
 
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked --version 0.22.1
+
+      - name: Rust dependency audit
+        run: npm run audit:rust
+
       - name: Rust format check
         working-directory: src-tauri
         run: cargo fmt --check

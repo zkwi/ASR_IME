@@ -263,6 +263,9 @@ npm run scan:secrets:staged
 
 # npm 依赖审计
 npm run audit:npm
+
+# Rust 依赖审计（需要先安装 cargo-audit）
+npm run audit:rust
 ```
 
 启用 Git pre-commit 钩子：
@@ -326,6 +329,12 @@ cargo test
 
 ```powershell
 npm run ai:release-check
+```
+
+Rust 依赖审计依赖 `cargo-audit`。本机未安装时先运行：
+
+```powershell
+cargo install cargo-audit --locked
 ```
 
 发布或合并前应同步更新 `CHANGELOG.md` 的 `[Unreleased]` 或对应版本段，记录用户可见变化、主链路保护和维护性调整。

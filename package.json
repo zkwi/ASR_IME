@@ -10,6 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "audit:npm": "npm audit --registry=https://registry.npmjs.org",
+    "audit:rust": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/rust-audit.ps1",
     "scan:secrets": "node scripts/scan-secrets.mjs --git-visible",
     "scan:secrets:staged": "node scripts/scan-secrets.mjs --staged",
     "test:secrets": "node scripts/test-scan-secrets.mjs",

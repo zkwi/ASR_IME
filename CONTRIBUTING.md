@@ -41,6 +41,13 @@ npm run scan:secrets:staged
 
 ```powershell
 npm run audit:npm
+npm run audit:rust
+```
+
+`audit:rust` 需要本机已安装 `cargo-audit`；缺失时先执行：
+
+```powershell
+cargo install cargo-audit --locked
 ```
 
 可以启用本地 pre-commit 钩子：

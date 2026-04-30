@@ -188,6 +188,7 @@ npm run build
 npm run scan:secrets
 npm run test:secrets
 npm run audit:npm
+npm run audit:rust
 Set-Location .\src-tauri
 cargo fmt --check
 cargo check
@@ -205,6 +206,12 @@ Release check:
 
 ```powershell
 npm run ai:release-check
+```
+
+Rust dependency audit requires `cargo-audit`. Install it first when missing:
+
+```powershell
+cargo install cargo-audit --locked
 ```
 
 ## Contributing
