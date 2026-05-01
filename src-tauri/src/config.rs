@@ -4,6 +4,9 @@ use std::path::{Path, PathBuf};
 
 const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 10_000;
+const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
+const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
+const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 
 use crate::config_validation::format_validation_errors;
 pub use crate::config_validation::validate_config;
@@ -495,7 +498,13 @@ pub fn load_config() -> Result<LoadedConfig, String> {
         data.context.recent_context.clear();
     }
     let migrated_auto_hotword_limit = migrate_auto_hotword_history_default(&mut data);
-    if contains_legacy_recent_context(&text) || migrated_auto_hotword_limit {
+    let migrated_silence_auto_stop = migrate_silence_auto_stop_default(&mut data);
+    let migrated_silence_level_threshold = migrate_silence_level_threshold_default(&mut data);
+    if contains_legacy_recent_context(&text)
+        || migrated_auto_hotword_limit
+        || migrated_silence_auto_stop
+        || migrated_silence_level_threshold
+    {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
         write_config_file(&path, &cleaned)?;
@@ -575,6 +584,24 @@ fn contains_legacy_recent_context(text: &str) -> bool {
 fn migrate_auto_hotword_history_default(config: &mut AppConfig) -> bool {
     if config.auto_hotwords.max_history_chars == LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS {
         config.auto_hotwords.max_history_chars = DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS;
+        return true;
+    }
+    false
+}
+
+fn migrate_silence_auto_stop_default(config: &mut AppConfig) -> bool {
+    if config.audio.silence_auto_stop_seconds == LEGACY_SILENCE_AUTO_STOP_SECONDS {
+        config.audio.silence_auto_stop_seconds = default_silence_auto_stop_seconds();
+        return true;
+    }
+    false
+}
+
+fn migrate_silence_level_threshold_default(config: &mut AppConfig) -> bool {
+    if (config.audio.silence_level_threshold - LEGACY_SILENCE_LEVEL_THRESHOLD).abs()
+        <= SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON
+    {
+        config.audio.silence_level_threshold = default_silence_level_threshold();
         return true;
     }
     false
@@ -700,10 +727,10 @@ fn default_stop_grace_ms() -> u64 {
     500
 }
 fn default_silence_auto_stop_seconds() -> u64 {
-    10
+    30
 }
 fn default_silence_level_threshold() -> f32 {
-    0.04
+    0.03
 }
 fn default_end_window_size() -> Option<u64> {
     Some(800)
@@ -827,6 +854,7 @@ fn default_close_behavior() -> String {
 mod tests {
     use super::{
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
+        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
         validate_config, AppConfig, TextContext,
     };
 
@@ -837,8 +865,8 @@ mod tests {
         assert!(!config.triggers.middle_mouse_enabled);
         assert!(!config.triggers.right_alt_enabled);
         assert!(!config.audio.mute_system_volume_while_recording);
-        assert_eq!(config.audio.silence_auto_stop_seconds, 10);
-        assert_eq!(config.audio.silence_level_threshold, 0.04);
+        assert_eq!(config.audio.silence_auto_stop_seconds, 30);
+        assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.request.end_window_size, Some(800));
         assert!(!config.context.enable_recent_context);
         assert!(!config.auto_hotwords.enabled);
@@ -1011,5 +1039,35 @@ mod tests {
         config.auto_hotwords.max_history_chars = 12_000;
         assert!(!migrate_auto_hotword_history_default(&mut config));
         assert_eq!(config.auto_hotwords.max_history_chars, 12_000);
+    }
+
+    #[test]
+    fn migrates_legacy_silence_auto_stop_default() {
+        let mut config = AppConfig::default();
+        config.audio.silence_auto_stop_seconds = 10;
+
+        assert!(migrate_silence_auto_stop_default(&mut config));
+        assert_eq!(config.audio.silence_auto_stop_seconds, 30);
+
+        assert!(!migrate_silence_auto_stop_default(&mut config));
+
+        config.audio.silence_auto_stop_seconds = 30;
+        assert!(!migrate_silence_auto_stop_default(&mut config));
+        assert_eq!(config.audio.silence_auto_stop_seconds, 30);
+    }
+
+    #[test]
+    fn migrates_legacy_silence_level_threshold_default() {
+        let mut config = AppConfig::default();
+        config.audio.silence_level_threshold = 0.04;
+
+        assert!(migrate_silence_level_threshold_default(&mut config));
+        assert_eq!(config.audio.silence_level_threshold, 0.03);
+
+        assert!(!migrate_silence_level_threshold_default(&mut config));
+
+        config.audio.silence_level_threshold = 0.02;
+        assert!(!migrate_silence_level_threshold_default(&mut config));
+        assert_eq!(config.audio.silence_level_threshold, 0.02);
     }
 }

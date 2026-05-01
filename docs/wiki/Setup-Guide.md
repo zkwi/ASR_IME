@@ -155,7 +155,7 @@ System Prompt 和最小润色字数位于高级设置。
 | 右 Alt | 关闭 | 可能与输入法或快捷键冲突 |
 | 粘贴方式 | 自动粘贴 | 适合大多数输入框 |
 | 剪贴板恢复 | 开启 | 粘贴后尽量恢复原剪贴板 |
-| 连续低音量自动停止 | 10 秒，阈值 `0.04` | 防止服务端未判停时录到最长上限 |
+| 连续低音量自动停止 | 30 秒，阈值 `0.03` | 比旧版 10 秒 / `0.04` 更不容易在长句口述或轻声输入时被提前截断 |
 | 最近上下文 | 关闭 | 默认更保守 |
 | 自动热词候选 | 关闭 | 默认不保存正文历史 |
 | 录音时静音系统音量 | 关闭 | 避免影响会议、视频和系统提示 |
@@ -191,8 +191,8 @@ enable_thinking = false
 ```toml
 [audio]
 max_record_seconds = 300
-silence_auto_stop_seconds = 10
-silence_level_threshold = 0.04
+silence_auto_stop_seconds = 30
+silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
@@ -229,7 +229,7 @@ github_repo = "zkwi/VoxType"
 2. 进入 API配置，填写豆包 ASR 的 App Key、Access Key 和 Resource ID。
 3. 点击豆包 ASR 的 **测试**。
 4. 回到首页，把光标放到目标输入框。
-5. 按 `Ctrl + Q` 开始录音，再按一次停止录音；如果持续低音量，默认 10 秒后会按手动停止流程自动停止。
+5. 按 `Ctrl + Q` 开始录音，再按一次停止录音；如果持续低音量，默认 30 秒后会按手动停止流程自动停止。
 6. 等待最终识别和可选润色完成。
 7. 如果目标输入框没有出现文字，按 `Ctrl + V` 手动粘贴。
 

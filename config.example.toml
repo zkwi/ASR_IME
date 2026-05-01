@@ -22,10 +22,10 @@ segment_ms = 200
 max_record_seconds = 300
 # 松开热键后额外保留一点尾音
 stop_grace_ms = 500
-# 连续静音达到该秒数后，本地自动结束本次录音；0 表示关闭
-silence_auto_stop_seconds = 10
+# 连续静音达到该秒数后，本地自动结束本次录音；默认 30 秒，避免长口述中途停顿被截断
+silence_auto_stop_seconds = 30
 # 静音判定音量阈值；短促噪声不会立即重置计时，普通用户不需要修改
-silence_level_threshold = 0.04
+silence_level_threshold = 0.03
 # 录音时是否自动静音系统音量；可减少回声，但可能影响会议、视频或系统提示音
 mute_system_volume_while_recording = false
 # 指定麦克风设备；不用时保持注释掉或留空

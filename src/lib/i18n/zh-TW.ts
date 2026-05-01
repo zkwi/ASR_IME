@@ -340,7 +340,7 @@ export const zhTW = {
   "hotkeyNeedsModifier": "快捷鍵至少需要 Ctrl、Alt、Shift 或 Win 中的一個修飾鍵。",
   "hotkeyUnsupported": "暫不支援這個按鍵，請使用 A-Z、0-9、Space、F1-F12 或 Enter。",
   "triggerConflictHint": "滑鼠中鍵開啟後，會占用瀏覽器、編輯器、檔案管理器等軟體的中鍵操作；右 Alt 也可能和輸入法或快捷鍵衝突。",
-  "silenceAutoStopHint": "連續低音量達到該時長後會按手動停止流程結束本次錄音，作為豆包服務端判停之外的本地兜底；填 0 可關閉。",
+  "silenceAutoStopHint": "連續低音量達到該時長後會按手動停止流程結束本次錄音；預設 30 秒，長句口述較不易被短暫停頓截斷。",
   "muteSystemAudioHint": "可減少回聲，但可能影響會議、影片或系統提示音。",
   "recentContextHint": "最近上下文會在單獨的本地檔案保存最近識別片段，用於改善連續識別；預設關閉。",
   "clearRecentContext": "清除最近上下文",

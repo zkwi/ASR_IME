@@ -25,7 +25,7 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Global trigger: `Ctrl + Q` is enabled by default. Right Alt and middle mouse can be enabled manually.
 - Microphone capture: PCM audio capture through Rust `cpal`; input device can be selected.
 - Streaming ASR: Doubao `bigmodel_async` WebSocket with real-time partial text and final text.
-- Local silence fallback: continuous low input volume for 10 seconds ends the current recording through the same path as manual stop, and brief noise spikes do not reset the timer immediately, so an empty recording does not wait until the 300-second maximum duration.
+- Local silence fallback: local low-volume auto-stop defaults to 30 seconds with a `0.03` threshold, less aggressive than the old 10-second / `0.04` default, so long dictation and quiet speech are less likely to be cut off. You can still adjust it in advanced settings.
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions show text, processing state, and errors only.
 - Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`. VoxType then tries to restore the previous clipboard.
 - Recent input card: after a successful input, the Home page can temporarily show and copy the latest recognized text. It is kept only in the current window memory and is cleared when the window closes or a new recording starts.
@@ -123,8 +123,8 @@ Recording defaults:
 ```toml
 [audio]
 max_record_seconds = 300
-silence_auto_stop_seconds = 10
-silence_level_threshold = 0.04
+silence_auto_stop_seconds = 30
+silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
@@ -139,7 +139,7 @@ mute_system_volume_while_recording = false
 5. Return to Home.
 6. Put the cursor in a target input field.
 7. Press `Ctrl + Q` to start recording.
-8. Press `Ctrl + Q` again to stop, or keep input volume low for the local silence fallback.
+8. Press `Ctrl + Q` again to stop recording, or wait for the local low-volume fallback.
 9. Wait for final recognition and optional polishing.
 10. If text does not appear in the target field, press `Ctrl + V` manually.
 

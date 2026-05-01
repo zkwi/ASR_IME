@@ -339,7 +339,7 @@ export const zhCN = {
   "hotkeyNeedsModifier": "热键至少需要 Ctrl、Alt、Shift 或 Win 中的一个修饰键。",
   "hotkeyUnsupported": "暂不支持这个按键，请使用 A-Z、0-9、Space、F1-F12 或 Enter。",
   "triggerConflictHint": "鼠标中键开启后，会占用浏览器、编辑器、文件管理器等软件的中键操作；右 Alt 也可能和输入法或快捷键冲突。",
-  "silenceAutoStopHint": "连续低音量达到该时长后会按手动停止流程结束本次录音，作为豆包服务端判停之外的本地兜底；填 0 可关闭。",
+  "silenceAutoStopHint": "连续低音量达到该时长后会按手动停止流程结束本次录音；默认 30 秒，长句口述不易被短暂停顿截断。",
   "muteSystemAudioHint": "可减少回声，但可能影响会议、视频或系统提示音。",
   "recentContextHint": "最近上下文会在单独的本地文件保存最近识别片段，用于改善连续识别；默认关闭。",
   "clearRecentContext": "清除最近上下文",
