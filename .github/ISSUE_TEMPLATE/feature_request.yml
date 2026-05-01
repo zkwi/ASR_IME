@@ -3,6 +3,10 @@ description: Suggest a focused VoxType improvement.
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing Issues and the Wiki first. Do not include real API keys, transcripts, personal hotwords, prompts, local context, raw logs, or Windows username paths.
   - type: textarea
     id: problem
     attributes:
@@ -36,11 +40,13 @@ body:
     validations:
       required: true
   - type: checkboxes
-    id: tradeoffs
+    id: scope
     attributes:
       label: Scope check
       options:
-        - label: This can be implemented without large rewrites or unnecessary new dependencies.
-          required: false
+        - label: I searched existing Issues and the Wiki before opening this request.
+          required: true
+        - label: I understand this project prefers small, dependency-light changes.
+          required: true
         - label: This may affect privacy, logs, clipboard, hotkeys, tray, updates, or config defaults.
           required: false

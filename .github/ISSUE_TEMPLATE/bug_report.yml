@@ -6,7 +6,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please do not paste real API keys, personal hotwords, transcripts, local context, raw logs, or full Windows username paths.
+        Please search existing Issues and the Wiki first. Do not paste real API keys, personal hotwords, transcripts, prompts, local context, raw logs, or full Windows username paths.
+  - type: checkboxes
+    id: before-reporting
+    attributes:
+      label: Before reporting
+      options:
+        - label: I searched existing Issues and the Troubleshooting Wiki.
+          required: true
+        - label: I included the smallest redacted reproduction details I can provide.
+          required: true
   - type: input
     id: version
     attributes:
@@ -65,6 +74,13 @@ body:
         Install method:
         Microphone:
         Paste target app:
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics
+      description: Optional. Paste only short, redacted errors or diagnostics that do not expose keys, transcripts, hotwords, prompts, local context, raw logs, or username paths.
     validations:
       required: false
   - type: checkboxes

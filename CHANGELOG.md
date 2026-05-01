@@ -16,6 +16,7 @@
 
 - 新增 `.editorconfig` 和 `.gitattributes`，统一编辑器缩进、换行和二进制资源处理规则。
 - 新增 Dependabot 配置，按周检查 npm、Cargo 和 GitHub Actions 依赖更新。
+- 收紧 CI 权限、并发和超时设置，并完善 Issue / PR 模板的排查、脱敏和风险说明要求。
 - 修复 `scripts/scan-secrets.mjs` 在普通目录扫描模式下漏扫嵌套文件的问题，并将 `context/` 本地语音上下文文件明确列为受保护文件。
 - 修复密钥扫描脚本从仓库子目录运行 `--git-visible` 或 `--staged` 时可能误跳过文件的问题，并新增无依赖自测。
 - 新增 `scan:secrets:staged` 和 `audit:npm` 脚本，并让 CI 覆盖密钥扫描自测和 npm 依赖审计。
