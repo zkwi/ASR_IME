@@ -10,10 +10,12 @@
 
 - 补充 MIT 许可证正文、贡献指南、安全策略、PR 模板和 Issue 模板，明确开源协作入口、隐私边界和本地检查要求。
 - 在中英文 README 增加贡献、安全和许可证入口。
+- 补充支持说明和社区行为准则，明确 Issue 前置排查、隐私保护和社区互动边界。
 
 ### 维护
 
 - 新增 `.editorconfig` 和 `.gitattributes`，统一编辑器缩进、换行和二进制资源处理规则。
+- 新增 Dependabot 配置，按周检查 npm、Cargo 和 GitHub Actions 依赖更新。
 - 修复 `scripts/scan-secrets.mjs` 在普通目录扫描模式下漏扫嵌套文件的问题，并将 `context/` 本地语音上下文文件明确列为受保护文件。
 - 修复密钥扫描脚本从仓库子目录运行 `--git-visible` 或 `--staged` 时可能误跳过文件的问题，并新增无依赖自测。
 - 新增 `scan:secrets:staged` 和 `audit:npm` 脚本，并让 CI 覆盖密钥扫描自测和 npm 依赖审计。

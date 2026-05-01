@@ -6,3 +6,9 @@ contact_links:
   - name: Troubleshooting
     url: https://github.com/zkwi/VoxType/wiki/Troubleshooting
     about: Common ASR, microphone, paste, update, and installer troubleshooting notes.
+  - name: Support policy
+    url: https://github.com/zkwi/VoxType/blob/main/SUPPORT.md
+    about: Read what information helps maintainers reproduce and triage issues.
+  - name: Security policy
+    url: https://github.com/zkwi/VoxType/blob/main/SECURITY.md
+    about: Report security and privacy issues without exposing secrets or transcripts publicly.

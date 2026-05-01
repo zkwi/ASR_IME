@@ -2,6 +2,8 @@
 
 感谢关注 VoxType。这个仓库是个人项目，维护优先级是实用、轻量、易维护。欢迎提交小而清晰的改进；涉及主链路、配置结构或隐私边界的改动，请先开 Issue 说明方案。
 
+参与讨论和提交前，请同时阅读 [SUPPORT.md](SUPPORT.md)、[SECURITY.md](SECURITY.md) 和 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)，尤其注意不要公开真实密钥、识别正文、个人热词、prompt、上下文或完整本地日志。
+
 ## 适合提交的改动
 
 - 明确的 bug 修复。

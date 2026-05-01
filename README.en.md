@@ -16,6 +16,8 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Troubleshooting: <https://github.com/zkwi/VoxType/wiki/Troubleshooting-English>
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Security policy: [SECURITY.md](SECURITY.md)
+- Support policy: [SUPPORT.md](SUPPORT.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - License: [MIT](LICENSE)
 
 ## Main Features
@@ -216,7 +218,7 @@ cargo install cargo-audit --locked
 
 ## Contributing
 
-Before opening an Issue or Pull Request, read [CONTRIBUTING.md](CONTRIBUTING.md). Small, focused bug fixes, documentation updates, config examples, and tests are welcome. Changes touching ASR, LLM polishing, clipboard/paste, hotkeys, tray behavior, logs, stats, or config structure should clearly describe their impact and verification steps.
+Before opening an Issue or Pull Request, read [CONTRIBUTING.md](CONTRIBUTING.md), [SUPPORT.md](SUPPORT.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Small, focused bug fixes, documentation updates, config examples, and tests are welcome. Changes touching ASR, LLM polishing, clipboard/paste, hotkeys, tray behavior, logs, stats, or config structure should clearly describe their impact and verification steps.
 
 For security or privacy issues, follow [SECURITY.md](SECURITY.md). Do not include real keys, transcripts, personal hotwords, prompts, recent context, raw logs, or Windows username paths in public Issues, Pull Requests, screenshots, or logs.
 
