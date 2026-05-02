@@ -194,81 +194,79 @@
     </button>
   </div>
 </section>
-<div class:with-outcome={lastSessionOutcome?.kind === "success"} class="home-detail-grid">
-  {#if lastSessionOutcome?.kind === "success"}
-    <section class="last-outcome-card">
-      <div class="last-outcome-header">
-        <div class="last-outcome-copy">
-          <strong>{t("lastOutcomeSuccessTitle")}</strong>
-        </div>
-        <div class="last-outcome-actions">
-          <button type="button" class="link-action compact copy-action" disabled={copyingLastOutcome} onclick={copyLastOutcome}>
-            <Copy size={14} />
-            {copyingLastOutcome ? t("lastOutcomeCopying") : lastOutcomeCopied ? t("lastOutcomeCopiedShort") : t("lastOutcomeCopyText")}
-          </button>
-          <button type="button" class="link-action compact" onclick={() => (lastOutcomeExpanded = !lastOutcomeExpanded)}>
-            {lastOutcomeExpanded ? t("lastOutcomeHideText") : t("lastOutcomeViewText")}
-          </button>
-        </div>
+{#if lastSessionOutcome?.kind === "success"}
+  <section class="last-outcome-card">
+    <div class="last-outcome-header">
+      <div class="last-outcome-copy">
+        <strong>{t("lastOutcomeSuccessTitle")}</strong>
       </div>
-      <p class="last-outcome-description">{t("lastOutcomeSuccessDescription")}</p>
-      {#if lastSessionOutcome.warning}
-        <p class="last-outcome-warning">
-          <span>{t("lastOutcomeWarningLabel")}：</span>{lastSessionOutcome.warning}
-        </p>
-      {/if}
-      <p class="last-outcome-memory">{t("lastOutcomeTextMemoryHint")}</p>
-      {#if lastOutcomeExpanded}
-        <div class="last-outcome-text">
-          <p>{outcomeTextPreview(lastSessionOutcome.text)}</p>
-          {#if lastSessionOutcome.text.length > outcomePreviewLimit}
-            <small>{t("lastOutcomeTextTruncated")}</small>
-          {/if}
-        </div>
-      {/if}
-    </section>
-  {/if}
-  <section class="launch-card">
-    <div class="section-title-row">
-      <h3>{t("desktopControl")}</h3>
-      <button class="link-action" type="button" onclick={() => onSelectSection("Options")}>
-        {t("shortcutSettings")} <ChevronRight size={16} />
-      </button>
+      <div class="last-outcome-actions">
+        <button type="button" class="link-action compact copy-action" disabled={copyingLastOutcome} onclick={copyLastOutcome}>
+          <Copy size={14} />
+          {copyingLastOutcome ? t("lastOutcomeCopying") : lastOutcomeCopied ? t("lastOutcomeCopiedShort") : t("lastOutcomeCopyText")}
+        </button>
+        <button type="button" class="link-action compact" onclick={() => (lastOutcomeExpanded = !lastOutcomeExpanded)}>
+          {lastOutcomeExpanded ? t("lastOutcomeHideText") : t("lastOutcomeViewText")}
+        </button>
+      </div>
     </div>
-    <div class="trigger-grid">
-      <label class:active={config.triggers.hotkey_enabled} class:disabled={saving} class="trigger-item">
-        <input class="trigger-input" type="checkbox" checked={config.triggers.hotkey_enabled} disabled={saving} onchange={() => onToggleTrigger("hotkey_enabled")} />
-        <span class="trigger-check">
-          {#if config.triggers.hotkey_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
-        </span>
-        <div>
-          <strong>{formatHotkey(snapshotHotkey)}</strong>
-          <p>{config.triggers.hotkey_enabled ? t("mainHotkey") : t("disabled")}</p>
-        </div>
-      </label>
-      <label class:active={config.triggers.middle_mouse_enabled} class:disabled={saving} class="trigger-item">
-        <input class="trigger-input" type="checkbox" checked={config.triggers.middle_mouse_enabled} disabled={saving} onchange={() => onToggleTrigger("middle_mouse_enabled")} />
-        <span class="trigger-check">
-          {#if config.triggers.middle_mouse_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
-        </span>
-        <div>
-          <strong>{t("middleMouse")}</strong>
-          <p>{triggerLabel(config.triggers.middle_mouse_enabled)}</p>
-        </div>
-      </label>
-      <label class:active={config.triggers.right_alt_enabled} class:disabled={saving} class="trigger-item">
-        <input class="trigger-input" type="checkbox" checked={config.triggers.right_alt_enabled} disabled={saving} onchange={() => onToggleTrigger("right_alt_enabled")} />
-        <span class="trigger-check">
-          {#if config.triggers.right_alt_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
-        </span>
-        <div>
-          <strong>{t("rightAlt")}</strong>
-          <p>{triggerLabel(config.triggers.right_alt_enabled)}</p>
-        </div>
-      </label>
-    </div>
+    <p class="last-outcome-description">{t("lastOutcomeSuccessDescription")}</p>
+    {#if lastSessionOutcome.warning}
+      <p class="last-outcome-warning">
+        <span>{t("lastOutcomeWarningLabel")}：</span>{lastSessionOutcome.warning}
+      </p>
+    {/if}
+    <p class="last-outcome-memory">{t("lastOutcomeTextMemoryHint")}</p>
+    {#if lastOutcomeExpanded}
+      <div class="last-outcome-text">
+        <p>{outcomeTextPreview(lastSessionOutcome.text)}</p>
+        {#if lastSessionOutcome.text.length > outcomePreviewLimit}
+          <small>{t("lastOutcomeTextTruncated")}</small>
+        {/if}
+      </div>
+    {/if}
   </section>
-</div>
+{/if}
+<section class="launch-card">
+  <div class="section-title-row">
+    <h3>{t("desktopControl")}</h3>
+    <button class="link-action" type="button" onclick={() => onSelectSection("Options")}>
+      {t("shortcutSettings")} <ChevronRight size={16} />
+    </button>
+  </div>
+  <div class="trigger-grid">
+    <label class:active={config.triggers.hotkey_enabled} class:disabled={saving} class="trigger-item">
+      <input class="trigger-input" type="checkbox" checked={config.triggers.hotkey_enabled} disabled={saving} onchange={() => onToggleTrigger("hotkey_enabled")} />
+      <span class="trigger-check">
+        {#if config.triggers.hotkey_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
+      </span>
+      <div>
+        <strong>{formatHotkey(snapshotHotkey)}</strong>
+        <p>{config.triggers.hotkey_enabled ? t("mainHotkey") : t("disabled")}</p>
+      </div>
+    </label>
+    <label class:active={config.triggers.middle_mouse_enabled} class:disabled={saving} class="trigger-item">
+      <input class="trigger-input" type="checkbox" checked={config.triggers.middle_mouse_enabled} disabled={saving} onchange={() => onToggleTrigger("middle_mouse_enabled")} />
+      <span class="trigger-check">
+        {#if config.triggers.middle_mouse_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
+      </span>
+      <div>
+        <strong>{t("middleMouse")}</strong>
+        <p>{triggerLabel(config.triggers.middle_mouse_enabled)}</p>
+      </div>
+    </label>
+    <label class:active={config.triggers.right_alt_enabled} class:disabled={saving} class="trigger-item">
+      <input class="trigger-input" type="checkbox" checked={config.triggers.right_alt_enabled} disabled={saving} onchange={() => onToggleTrigger("right_alt_enabled")} />
+      <span class="trigger-check">
+        {#if config.triggers.right_alt_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
+      </span>
+      <div>
+        <strong>{t("rightAlt")}</strong>
+        <p>{triggerLabel(config.triggers.right_alt_enabled)}</p>
+      </div>
+    </label>
+  </div>
+</section>
 <section class="performance-card">
   <div class="section-title-row">
     <h3>{t("recentUsage")}</h3>
@@ -321,16 +319,16 @@
     margin-top: 0;
   }
 
-  .home-detail-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
-    min-width: 0;
+  .last-outcome-card {
+    order: 1;
   }
 
-  .home-detail-grid.with-outcome {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.82fr);
-    align-items: start;
+  .performance-card {
+    order: 2;
+  }
+
+  .launch-card {
+    order: 3;
   }
 
   .section-title-row {
@@ -832,55 +830,6 @@
     overflow-wrap: anywhere;
   }
 
-  .home-detail-grid.with-outcome .launch-card {
-    padding: 12px;
-  }
-
-  .home-detail-grid.with-outcome .launch-card .section-title-row {
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .home-detail-grid.with-outcome .launch-card .section-title-row h3 {
-    font-size: 15px;
-  }
-
-  .home-detail-grid.with-outcome .launch-card .link-action {
-    min-height: 28px;
-    padding: 0 8px;
-    font-size: 11px;
-  }
-
-  .home-detail-grid.with-outcome .launch-card .trigger-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .home-detail-grid.with-outcome .trigger-item {
-    grid-template-columns: 24px minmax(0, 1fr);
-    gap: 6px;
-    min-height: 64px;
-    padding: 8px;
-    border-radius: 13px;
-  }
-
-  .home-detail-grid.with-outcome .trigger-check {
-    width: 24px;
-    height: 24px;
-    border-radius: 9px;
-  }
-
-  .home-detail-grid.with-outcome .trigger-item strong {
-    font-size: 11px;
-    line-height: 1.2;
-  }
-
-  .home-detail-grid.with-outcome .trigger-item p {
-    margin-top: 2px;
-    font-size: 10px;
-    line-height: 1.25;
-  }
-
   .stat-card {
     gap: 2px;
     align-content: start;
@@ -987,10 +936,6 @@
     gap: 7px;
   }
 
-  :global(.ui-compact) .home-detail-grid {
-    gap: 12px;
-  }
-
   :global(.ui-compact) .trigger-item {
     min-height: 64px;
     padding: 9px;
@@ -1016,12 +961,6 @@
     font-size: 15px;
   }
 
-  @media (max-width: 1180px) {
-    .home-detail-grid.with-outcome {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
   @media (max-width: 920px) {
     .last-outcome-header {
       grid-template-columns: minmax(0, 1fr);
@@ -1035,10 +974,6 @@
     .stats-row,
     :global(.ui-compact) .trigger-grid,
     :global(.ui-compact) .stats-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .home-detail-grid.with-outcome .launch-card .trigger-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -1072,8 +1007,7 @@
 
   @media (max-width: 640px) {
     .trigger-grid,
-    .stats-row,
-    .home-detail-grid.with-outcome .launch-card .trigger-grid {
+    .stats-row {
       grid-template-columns: minmax(0, 1fr);
     }
   }
