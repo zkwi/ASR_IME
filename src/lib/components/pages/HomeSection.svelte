@@ -329,12 +329,13 @@
   }
 
   .home-detail-grid.with-outcome {
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.92fr);
+    grid-template-columns: minmax(0, 1fr) minmax(min(360px, 100%), 0.92fr);
     align-items: stretch;
   }
 
   .section-title-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
@@ -734,6 +735,7 @@
 
   .link-action {
     display: inline-flex;
+    flex: 0 1 auto;
     align-items: center;
     justify-content: center;
     gap: 4px;
@@ -745,13 +747,19 @@
     border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
-    white-space: nowrap;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .link-action :global(svg) {
+    flex: 0 0 auto;
   }
 
   .trigger-grid,
   .stats-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
     gap: 8px;
   }
 
@@ -880,7 +888,7 @@
   }
 
   .stats-row {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   }
 
   .stat-card {
@@ -1035,7 +1043,7 @@
     .stats-row,
     :global(.ui-compact) .trigger-grid,
     :global(.ui-compact) .stats-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
     }
 
     .voice-hero {

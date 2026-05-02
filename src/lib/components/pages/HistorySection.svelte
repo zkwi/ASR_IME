@@ -179,9 +179,9 @@
   .day-list-head,
   .day-list article {
     display: grid;
-    grid-template-columns: minmax(128px, 1.05fr) minmax(116px, 0.9fr) minmax(92px, 0.62fr) minmax(136px, 0.9fr) minmax(106px, 0.76fr);
+    grid-template-columns: minmax(104px, 1.05fr) minmax(92px, 0.9fr) minmax(72px, 0.62fr) minmax(104px, 0.9fr) minmax(84px, 0.76fr);
     align-items: center;
-    column-gap: 22px;
+    column-gap: 14px;
     min-height: 48px;
     padding: 10px 0;
     border-bottom: 1px solid var(--border);
@@ -196,7 +196,7 @@
   }
 
   .day-list-head span {
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   .day-list article:last-child {
@@ -231,13 +231,13 @@
 
   .duration-cell {
     justify-self: end;
-    min-width: 72px;
+    min-width: 0;
     color: var(--text-main);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
     font-weight: 700;
     text-align: right;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   .day-list-head span:nth-child(n + 2) {
@@ -252,7 +252,7 @@
     .day-list-head,
     .day-list article {
       grid-template-columns: minmax(104px, 1fr) minmax(94px, 0.8fr) minmax(82px, 0.62fr) minmax(112px, 0.86fr) minmax(86px, 0.72fr);
-      column-gap: 10px;
+      column-gap: 8px;
     }
   }
 </style>

@@ -29,6 +29,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    min-width: 0;
     margin-top: 8px;
   }
 
@@ -43,8 +44,10 @@
     border-radius: 999px;
     font-size: 11px;
     font-weight: 800;
-    line-height: 1;
-    white-space: nowrap;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    text-align: center;
+    white-space: normal;
   }
 
   .setting-tag.required {

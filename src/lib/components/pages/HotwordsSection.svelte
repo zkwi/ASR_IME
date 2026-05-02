@@ -368,7 +368,7 @@
   }
 
   .form-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   }
 
   .toggle-grid {
@@ -386,12 +386,12 @@
     min-height: 38px;
     width: fit-content;
     max-width: 100%;
-    min-width: max-content;
+    min-width: 0;
     color: var(--text-main);
     font-weight: 700;
     line-height: 1.35;
-    white-space: nowrap;
-    overflow-wrap: normal;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .check input {
@@ -425,7 +425,9 @@
     border-radius: 12px;
     font-size: 13px;
     font-weight: 800;
-    white-space: nowrap;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .test-button:disabled {
@@ -658,7 +660,7 @@
     }
 
     .form-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
     }
   }
 
@@ -674,9 +676,6 @@
 
     .check {
       width: 100%;
-      min-width: 0;
-      white-space: normal;
-      overflow-wrap: anywhere;
     }
   }
 </style>

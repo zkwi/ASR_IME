@@ -453,7 +453,7 @@
   }
 
   .form-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   }
 
   .toggle-grid {
@@ -475,12 +475,12 @@
     min-height: 38px;
     width: fit-content;
     max-width: 100%;
-    min-width: max-content;
+    min-width: 0;
     color: var(--text-main);
     font-weight: 700;
     line-height: 1.35;
-    white-space: nowrap;
-    overflow-wrap: normal;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .check input {
@@ -500,7 +500,7 @@
     color: var(--text-main);
     font-size: 14px;
     font-weight: 700;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .check-copy small {
@@ -508,7 +508,8 @@
     font-size: 11px;
     font-weight: 700;
     line-height: 1.25;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   input,
@@ -629,6 +630,7 @@
     color: var(--text-secondary);
     font-size: 13px;
     line-height: 1.45;
+    overflow-wrap: anywhere;
   }
 
   .caption-preview {
@@ -650,7 +652,7 @@
 
   .preset-row {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
     gap: 10px;
   }
 
@@ -678,7 +680,7 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .preset-swatch {
@@ -709,7 +711,7 @@
   }
 
   .opacity-preset-row {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
   }
 
   .opacity-preset-row button {
@@ -793,7 +795,9 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     font-weight: 700;
-    white-space: nowrap;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .update-actions .primary {
@@ -816,9 +820,12 @@
       flex: 1 1 150px;
     }
 
-    .form-grid,
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
     .preset-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
     }
 
     .caption-theme-head {
@@ -846,14 +853,6 @@
 
     .check {
       width: 100%;
-      min-width: 0;
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-
-    .check-copy span,
-    .check-copy small {
-      white-space: normal;
     }
   }
 </style>

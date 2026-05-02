@@ -8,7 +8,7 @@
   import SettingsToolbar from "$lib/components/settings/SettingsToolbar.svelte";
   import type { AppConfig } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
-  import { ShieldCheck } from "lucide-svelte";
+  import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -205,8 +205,18 @@
           <p>{t("llmApiOptionalDescription")}</p>
           <SettingTags tags={[t("tagOptional"), t("tagSentToService")]} />
         </div>
-        <button class="test-button" type="button" onclick={() => (llmApiConfigVisible = !llmApiConfigVisible)}>
-          {llmApiConfigVisible ? t("hideLlmConfig") : t("expandLlmConfig")}
+        <button
+          class="test-button config-toggle-button"
+          type="button"
+          aria-controls="llm-api-config-fields"
+          aria-expanded={llmApiConfigVisible}
+          onclick={() => (llmApiConfigVisible = !llmApiConfigVisible)}
+        >
+          {#if llmApiConfigVisible}
+            <ChevronUp size={16} />{t("hideLlmConfig")}
+          {:else}
+            <ChevronDown size={16} />{t("expandLlmConfig")}
+          {/if}
         </button>
       </div>
       <div class="optional-config-summary">
@@ -227,7 +237,7 @@
           {#if !hasLlmApiConfig}<small>{t("llmApiRequiredForPolishing")}</small>{/if}
         </span>
       </label>
-      {#if llmApiConfigVisible || config.llm_post_edit.enabled || !hasLlmApiConfig}
+      <div id="llm-api-config-fields" class="llm-api-config-fields" hidden={!llmApiConfigVisible}>
         <div class="form-grid">
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.base_url"))}>
             <span>Base URL</span>
@@ -248,31 +258,31 @@
         <button class="test-button" type="button" onclick={onTestLlmConfig} disabled={testingLlm}>
           <ShieldCheck size={16} />{testingLlm ? t("testingConnection") : t("testConnection")}
         </button>
-      {/if}
-      {#if advancedOpen}
-        <div class="advanced-subpanel">
-          <div class="section-heading">
-            <div class="section-heading-copy">
-              <h3>{t("llmAdvancedParams")}</h3>
-              <p>{t("llmAdvancedParamsDescription")}</p>
+        {#if advancedOpen}
+          <div class="advanced-subpanel">
+            <div class="section-heading">
+              <div class="section-heading-copy">
+                <h3>{t("llmAdvancedParams")}</h3>
+                <p>{t("llmAdvancedParamsDescription")}</p>
+              </div>
             </div>
-          </div>
-          <div class="form-grid">
-            <label class:field-invalid={Boolean(fieldError("llm_post_edit.timeout_seconds"))}>
-              <span>{t("timeout")}</span>
-              <input type="number" bind:value={config.llm_post_edit.timeout_seconds} />
-              {#if fieldError("llm_post_edit.timeout_seconds")}<small class="field-error">{fieldError("llm_post_edit.timeout_seconds")}</small>{/if}
+            <div class="form-grid">
+              <label class:field-invalid={Boolean(fieldError("llm_post_edit.timeout_seconds"))}>
+                <span>{t("timeout")}</span>
+                <input type="number" bind:value={config.llm_post_edit.timeout_seconds} />
+                {#if fieldError("llm_post_edit.timeout_seconds")}<small class="field-error">{fieldError("llm_post_edit.timeout_seconds")}</small>{/if}
+              </label>
+            </div>
+            <label class="check">
+              <input type="checkbox" bind:checked={config.llm_post_edit.enable_thinking} />
+              <span class="check-copy">
+                <span>{t("enableThinking")}</span>
+                <small>{t("enableThinkingHint")}</small>
+              </span>
             </label>
           </div>
-          <label class="check">
-            <input type="checkbox" bind:checked={config.llm_post_edit.enable_thinking} />
-            <span class="check-copy">
-              <span>{t("enableThinking")}</span>
-              <small>{t("enableThinkingHint")}</small>
-            </span>
-          </label>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
   </section>
 </section>
@@ -369,7 +379,7 @@
   }
 
   .form-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   }
 
   .check {
@@ -380,12 +390,12 @@
     min-height: 38px;
     width: fit-content;
     max-width: 100%;
-    min-width: max-content;
+    min-width: 0;
     color: var(--text-main);
     font-weight: 700;
     line-height: 1.35;
-    white-space: nowrap;
-    overflow-wrap: normal;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .check input {
@@ -405,7 +415,7 @@
     color: var(--text-main);
     font-size: 14px;
     font-weight: 700;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .check-copy small {
@@ -413,7 +423,8 @@
     font-size: 11px;
     font-weight: 700;
     line-height: 1.25;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .settings-inline-actions {
@@ -440,12 +451,18 @@
     border-radius: 12px;
     font-size: 13px;
     font-weight: 800;
-    white-space: nowrap;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .test-button:disabled {
     cursor: wait;
     opacity: 0.68;
+  }
+
+  .config-toggle-button {
+    min-width: 112px;
   }
 
   input {
@@ -503,13 +520,24 @@
   }
 
   .optional-config-summary span {
+    min-width: 0;
     color: var(--text-main);
     font-weight: 800;
+    overflow-wrap: anywhere;
   }
 
   .optional-config-summary small {
     color: var(--text-secondary);
     overflow-wrap: anywhere;
+  }
+
+  .llm-api-config-fields {
+    display: grid;
+    gap: 14px;
+  }
+
+  .llm-api-config-fields[hidden] {
+    display: none;
   }
 
   .advanced-subpanel {
@@ -585,25 +613,13 @@
     }
 
     .form-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
     }
   }
 
   @media (max-width: 720px) {
-    .form-grid {
-      grid-template-columns: 1fr;
-    }
-
     .check {
       width: 100%;
-      min-width: 0;
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-
-    .check-copy span,
-    .check-copy small {
-      white-space: normal;
     }
   }
 </style>
