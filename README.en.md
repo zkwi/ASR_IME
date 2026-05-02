@@ -99,6 +99,8 @@ min_chars = 40
 enable_thinking = false
 ```
 
+VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed.
+
 Recommended trigger defaults:
 
 ```toml
