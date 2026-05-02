@@ -260,27 +260,22 @@ pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
         .map_err(|_| "连接豆包 ASR 测试超时，请检查网络或代理设置。".to_string())?
         .map_err(|err| friendly_asr_connection_error(&err.to_string()))?;
     websocket
-        .send(Message::Binary(protocol::build_full_request(
-            &preview.payload,
-            1,
-        )?))
+        .send(Message::Binary(
+            protocol::build_full_request(&preview.payload, 1)?.into(),
+        ))
         .await
         .map_err(|err| format!("发送豆包 ASR 测试首包失败: {}", err))?;
     let test_audio = silent_test_audio(&test_config);
     websocket
-        .send(Message::Binary(protocol::build_audio_request(
-            2,
-            &test_audio,
-            false,
-        )?))
+        .send(Message::Binary(
+            protocol::build_audio_request(2, &test_audio, false)?.into(),
+        ))
         .await
         .map_err(|err| format!("发送豆包 ASR 测试音频包失败: {}", err))?;
     websocket
-        .send(Message::Binary(protocol::build_audio_request(
-            3,
-            &[],
-            true,
-        )?))
+        .send(Message::Binary(
+            protocol::build_audio_request(3, &[], true)?.into(),
+        ))
         .await
         .map_err(|err| format!("发送豆包 ASR 测试结束包失败: {}", err))?;
 
@@ -395,10 +390,9 @@ async fn run_websocket_session(
     })?;
     app_log::info("ASR WebSocket 已连接");
     websocket
-        .send(Message::Binary(protocol::build_full_request(
-            &preview.payload,
-            1,
-        )?))
+        .send(Message::Binary(
+            protocol::build_full_request(&preview.payload, 1)?.into(),
+        ))
         .await
         .map_err(|err| format!("发送 ASR 首包失败: {}", err))?;
     app_log::info("ASR 首包已发送");
@@ -417,9 +411,9 @@ async fn run_websocket_session(
             match audio_rx.try_recv() {
                 Ok(chunk) => {
                     websocket
-                        .send(Message::Binary(protocol::build_audio_request(
-                            seq, &chunk, false,
-                        )?))
+                        .send(Message::Binary(
+                            protocol::build_audio_request(seq, &chunk, false)?.into(),
+                        ))
                         .await
                         .map_err(|err| format!("发送 ASR 音频包失败: {}", err))?;
                     seq += 1;
@@ -427,11 +421,9 @@ async fn run_websocket_session(
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {
                     websocket
-                        .send(Message::Binary(protocol::build_audio_request(
-                            seq,
-                            &[],
-                            true,
-                        )?))
+                        .send(Message::Binary(
+                            protocol::build_audio_request(seq, &[], true)?.into(),
+                        ))
                         .await
                         .map_err(|err| format!("发送 ASR 结束包失败: {}", err))?;
                     audio_finished = true;

@@ -1,7 +1,7 @@
 use crate::app_log;
 use crate::config::AudioConfig;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Device, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig};
+use cpal::{Device, SampleFormat, Stream, StreamConfig, SupportedStreamConfig};
 use serde::Serialize;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
@@ -118,7 +118,8 @@ pub fn list_input_devices() -> Result<Vec<AudioDeviceInfo>, String> {
     let host = cpal::default_host();
     let default_name = host
         .default_input_device()
-        .and_then(|device| device.name().ok());
+        .and_then(|device| device.description().ok())
+        .map(|description| description.name().to_string());
     let devices = host
         .input_devices()
         .map_err(|err| format!("枚举输入设备失败: {}", err))?;
@@ -126,7 +127,8 @@ pub fn list_input_devices() -> Result<Vec<AudioDeviceInfo>, String> {
         .enumerate()
         .map(|(index, device)| {
             let name = device
-                .name()
+                .description()
+                .map(|description| description.name().to_string())
                 .unwrap_or_else(|_| format!("Input device {}", index));
             AudioDeviceInfo {
                 index: index as u32,
@@ -154,7 +156,8 @@ fn start_capture_in_thread(
     let host = cpal::default_host();
     let device = select_input_device(&host, audio.input_device)?;
     let device_name = device
-        .name()
+        .description()
+        .map(|description| description.name().to_string())
         .unwrap_or_else(|_| "Unknown input device".to_string());
     let supported = select_input_config(&device, audio)?;
     let sample_format = supported.sample_format();
@@ -206,7 +209,7 @@ fn start_capture_in_thread(
     Ok((
         stream,
         device_name,
-        stream_config.sample_rate.0,
+        stream_config.sample_rate,
         stream_config.channels,
     ))
 }
@@ -227,7 +230,7 @@ fn select_input_config(
     device: &Device,
     audio: &AudioConfig,
 ) -> Result<SupportedStreamConfig, String> {
-    let target_rate = SampleRate(audio.sample_rate);
+    let target_rate = audio.sample_rate;
     let mut fallback = None;
     for range in device
         .supported_input_configs()
@@ -249,7 +252,7 @@ fn select_input_config(
 }
 
 fn target_chunk_bytes(config: &StreamConfig, segment_ms: u64) -> usize {
-    let frames = ((config.sample_rate.0 as u64 * segment_ms.max(1)) / 1000).max(1);
+    let frames = ((config.sample_rate as u64 * segment_ms.max(1)) / 1000).max(1);
     frames as usize * config.channels.max(1) as usize * 2
 }
 
@@ -396,7 +399,7 @@ fn build_i16_stream(
     let channels = config.channels.max(1) as usize;
     let mut pending = Vec::new();
     let mut silence = SilenceAutoStopper::new(
-        config.sample_rate.0,
+        config.sample_rate,
         outputs.silence_auto_stop_seconds,
         outputs.silence_level_threshold,
     );
@@ -442,7 +445,7 @@ fn build_u16_stream(
     let channels = config.channels.max(1) as usize;
     let mut pending = Vec::new();
     let mut silence = SilenceAutoStopper::new(
-        config.sample_rate.0,
+        config.sample_rate,
         outputs.silence_auto_stop_seconds,
         outputs.silence_level_threshold,
     );
@@ -489,7 +492,7 @@ fn build_u8_stream(
     let channels = config.channels.max(1) as usize;
     let mut pending = Vec::new();
     let mut silence = SilenceAutoStopper::new(
-        config.sample_rate.0,
+        config.sample_rate,
         outputs.silence_auto_stop_seconds,
         outputs.silence_level_threshold,
     );
@@ -536,7 +539,7 @@ fn build_f32_stream(
     let channels = config.channels.max(1) as usize;
     let mut pending = Vec::new();
     let mut silence = SilenceAutoStopper::new(
-        config.sample_rate.0,
+        config.sample_rate,
         outputs.silence_auto_stop_seconds,
         outputs.silence_level_threshold,
     );
