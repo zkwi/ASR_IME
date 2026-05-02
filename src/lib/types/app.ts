@@ -174,6 +174,7 @@ export type AppConfig = {
   request: {
     ws_url: string;
     model_name: string;
+    language: string;
     enable_nonstream: boolean;
     enable_itn: boolean;
     enable_punc: boolean;

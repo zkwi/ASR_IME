@@ -82,6 +82,8 @@ pub struct RequestConfig {
     pub ws_url: String,
     #[serde(default = "default_model_name")]
     pub model_name: String,
+    #[serde(default = "default_asr_language")]
+    pub language: String,
     #[serde(default = "default_true")]
     pub enable_nonstream: bool,
     #[serde(default = "default_true")]
@@ -307,6 +309,7 @@ impl Default for RequestConfig {
         Self {
             ws_url: default_ws_url(),
             model_name: default_model_name(),
+            language: default_asr_language(),
             enable_nonstream: true,
             enable_itn: true,
             enable_punc: true,
@@ -744,6 +747,9 @@ fn default_ws_url() -> String {
 fn default_model_name() -> String {
     "bigmodel".to_string()
 }
+fn default_asr_language() -> String {
+    "zh-CN".to_string()
+}
 fn default_result_type() -> String {
     "full".to_string()
 }
@@ -877,6 +883,7 @@ mod tests {
         assert_eq!(config.audio.silence_auto_stop_seconds, 30);
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.request.end_window_size, Some(800));
+        assert_eq!(config.request.language, "zh-CN");
         assert!(!config.context.enable_recent_context);
         assert!(!config.auto_hotwords.enabled);
         assert!(config.auto_hotwords.accepted_hotwords.is_empty());
@@ -957,6 +964,7 @@ mod tests {
         config.typing.paste_method = "unknown".to_string();
         config.tray.close_behavior = "minimize".to_string();
         config.request.ws_url = "http://example.com/asr".to_string();
+        config.request.language = "auto".to_string();
         config.update.github_repo = "broken".to_string();
         config.auto_hotwords.max_history_chars = 999;
         config.auto_hotwords.max_candidates = 101;
@@ -980,6 +988,7 @@ mod tests {
         assert!(fields.contains(&"typing.paste_method"));
         assert!(fields.contains(&"tray.close_behavior"));
         assert!(fields.contains(&"request.ws_url"));
+        assert!(fields.contains(&"request.language"));
         assert!(fields.contains(&"update.github_repo"));
         assert!(fields.contains(&"auto_hotwords.max_history_chars"));
         assert!(fields.contains(&"auto_hotwords.max_candidates"));

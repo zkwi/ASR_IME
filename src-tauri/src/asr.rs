@@ -75,16 +75,21 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     if let Some(context) = context_payload {
         request.insert("corpus".to_string(), json!({ "context": context }));
     }
+    let mut audio = serde_json::Map::from_iter([
+        ("format".to_string(), json!("pcm")),
+        ("codec".to_string(), json!("raw")),
+        ("rate".to_string(), json!(config.audio.sample_rate)),
+        ("bits".to_string(), json!(16)),
+        ("channel".to_string(), json!(config.audio.channels)),
+    ]);
+    let language = config.request.language.trim();
+    if !language.is_empty() {
+        audio.insert("language".to_string(), json!(language));
+    }
 
     json!({
         "user": { "uid": "desktop-input" },
-        "audio": {
-            "format": "pcm",
-            "codec": "raw",
-            "rate": config.audio.sample_rate,
-            "bits": 16,
-            "channel": config.audio.channels,
-        },
+        "audio": Value::Object(audio),
         "request": Value::Object(request),
     })
 }
@@ -229,6 +234,26 @@ mod tests {
         assert_eq!(value["hotwords"][1]["word"], "VoxType");
         assert_eq!(value["context_data"][0]["text"], "recent");
         assert_eq!(value["context_data"][1]["text"], "prompt");
+    }
+
+    #[test]
+    fn request_payload_includes_configured_audio_language() {
+        let mut config = AppConfig::default();
+        config.request.language = "en-US".to_string();
+
+        let payload = build_request_payload(&config, None);
+
+        assert_eq!(payload["audio"]["language"], "en-US");
+    }
+
+    #[test]
+    fn request_payload_omits_empty_audio_language() {
+        let mut config = AppConfig::default();
+        config.request.language.clear();
+
+        let payload = build_request_payload(&config, None);
+
+        assert!(payload["audio"].get("language").is_none());
     }
 
     #[test]

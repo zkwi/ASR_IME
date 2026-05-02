@@ -63,6 +63,7 @@ export const fallbackConfig: AppConfig = {
   request: {
     ws_url: "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async",
     model_name: "bigmodel",
+    language: "zh-CN",
     enable_nonstream: true,
     enable_itn: true,
     enable_punc: true,

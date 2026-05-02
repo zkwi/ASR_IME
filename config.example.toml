@@ -35,6 +35,9 @@ mute_system_volume_while_recording = false
 # 豆包流式 ASR WebSocket 地址，通常保持默认
 ws_url = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
 model_name = "bigmodel"
+# 指定 ASR 可识别的输入语言；留空表示使用服务默认/自动。常用：zh-CN / en-US / ja-JP / yue-CN
+# 注意：豆包文档提示该参数仅部分流式模式支持；若连接测试失败，可改为空字符串或检查接口模式
+language = "zh-CN"
 # 以下为 ASR 请求内部参数；应用设置页不再展示，可按需手动编辑
 # 是否开启二遍识别；通常建议开启
 enable_nonstream = true

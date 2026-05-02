@@ -12,6 +12,35 @@
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
+  const asrLanguageOptions: Array<{ value: string; labelKey: CopyKey }> = [
+    { value: "", labelKey: "asrLanguageAuto" },
+    { value: "zh-CN", labelKey: "asrLanguageZhCN" },
+    { value: "en-US", labelKey: "asrLanguageEnUS" },
+    { value: "ja-JP", labelKey: "asrLanguageJaJP" },
+    { value: "id-ID", labelKey: "asrLanguageIdID" },
+    { value: "es-MX", labelKey: "asrLanguageEsMX" },
+    { value: "pt-BR", labelKey: "asrLanguagePtBR" },
+    { value: "de-DE", labelKey: "asrLanguageDeDE" },
+    { value: "fr-FR", labelKey: "asrLanguageFrFR" },
+    { value: "ko-KR", labelKey: "asrLanguageKoKR" },
+    { value: "fil-PH", labelKey: "asrLanguageFilPH" },
+    { value: "ms-MY", labelKey: "asrLanguageMsMY" },
+    { value: "th-TH", labelKey: "asrLanguageThTH" },
+    { value: "ar-SA", labelKey: "asrLanguageArSA" },
+    { value: "it-IT", labelKey: "asrLanguageItIT" },
+    { value: "bn-BD", labelKey: "asrLanguageBnBD" },
+    { value: "el-GR", labelKey: "asrLanguageElGR" },
+    { value: "nl-NL", labelKey: "asrLanguageNlNL" },
+    { value: "ru-RU", labelKey: "asrLanguageRuRU" },
+    { value: "tr-TR", labelKey: "asrLanguageTrTR" },
+    { value: "vi-VN", labelKey: "asrLanguageViVN" },
+    { value: "pl-PL", labelKey: "asrLanguagePlPL" },
+    { value: "ro-RO", labelKey: "asrLanguageRoRO" },
+    { value: "ne-NP", labelKey: "asrLanguageNeNP" },
+    { value: "uk-UA", labelKey: "asrLanguageUkUA" },
+    { value: "yue-CN", labelKey: "asrLanguageYueCN" },
+  ];
+
   type Props = {
     config: AppConfig;
     llmApiConfigVisible: boolean;
@@ -164,6 +193,27 @@
           <span>{t("accessKey")}</span>
           <input type="password" autocomplete="off" bind:value={config.auth.access_key} />
           {#if fieldError("auth.access_key")}<small class="field-error">{fieldError("auth.access_key")}</small>{/if}
+        </label>
+      </div>
+    </div>
+    <div id="settings-asr-language" class="form-panel">
+      <div class="section-heading">
+        <div class="section-heading-copy">
+          <h3>{t("asrLanguageTitle")}</h3>
+          <p>{t("asrLanguageDescription")}</p>
+          <SettingTags tags={[t("tagOptional"), t("tagSentToService")]} />
+        </div>
+      </div>
+      <div class="form-grid">
+        <label class:field-invalid={Boolean(fieldError("request.language"))}>
+          <span>{t("asrInputLanguage")}</span>
+          <select bind:value={config.request.language}>
+            {#each asrLanguageOptions as option}
+              <option value={option.value}>{t(option.labelKey)}</option>
+            {/each}
+          </select>
+          {#if fieldError("request.language")}<small class="field-error">{fieldError("request.language")}</small>{/if}
+          <small class="field-hint">{t("asrInputLanguageHint")}</small>
         </label>
       </div>
     </div>
@@ -465,7 +515,8 @@
     min-width: 112px;
   }
 
-  input {
+  input,
+  select {
     width: 100%;
     min-height: 38px;
     padding: 0 12px;
@@ -475,12 +526,14 @@
     border-radius: 10px;
   }
 
-  input {
+  input,
+  select {
     min-width: 0;
     text-overflow: ellipsis;
   }
 
   input:focus,
+  select:focus,
   button:focus-visible {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.14);
@@ -493,7 +546,8 @@
     line-height: 1.45;
   }
 
-  .field-invalid input {
+  .field-invalid input,
+  .field-invalid select {
     border-color: var(--danger);
     background: #fff7f7;
   }

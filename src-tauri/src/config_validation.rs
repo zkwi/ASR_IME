@@ -109,6 +109,17 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         &["ws://", "wss://"],
         "ASR WebSocket 地址必须以 ws:// 或 wss:// 开头。",
     );
+    validate_allowed_value(
+        &mut errors,
+        "request.language",
+        &config.request.language,
+        &[
+            "", "zh-CN", "en-US", "ja-JP", "id-ID", "es-MX", "pt-BR", "de-DE", "fr-FR", "ko-KR",
+            "fil-PH", "ms-MY", "th-TH", "ar-SA", "it-IT", "bn-BD", "el-GR", "nl-NL", "ru-RU",
+            "tr-TR", "vi-VN", "pl-PL", "ro-RO", "ne-NP", "uk-UA", "yue-CN",
+        ],
+        "识别语言只能选择文档支持的语言代码，或留空使用服务默认。",
+    );
     if !config.llm_post_edit.base_url.trim().is_empty() {
         validate_url_scheme(
             &mut errors,

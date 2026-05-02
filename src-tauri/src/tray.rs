@@ -14,6 +14,7 @@ const OPEN_CONFIG_ID: &str = "open_config";
 const OPEN_LOG_ID: &str = "open_log";
 const OPEN_SETUP_GUIDE_ID: &str = "open_setup_guide";
 const CHECK_UPDATE_ID: &str = "check_update";
+const RESTART_ID: &str = "restart";
 const EXIT_ID: &str = "exit";
 const CHECK_UPDATE_EVENT: &str = "check-update-requested";
 
@@ -23,6 +24,7 @@ struct TrayLabels {
     open_log: &'static str,
     open_setup_guide: &'static str,
     check_update: &'static str,
+    restart: &'static str,
     exit: &'static str,
 }
 
@@ -48,6 +50,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
                 }
             }
             CHECK_UPDATE_ID => request_update_check(app),
+            RESTART_ID => restart_app(app),
             EXIT_ID => exit_app(app),
             _ => {}
         })
@@ -107,6 +110,8 @@ fn build_tray_menu(app: &AppHandle, labels: TrayLabels) -> Result<Menu<tauri::Wr
         None::<&str>,
     )
     .map_err(|err| format!("创建托盘菜单失败: {}", err))?;
+    let restart = MenuItem::with_id(app, RESTART_ID, labels.restart, true, None::<&str>)
+        .map_err(|err| format!("创建托盘菜单失败: {}", err))?;
     let separator = PredefinedMenuItem::separator(app)
         .map_err(|err| format!("创建托盘菜单分隔线失败: {}", err))?;
     let exit = MenuItem::with_id(app, EXIT_ID, labels.exit, true, None::<&str>)
@@ -118,6 +123,7 @@ fn build_tray_menu(app: &AppHandle, labels: TrayLabels) -> Result<Menu<tauri::Wr
             &open_log,
             &open_setup_guide,
             &check_update,
+            &restart,
             &separator,
             &exit,
         ],
@@ -167,6 +173,7 @@ fn tray_labels(language: &str) -> TrayLabels {
             open_log: "View logs",
             open_setup_guide: "Setup guide",
             check_update: "Check updates",
+            restart: "Restart app",
             exit: "Exit",
         },
         "zh-TW" => TrayLabels {
@@ -174,6 +181,7 @@ fn tray_labels(language: &str) -> TrayLabels {
             open_log: "查看日誌",
             open_setup_guide: "配置指南",
             check_update: "檢查更新",
+            restart: "重新啟動程式",
             exit: "退出",
         },
         _ => TrayLabels {
@@ -181,6 +189,7 @@ fn tray_labels(language: &str) -> TrayLabels {
             open_log: "查看日志",
             open_setup_guide: "配置指南",
             check_update: "检查更新",
+            restart: "重启程序",
             exit: "退出",
         },
     }
@@ -262,6 +271,14 @@ pub fn exit_app(app: &AppHandle) {
     app.exit(0);
 }
 
+fn restart_app(app: &AppHandle) {
+    app_log::info("用户从托盘菜单重启程序。");
+    crate::hotkey::stop_input_threads();
+    let controller = app.state::<SessionController>().inner().clone();
+    controller.abort_from_worker(app, "Application restarting.");
+    app.request_restart();
+}
+
 fn open_log_file_with_source(app: &AppHandle, source: &str) -> Result<(), String> {
     app_log::info(format!("用户从{}打开日志文件。", source));
     let path = app_log::log_path();
@@ -328,6 +345,7 @@ mod tests {
         assert_eq!(labels.open_log, "View logs");
         assert_eq!(labels.open_setup_guide, "Setup guide");
         assert_eq!(labels.check_update, "Check updates");
+        assert_eq!(labels.restart, "Restart app");
         assert_eq!(labels.exit, "Exit");
     }
 
@@ -339,6 +357,7 @@ mod tests {
         assert_eq!(labels.open_log, "查看日誌");
         assert_eq!(labels.open_setup_guide, "配置指南");
         assert_eq!(labels.check_update, "檢查更新");
+        assert_eq!(labels.restart, "重新啟動程式");
         assert_eq!(labels.exit, "退出");
     }
 
@@ -347,6 +366,7 @@ mod tests {
         let labels = tray_labels("fr");
 
         assert_eq!(labels.open_config, "打开配置文件");
+        assert_eq!(labels.restart, "重启程序");
         assert_eq!(tray_tooltip("fr", false), "声写");
         assert_eq!(tray_tooltip("en", true), "VoxType · Listening");
     }

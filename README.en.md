@@ -32,7 +32,7 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Optional LLM polishing: OpenAI-compatible API support for light text cleanup and style control.
 - Hotwords and prompts: maintain custom hotwords, scene notes, and polishing prompts.
 - Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count and retry.
-- Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. The tray menu can open config, open logs, check updates, or exit.
+- Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. The tray menu can open config, open logs, check updates, restart the app, or exit.
 - Updates: the advanced Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
@@ -84,6 +84,8 @@ app_key = ""
 access_key = ""
 resource_id = "volc.seedasr.sauc.duration"
 ```
+
+API Config also includes the Doubao ASR input language. The default is `zh-CN` for Chinese speech. For multilingual use, switch to a supported language code such as `en-US`, `ja-JP`, or `yue-CN`, or choose Auto/service default to omit the parameter. Doubao documents this option as supported only by some streaming modes, so if the ASR test fails, switch back to Auto/service default or confirm the current API mode.
 
 Without `app_key` and `access_key`, recording, recognition, and paste actions are locked.
 

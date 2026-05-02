@@ -16,7 +16,7 @@ export function fieldRequiresAdvancedSettings(field: string) {
     (field.startsWith("ui.") && field !== "ui.opacity") ||
     (field.startsWith("context.") && field !== "context.hotwords") ||
     field.startsWith("auto_hotwords.") ||
-    (field.startsWith("request.") && field !== "request.final_result_timeout_seconds") ||
+    (field.startsWith("request.") && field !== "request.final_result_timeout_seconds" && field !== "request.language") ||
     field.startsWith("update.") ||
     field === "typing.paste_delay_ms" ||
     field === "typing.clipboard_restore_delay_ms" ||
@@ -30,6 +30,7 @@ export function fieldRequiresAdvancedSettings(field: string) {
 
 export function settingsPanelForField(field: string) {
   if (field.startsWith("auth.")) return "settings-auth";
+  if (field === "request.language") return "settings-asr-language";
   if (field.startsWith("request.")) return "settings-request";
   if (field === "llm_post_edit.system_prompt" || field === "llm_post_edit.user_prompt_template" || field === "llm_post_edit.min_chars") {
     return "settings-llm-prompt";
