@@ -991,7 +991,7 @@ export function createVoxTypeController() {
     if (sessionPhase === "waiting_final_result") return t("sessionWaitingFinal");
     if (sessionPhase === "post_editing") return t("sessionPostEditing");
     if (sessionPhase === "pasting") return t("sessionPasting");
-    if (sessionPhase === "succeeded") return t("sessionSucceeded");
+    if (sessionPhase === "succeeded") return t("lastOutcomeSuccessTitle");
     return recording ? t("recordingPreview") : t("idle");
   }
   function inputStatusDesc() {

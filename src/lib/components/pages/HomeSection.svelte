@@ -329,8 +329,8 @@
   }
 
   .home-detail-grid.with-outcome {
-    grid-template-columns: minmax(0, 1fr) minmax(min(360px, 100%), 0.92fr);
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.82fr);
+    align-items: start;
   }
 
   .section-title-row {
@@ -346,12 +346,11 @@
   .section-title-row h3 {
     margin: 0;
     min-width: 0;
-    overflow: hidden;
     color: var(--text-main);
     font-size: 17px;
     font-weight: 800;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 
   .setup-alert {
@@ -625,11 +624,10 @@
 
   .hero-status {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     max-width: 100%;
     margin-bottom: 10px;
-    overflow: hidden;
     font-size: 26px;
     font-weight: 800;
     line-height: 1.16;
@@ -637,9 +635,7 @@
 
   .hero-status strong {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   .hero-dot {
@@ -662,24 +658,18 @@
   .voice-copy h4 {
     margin: 0 0 8px;
     max-width: 100%;
-    overflow: hidden;
     font-size: 17px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 
   .voice-copy p {
-    display: -webkit-box;
     max-width: 100%;
     margin: 0;
-    overflow: hidden;
     color: rgba(255, 255, 255, 0.88);
     font-size: 14px;
     line-height: 1.45;
     overflow-wrap: anywhere;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
   }
 
   .hero-features {
@@ -697,14 +687,13 @@
     gap: 6px;
     min-width: 0;
     min-height: 30px;
-    padding: 0 10px;
-    overflow: hidden;
+    padding: 6px 10px;
     background: rgba(255, 255, 255, 0.16);
     border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 
   .shortcut-help {
@@ -759,8 +748,15 @@
   .trigger-grid,
   .stats-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
     gap: 8px;
+  }
+
+  .trigger-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .trigger-item,
@@ -769,7 +765,6 @@
     display: grid;
     min-width: 0;
     min-height: 74px;
-    overflow: hidden;
     background: #f8fbff;
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -822,21 +817,19 @@
   .trigger-item strong {
     display: block;
     min-width: 0;
-    overflow: hidden;
     color: var(--text-main);
     font-size: 14px;
     font-weight: 800;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 
   .trigger-item p {
     margin: 3px 0 0;
-    overflow: hidden;
     color: var(--text-secondary);
     font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 
   .home-detail-grid.with-outcome .launch-card {
@@ -859,6 +852,7 @@
   }
 
   .home-detail-grid.with-outcome .launch-card .trigger-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
   }
 
@@ -887,10 +881,6 @@
     line-height: 1.25;
   }
 
-  .stats-row {
-    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-  }
-
   .stat-card {
     gap: 2px;
     align-content: start;
@@ -914,9 +904,8 @@
 
   .stat-card p {
     margin: 2px 0 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 
   .stat-card strong {
@@ -926,7 +915,8 @@
     font-size: 16px;
     font-weight: 800;
     line-height: 1.18;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   .stat-card small {
@@ -1026,11 +1016,13 @@
     font-size: 15px;
   }
 
-  @media (max-width: 920px) {
+  @media (max-width: 1180px) {
     .home-detail-grid.with-outcome {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
 
+  @media (max-width: 920px) {
     .last-outcome-header {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1043,7 +1035,11 @@
     .stats-row,
     :global(.ui-compact) .trigger-grid,
     :global(.ui-compact) .stats-row {
-      grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-detail-grid.with-outcome .launch-card .trigger-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .voice-hero {
@@ -1071,6 +1067,14 @@
 
     .voice-copy h4 {
       font-size: 16px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .trigger-grid,
+    .stats-row,
+    .home-detail-grid.with-outcome .launch-card .trigger-grid {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>

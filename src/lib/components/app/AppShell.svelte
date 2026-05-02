@@ -595,16 +595,12 @@
     grid-auto-rows: max-content;
     gap: 14px;
     align-content: start;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .ui-compact .content.overview-content {
     gap: 12px;
-  }
-
-  .content.overview-content.setup-required,
-  .content.overview-content.session-error {
-    overflow: auto;
   }
 
   @media (max-width: 920px) {
