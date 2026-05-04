@@ -1,12 +1,19 @@
-# VoxType
+# VoxType - Windows Voice Typing and Speech-to-Text
 
 [简体中文](README.md) | English
 
-VoxType is a lightweight Windows desktop voice input tool. Put the cursor in any input box, press the global shortcut, speak, and VoxType will record microphone audio, transcribe it with Doubao streaming ASR, optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active input field, and restore the previous clipboard when possible.
+VoxType is a lightweight Windows 10/11 desktop voice typing, dictation, and speech-to-text tool. Put the cursor in any input box, press the global shortcut, speak, and VoxType will record microphone audio, transcribe it with Doubao streaming ASR, optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active input field, and restore the previous clipboard when possible.
 
 The current project is a root-level Tauri app. Rust handles global shortcuts, input hooks, audio capture, ASR sessions, clipboard output, tray behavior, floating captions, updates, and system audio. Svelte handles the main window UI.
 
 This is a personal project. The priority is practicality, simplicity, and maintainability. Do not commit real API keys, personal hotwords, local context files, logs, or stats files.
+
+## Use Cases
+
+- Voice typing in any Windows text field, including Chinese dictation, English dictation, and multilingual speech-to-text.
+- Real-time captions and final transcripts powered by Doubao streaming ASR, then automatic paste into chat apps, browsers, editors, forms, or office tools.
+- Optional LLM polishing for long spoken text, reducing filler words, recognition noise, and formatting issues.
+- A local, open-source Windows dictation workflow that keeps usage stats free of transcript text by default.
 
 ## Documentation
 
@@ -20,11 +27,11 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - License: [MIT](LICENSE)
 
-## Main Features
+## Windows Voice Typing Features
 
 - Global trigger: `Ctrl + Q` is enabled by default. Right Alt and middle mouse can be enabled manually.
 - Microphone capture: PCM audio capture through Rust `cpal`; input device can be selected.
-- Streaming ASR: Doubao `bigmodel_async` WebSocket with real-time partial text and final text.
+- Real-time speech recognition: Doubao `bigmodel_async` WebSocket with live caption fragments and final speech-to-text output.
 - Local silence fallback: local low-volume auto-stop defaults to 30 seconds with a `0.03` threshold, less aggressive than the old 10-second / `0.04` default, so long dictation and quiet speech are less likely to be cut off. You can still adjust it in advanced settings.
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions show text, processing state, and errors only.
 - Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`. VoxType then tries to restore the previous clipboard.
@@ -146,6 +153,24 @@ mute_system_volume_while_recording = false
 8. Press `Ctrl + Q` again to stop recording, or wait for the local low-volume fallback.
 9. Wait for final recognition and optional polishing.
 10. If text does not appear in the target field, press `Ctrl + V` manually.
+
+## FAQ
+
+### What is VoxType?
+
+VoxType is a Windows desktop voice typing app. It turns microphone speech into text with Doubao streaming ASR, then copies and pastes the result into the active input field. It is a dictation assistant, not a chatbot.
+
+### Where can I use VoxType?
+
+VoxType works best in apps that accept clipboard paste, including browser fields, chat apps, Markdown editors, IDEs, office documents, and internal admin tools. For apps that block `Ctrl + V`, try `Shift + Insert` or clipboard-only mode.
+
+### Does VoxType store my transcript text?
+
+Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history are advanced features and stay off by default.
+
+### Why does VoxType need Doubao ASR keys?
+
+The core workflow depends on Doubao streaming speech recognition. Without App Key and Access Key, recording, recognition, and automatic paste stay locked so the app does not pretend an input succeeded.
 
 ## Development
 
