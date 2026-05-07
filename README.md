@@ -73,6 +73,8 @@
 
 普通用户请下载并运行 `VoxType-*-setup.exe` 安装包。安装包会内置 Microsoft Edge WebView2 Bootstrapper，在系统缺少 WebView2 Runtime 时自动安装运行时。
 
+如果主窗口一直白屏或长时间停留在启动页，通常是系统的 Microsoft Edge WebView2 Runtime 损坏、缺失或被策略阻断。请先按 [常见问题与排障](https://github.com/zkwi/VoxType/wiki/Troubleshooting) 中的“启动白屏或卡在启动页”处理，不建议在 VoxType 内自动修复系统组件。
+
 项目不再发布绿色版 ZIP。绿色版不会安装系统运行时，容易在干净电脑上出现缺少 WebView2 Runtime 的问题。
 
 运行时还需要 Windows 允许桌面应用访问麦克风。若录音失败，请在“设置 → 隐私和安全性 → 麦克风”中开启麦克风访问权限。
