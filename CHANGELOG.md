@@ -6,6 +6,34 @@
 
 ## [未发布]
 
+## [0.1.57] - 2026-05-07
+
+### 改进
+
+- 优化“预览最终 Prompt”，在预览顶部直接显示场景上下文，并明确最近上下文不进入 LLM Prompt，仅用于豆包 ASR 的 `corpus.context`。
+- 移除热词与提示词高级设置中的“清除最近上下文”按钮，减少低频操作入口；最近上下文本地文件和后端清理能力保持不变。
+
+### 文档
+
+- 同步更新 README、英文 README 和 Wiki 草稿，说明 Prompt 预览中的上下文策略，并修正最近上下文清理方式。
+- 纳入 `main` 上未发布的 README/Wiki SEO 优化和 2026-05-04 项目审计记录。
+
+### 依赖
+
+- 纳入 Dependabot 前端依赖组合更新。
+
+### 测试
+
+- 运行 `npm run check`，前端类型检查通过。
+- 运行 `npm run ai:check`，覆盖前端类型检查、构建、密钥扫描、Rust fmt/check/test。
+- 运行 `npm run audit:npm`，未发现 npm 漏洞。
+- 运行 `npm run ai:release-check`，覆盖本地检查、Rust 依赖审计、clippy 和 Tauri debug build；Rust 审计仅报告当前 Tauri 依赖链中已允许的 warnings。
+- 运行 `npx tauri build`，生成 Windows x64 安装包。
+
+### 审计
+
+- 本次功能改动只影响前端设置页和 Prompt 预览；不改 ASR、LLM 实际请求策略、剪贴板输出、热键、托盘、统计正文记录、日志脱敏或配置结构。
+
 ## [0.1.56] - 2026-05-02
 
 ### 修复

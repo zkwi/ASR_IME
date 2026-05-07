@@ -110,7 +110,7 @@ API配置页还提供 **识别语言**。默认值是 `zh-CN`；如果经常输�
 可做的事情：
 
 - 恢复默认提示词。
-- 预览最终 Prompt。
+- 预览最终 Prompt；预览顶部会说明场景上下文会进入 LLM Prompt，最近上下文只用于豆包 ASR 上下文。
 - 编辑 User Prompt 模板。
 
 System Prompt 和最小润色字数位于高级设置。
@@ -123,7 +123,7 @@ System Prompt 和最小润色字数位于高级设置。
 
 - 只保存 VoxType 识别片段，不记录键盘输入。
 - 不写回 `config.toml`。
-- 可在热词页高级设置中清空。
+- 如需清理，可删除本地 `context/recent_context.jsonl` 文件。
 
 ### 自动热词候选
 

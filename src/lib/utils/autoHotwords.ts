@@ -31,17 +31,30 @@ export function buildFinalPromptPreview(
   config: AppConfig,
   sampleText: string,
   hotwords: string[],
-  labels: { dictionary: string; context: string; systemPrompt: string; userPromptTemplate: string; empty: string },
+  labels: {
+    dictionary: string;
+    context: string;
+    systemPrompt: string;
+    userPromptTemplate: string;
+    empty: string;
+    summaryTitle: string;
+    sceneContextSummary: string;
+    recentContextPolicy: string;
+    actualPromptTitle: string;
+  },
 ) {
   let userPrompt = config.llm_post_edit.user_prompt_template.replace("{text}", sampleText);
   if (hotwords.length > 0) {
     userPrompt += `\n\n${labels.dictionary}\n${hotwords.join("\n")}`;
   }
   const promptContext = config.context.prompt_context.map((item) => item.text.trim()).filter(Boolean);
+  const promptContextText = promptContext.length > 0 ? promptContext.map((item) => `- ${item}`).join("\n") : labels.empty;
   if (promptContext.length > 0) {
-    userPrompt += `\n\n${labels.context}\n${promptContext.map((item) => `- ${item}`).join("\n")}`;
+    userPrompt += `\n\n${labels.context}\n${promptContextText}`;
   }
-  return `${labels.systemPrompt}\n${config.llm_post_edit.system_prompt || labels.empty}\n\n${labels.userPromptTemplate}\n${userPrompt}`;
+  const summary = `${labels.summaryTitle}\n${labels.sceneContextSummary}\n${promptContextText}\n\n${labels.recentContextPolicy}`;
+  const actualPrompt = `${labels.actualPromptTitle}\n\n${labels.systemPrompt}\n${config.llm_post_edit.system_prompt || labels.empty}\n\n${labels.userPromptTemplate}\n${userPrompt}`;
+  return `${summary}\n\n${actualPrompt}`;
 }
 
 export function applySelectedAutoHotwords(

@@ -64,7 +64,6 @@
     installingUpdate: boolean;
     openingLog: boolean;
     copyingDiagnosticReport: boolean;
-    clearingRecentContext: boolean;
     generatingAutoHotwords: boolean;
     clearingAutoHotwordHistory: boolean;
     autoHotwordError: string;
@@ -113,7 +112,6 @@
     onTidyHotwords: () => void;
     onClearHotwords: () => void;
     onUpdatePromptContext: (value: string) => void;
-    onClearRecentContext: () => void;
     onOptionEnabledNotice: (key: SoftConfigNoticeKey, enabled: boolean) => void;
     onRestoreDefaultPrompt: () => void;
     onPreviewFinalPrompt: () => void;
@@ -182,7 +180,6 @@
     installingUpdate,
     openingLog,
     copyingDiagnosticReport,
-    clearingRecentContext,
     generatingAutoHotwords,
     clearingAutoHotwordHistory,
     autoHotwordError,
@@ -231,7 +228,6 @@
     onTidyHotwords,
     onClearHotwords,
     onUpdatePromptContext,
-    onClearRecentContext,
     onOptionEnabledNotice,
     onRestoreDefaultPrompt,
     onPreviewFinalPrompt,
@@ -303,7 +299,6 @@
     {settingsDirty}
     {toolbarMessage}
     advancedOpen={advancedHotwordsOpen}
-    {clearingRecentContext}
     {generatingAutoHotwords}
     {clearingAutoHotwordHistory}
     {autoHotwordError}
@@ -321,7 +316,6 @@
     onTidyHotwords={onTidyHotwords}
     onClearHotwords={onClearHotwords}
     onUpdatePromptContext={onUpdatePromptContext}
-    onClearRecentContext={onClearRecentContext}
     onOptionEnabledNotice={onOptionEnabledNotice}
     onRestoreDefaultPrompt={onRestoreDefaultPrompt}
     onPreviewFinalPrompt={onPreviewFinalPrompt}

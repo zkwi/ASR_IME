@@ -165,7 +165,6 @@ export function createVoxTypeController() {
   let asrConnectionStatus = $state<AsrConnectionStatus>("missing_auth");
   let asrTestedConfigFingerprint = $state("");
   let testingLlm = $state(false);
-  let clearingRecentContext = $state(false);
   let validationErrors = $state<Record<string, string>>({});
   const autoHotwords = createAutoHotwordsController({
     getConfig: () => config,
@@ -681,27 +680,6 @@ export function createVoxTypeController() {
       showActionNotice(statusMessage, "error");
     }
   }
-  async function clearRecentContextFromUi() {
-    if (clearingRecentContext) return;
-    if (!hasTauriApi()) {
-      statusMessage = t("browserPreview");
-      showActionNotice(statusMessage, "error");
-      return;
-    }
-    clearingRecentContext = true;
-    try {
-      await invoke<ConnectionTestResult>("clear_recent_context");
-      statusMessage = t("recentContextCleared");
-      showActionNotice(statusMessage, "success");
-      await refreshSetupStatus();
-    } catch (error) {
-      statusMessage = t("operationFailedGeneric");
-      logFrontendError(`clear recent context failed: ${formatFrontendError(error)}`);
-      showActionNotice(statusMessage, "error");
-    } finally {
-      clearingRecentContext = false;
-    }
-  }
   async function testAsrConfig() {
     if (testingAsr) return;
     if (!requireAuthFields()) return;
@@ -964,6 +942,10 @@ export function createVoxTypeController() {
         systemPrompt: t("systemPrompt"),
         userPromptTemplate: t("userPromptTemplate"),
         empty: t("promptPreviewEmpty"),
+        summaryTitle: t("promptPreviewSummaryTitle"),
+        sceneContextSummary: t("promptPreviewSceneContextSummary"),
+        recentContextPolicy: t("promptPreviewRecentContextPolicy"),
+        actualPromptTitle: t("promptPreviewActualPromptTitle"),
       }),
     );
   }
@@ -1150,7 +1132,6 @@ export function createVoxTypeController() {
       installingUpdate: updates.installing,
       openingLog: diagnostics.openingLog,
       copyingDiagnosticReport: diagnostics.copyingReport,
-      clearingRecentContext,
       generatingAutoHotwords: autoHotwords.generating,
       clearingAutoHotwordHistory: autoHotwords.clearingHistory,
       autoHotwordError: autoHotwords.error,
@@ -1199,7 +1180,6 @@ export function createVoxTypeController() {
       onTidyHotwords: tidyHotwords,
       onClearHotwords: clearHotwords,
       onUpdatePromptContext: updatePromptContext,
-      onClearRecentContext: clearRecentContextFromUi,
       onOptionEnabledNotice: maybeShowOptionEnabledNotice,
       onRestoreDefaultPrompt: restoreDefaultLlmPrompt,
       onPreviewFinalPrompt: previewFinalPrompt,

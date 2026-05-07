@@ -16,7 +16,6 @@
     settingsDirty: boolean;
     toolbarMessage: string;
     advancedOpen: boolean;
-    clearingRecentContext: boolean;
     generatingAutoHotwords: boolean;
     clearingAutoHotwordHistory: boolean;
     autoHotwordError: string;
@@ -34,7 +33,6 @@
     onTidyHotwords: () => void;
     onClearHotwords: () => void;
     onUpdatePromptContext: (value: string) => void;
-    onClearRecentContext: () => void;
     onOptionEnabledNotice: (key: "enable_recent_context", enabled: boolean) => void;
     onRestoreDefaultPrompt: () => void;
     onPreviewFinalPrompt: () => void;
@@ -56,7 +54,6 @@
     settingsDirty,
     toolbarMessage,
     advancedOpen,
-    clearingRecentContext,
     generatingAutoHotwords,
     clearingAutoHotwordHistory,
     autoHotwordError,
@@ -74,7 +71,6 @@
     onTidyHotwords,
     onClearHotwords,
     onUpdatePromptContext,
-    onClearRecentContext,
     onOptionEnabledNotice,
     onRestoreDefaultPrompt,
     onPreviewFinalPrompt,
@@ -175,15 +171,12 @@
     </div>
     {#if advancedOpen}
       <div id="settings-prompt-context" class="form-panel">
-        <div class="section-heading with-actions">
+        <div class="section-heading">
           <div class="section-heading-copy">
             <h3>{t("sceneContext")}</h3>
             <p>{t("sceneContextDescription")}</p>
             <SettingTags tags={[t("tagLocalOnly"), t("tagPrivacySensitive")]} />
           </div>
-          <button class="test-button" type="button" onclick={onClearRecentContext} disabled={clearingRecentContext}>
-            <Trash2 size={16} />{clearingRecentContext ? t("clearingRecentContext") : t("clearRecentContext")}
-          </button>
         </div>
         <label><span>{t("promptContext")}</span><textarea value={config.context.prompt_context.map((item) => item.text).join("\n")} oninput={(event) => onUpdatePromptContext(event.currentTarget.value)}></textarea></label>
         <div class="form-grid">

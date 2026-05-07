@@ -108,7 +108,7 @@ min_chars = 40
 enable_thinking = false
 ```
 
-VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed.
+VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed. The final prompt preview now starts with a short summary showing whether scene context enters the LLM prompt and clarifying that recent context is only used for Doubao ASR context.
 
 Recommended trigger defaults:
 
