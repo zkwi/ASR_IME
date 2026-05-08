@@ -105,7 +105,6 @@
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
     onSelectSection: (section: Section) => void;
-    onToggleTrigger: (key: keyof AppConfig["triggers"]) => void;
     onReload: () => void;
     onToggleAdvanced: (section: "Hotwords" | "ApiConfig" | "Options") => void;
     onUpdateHotwords: (value: string) => void;
@@ -221,7 +220,6 @@
     onCopyLastOutcomeText,
     onToggleRecording,
     onSelectSection,
-    onToggleTrigger,
     onReload,
     onToggleAdvanced,
     onUpdateHotwords,
@@ -288,7 +286,6 @@
     onUserErrorAction={onUserErrorAction}
     onToggleRecording={onToggleRecording}
     onSelectSection={onSelectSection}
-    onToggleTrigger={onToggleTrigger}
   />
 {:else if selectedSection === "Hotwords"}
   <HotwordsSection

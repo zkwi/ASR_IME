@@ -100,22 +100,6 @@
     onCopyDiagnosticReport,
   }: Props = $props();
 
-  function basicPasteMode(pasteMethod: string) {
-    return pasteMethod === "clipboard_only" ? "clipboard_only" : "auto_paste";
-  }
-
-  function basicPasteLabel(pasteMethod: string) {
-    return pasteMethod === "shift_insert" ? t("basicPasteAutoCompat") : t("basicPasteAuto");
-  }
-
-  function setBasicPasteMode(mode: string) {
-    if (mode === "clipboard_only") {
-      config.typing.paste_method = "clipboard_only";
-      return;
-    }
-    if (config.typing.paste_method === "shift_insert") return;
-    config.typing.paste_method = "ctrl_v";
-  }
 </script>
 
 <section class="settings-stack">
@@ -178,15 +162,17 @@
       <div class="form-grid">
         <label class:field-invalid={Boolean(fieldError("typing.paste_method"))}>
           <span>{t("pasteMethod")}</span>
-          <select value={basicPasteMode(config.typing.paste_method)} onchange={(event) => setBasicPasteMode(event.currentTarget.value)}>
-            <option value="auto_paste">{basicPasteLabel(config.typing.paste_method)}</option>
-            <option value="clipboard_only">{t("basicPasteClipboardOnly")}</option>
+          <select bind:value={config.typing.paste_method}>
+            <option value="ctrl_v">Ctrl + V</option>
+            <option value="shift_insert">Shift + Insert</option>
+            <option value="clipboard_only">{t("clipboardOnly")}</option>
           </select>
           {#if fieldError("typing.paste_method")}<small class="field-error">{fieldError("typing.paste_method")}</small>{/if}
         </label>
       </div>
       <div class="toggle-grid">
         <label class="check"><input type="checkbox" bind:checked={config.typing.remove_trailing_period} />{t("removeTrailingPeriod")}</label>
+        <label class="check"><input type="checkbox" bind:checked={config.typing.restore_clipboard_after_paste} />{t("restoreClipboardAfterPaste")}</label>
       </div>
       <p class="field-hint">{t("removeTrailingPeriodHint")}</p>
       <p class="field-hint">{t("clipboardTextRestoreHint")}</p>
@@ -292,35 +278,11 @@
         </div>
         <p class="field-hint">{t("triggerConflictHint")}</p>
       </div>
-      <div id="settings-paste-compatibility" class="form-panel">
-        <div class="section-heading"><h3>{t("pasteCompatibility")}</h3><p>{t("pasteCompatibilityDescription")}</p></div>
-        <div class="form-grid">
-          <label class:field-invalid={Boolean(fieldError("typing.paste_method"))}>
-            <span>{t("pasteMethod")}</span>
-            <select bind:value={config.typing.paste_method}><option value="ctrl_v">Ctrl + V</option><option value="shift_insert">Shift + Insert</option><option value="clipboard_only">{t("clipboardOnly")}</option></select>
-            {#if fieldError("typing.paste_method")}<small class="field-error">{fieldError("typing.paste_method")}</small>{/if}
-          </label>
-          <label class:field-invalid={Boolean(fieldError("typing.clipboard_restore_delay_ms"))}>
-            <span>{t("clipboardRestoreDelay")}</span>
-            <input type="number" bind:value={config.typing.clipboard_restore_delay_ms} />
-            {#if fieldError("typing.clipboard_restore_delay_ms")}<small class="field-error">{fieldError("typing.clipboard_restore_delay_ms")}</small>{/if}
-          </label>
-        </div>
-        <div class="toggle-grid">
-          <label class="check"><input type="checkbox" bind:checked={config.typing.restore_clipboard_after_paste} />{t("restoreClipboardAfterPaste")}</label>
-        </div>
-        <p class="field-hint">{t("clipboardRestoreDelayHint")}</p>
-      </div>
     {/if}
     {#if advancedOpen}
       <div id="settings-recording-troubleshooting" class="form-panel">
         <div class="section-heading"><h3>{t("recordingTroubleshooting")}</h3><p>{t("recordingTroubleshootingDescription")}</p></div>
         <div class="form-grid">
-          <label class:field-invalid={Boolean(fieldError("audio.max_record_seconds"))}>
-            <span>{t("maxSeconds")}</span>
-            <input type="number" bind:value={config.audio.max_record_seconds} />
-            {#if fieldError("audio.max_record_seconds")}<small class="field-error">{fieldError("audio.max_record_seconds")}</small>{/if}
-          </label>
           <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
             <span>{t("silenceAutoStopSeconds")}</span>
             <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
@@ -333,47 +295,47 @@
         <p class="field-hint">{t("silenceAutoStopHint")}</p>
         <p class="field-hint">{t("muteSystemAudioHint")}</p>
       </div>
-      <div id="settings-update" class="form-panel update-panel">
-        <div class="section-heading"><h3>{t("updatesAndDiagnostics")}</h3><p>{t("updatesAndDiagnosticsDescription")}</p></div>
-        <div class:available={updateStatus?.update_available} class="update-card">
-          <div>
-            <strong>{updatePanelTitle()}</strong>
-            <p>{updatePanelDescription()}</p>
-            <small>{updateMetaText()}</small>
-          </div>
-          <div class="update-actions">
-            <button type="button" onclick={() => onCheckUpdate(true)} disabled={checkingUpdate}>
-              <ShieldCheck size={16} />{checkingUpdate ? t("checkingUpdates") : t("checkUpdates")}
-            </button>
-            {#if updateStatus?.update_available && updateStatus.asset_name}
-              <button type="button" class="primary" onclick={onDownloadLatestUpdate} disabled={installingUpdate}>
-                <Download size={16} />{installingUpdate ? t("downloadingInstall") : t("updateNow")}
-              </button>
-            {/if}
-          </div>
-        </div>
-        <div class="toggle-grid">
-          <label class="check"><input type="checkbox" bind:checked={config.update.auto_check_on_startup} />{t("autoCheckUpdates")}</label>
-        </div>
-      </div>
-      <div id="settings-diagnostics" class="form-panel">
-        <div class="section-heading"><h3>{t("diagnosticsAndLogs")}</h3><p>{t("diagnosticsDescription")}</p></div>
-        <div class="update-card">
-          <div>
-            <strong>{t("logStatusTitle")}</strong>
-            <p>{t("logStatusDescription")}</p>
-          </div>
-          <div class="update-actions">
-            <button type="button" onclick={onOpenLog} disabled={openingLog}>
-              <FileText size={16} />{openingLog ? t("openingLog") : t("openLog")}
-            </button>
-            <button type="button" onclick={onCopyDiagnosticReport} disabled={copyingDiagnosticReport}>
-              <ClipboardCopy size={16} />{copyingDiagnosticReport ? t("copyingReport") : t("copyDiagnosticReport")}
-            </button>
-          </div>
-        </div>
-      </div>
     {/if}
+    <div id="settings-update" class="form-panel update-panel">
+      <div class="section-heading"><h3>{t("updatesAndDiagnostics")}</h3><p>{t("updatesAndDiagnosticsDescription")}</p></div>
+      <div class:available={updateStatus?.update_available} class="update-card">
+        <div>
+          <strong>{updatePanelTitle()}</strong>
+          <p>{updatePanelDescription()}</p>
+          <small>{updateMetaText()}</small>
+        </div>
+        <div class="update-actions">
+          <button type="button" onclick={() => onCheckUpdate(true)} disabled={checkingUpdate}>
+            <ShieldCheck size={16} />{checkingUpdate ? t("checkingUpdates") : t("checkUpdates")}
+          </button>
+          {#if updateStatus?.update_available && updateStatus.asset_name}
+            <button type="button" class="primary" onclick={onDownloadLatestUpdate} disabled={installingUpdate}>
+              <Download size={16} />{installingUpdate ? t("downloadingInstall") : t("updateNow")}
+            </button>
+          {/if}
+        </div>
+      </div>
+      <div class="toggle-grid">
+        <label class="check"><input type="checkbox" bind:checked={config.update.auto_check_on_startup} />{t("autoCheckUpdates")}</label>
+      </div>
+    </div>
+    <div id="settings-diagnostics" class="form-panel">
+      <div class="section-heading"><h3>{t("diagnosticsAndLogs")}</h3><p>{t("diagnosticsDescription")}</p></div>
+      <div class="update-card">
+        <div>
+          <strong>{t("logStatusTitle")}</strong>
+          <p>{t("logStatusDescription")}</p>
+        </div>
+        <div class="update-actions">
+          <button type="button" onclick={onOpenLog} disabled={openingLog}>
+            <FileText size={16} />{openingLog ? t("openingLog") : t("openLog")}
+          </button>
+          <button type="button" onclick={onCopyDiagnosticReport} disabled={copyingDiagnosticReport}>
+            <ClipboardCopy size={16} />{copyingDiagnosticReport ? t("copyingReport") : t("copyDiagnosticReport")}
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </section>
 

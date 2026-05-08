@@ -18,9 +18,9 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
   let selectedSection = $state<Section>("Home");
   let llmApiConfigVisible = $state(false);
   let advancedVisible = $state<Record<AdvancedSection, boolean>>({
-    Hotwords: false,
-    ApiConfig: false,
-    Options: false,
+    Hotwords: true,
+    ApiConfig: true,
+    Options: true,
   });
 
   function isAdvancedVisible(section: AdvancedSection) {

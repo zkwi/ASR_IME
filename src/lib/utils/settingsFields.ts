@@ -16,14 +16,13 @@ export function fieldRequiresAdvancedSettings(field: string) {
     (field.startsWith("ui.") && field !== "ui.opacity") ||
     (field.startsWith("context.") && field !== "context.hotwords") ||
     field.startsWith("auto_hotwords.") ||
-    (field.startsWith("request.") && field !== "request.final_result_timeout_seconds" && field !== "request.language") ||
-    field.startsWith("update.") ||
+    (field.startsWith("request.") && field !== "request.language") ||
+    field === "update.github_repo" ||
     field === "typing.paste_delay_ms" ||
     field === "typing.clipboard_restore_delay_ms" ||
     field === "typing.clipboard_snapshot_max_bytes" ||
     field === "typing.clipboard_open_retry_count" ||
     field === "typing.clipboard_open_retry_interval_ms" ||
-    field === "typing.restore_clipboard_after_paste" ||
     field === "llm_post_edit.enable_thinking"
   );
 }
@@ -39,6 +38,7 @@ export function settingsPanelForField(field: string) {
   if (field.startsWith("auto_hotwords.")) return "settings-auto-hotwords";
   if (field.startsWith("context.") && field !== "context.hotwords") return "settings-prompt-context";
   if (field.startsWith("context.")) return "settings-context";
+  if (field === "typing.paste_method" || field === "typing.remove_trailing_period" || field === "typing.restore_clipboard_after_paste") return "settings-basic-output";
   if (field === "audio.input_device") return "settings-audio";
   if (field.startsWith("audio.")) return "settings-recording-troubleshooting";
   if (field.startsWith("ui.")) return "settings-overlay";

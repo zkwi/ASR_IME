@@ -110,7 +110,6 @@ import type {
   SessionState,
   SoftConfigNoticeKey,
   StatsSnapshot,
-  TriggerKey,
   UsageStats,
   UserErrorAction,
 } from "$lib/types/app";
@@ -757,19 +756,6 @@ export function createVoxTypeController() {
     const notice = optionEnabledNotice(key, enabled);
     if (notice) showActionNotice(notice, "info");
   }
-  async function toggleTrigger(key: TriggerKey) {
-    if (saving) return;
-    const previous = config.triggers[key];
-    config.triggers[key] = !previous;
-    const result = await persistConfig({ enforceAuth: false });
-    if (!result) {
-      config.triggers[key] = previous;
-      if (statusMessage) showActionNotice(statusMessage, "error");
-      return;
-    }
-    const notice = optionEnabledNotice(key, !previous);
-    showActionNotice(notice || t("configSaved"), notice ? "info" : "success");
-  }
   function triggerLabel(enabled: boolean) {
     return enabled ? t("enabled") : t("disabled");
   }
@@ -1173,7 +1159,6 @@ export function createVoxTypeController() {
       onCopyLastOutcomeText: copyLastOutcomeText,
       onToggleRecording: toggleRecordingFromUi,
       onSelectSection: settingsNav.selectSection,
-      onToggleTrigger: toggleTrigger,
       onReload: reloadConfigFromUi,
       onToggleAdvanced: settingsNav.toggleAdvanced,
       onUpdateHotwords: updateHotwords,

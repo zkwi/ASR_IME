@@ -32,15 +32,15 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Global trigger: `Ctrl + Q` is enabled by default. Right Alt and middle mouse can be enabled manually.
 - Microphone capture: PCM audio capture through Rust `cpal`; input device can be selected.
 - Real-time speech recognition: Doubao `bigmodel_async` WebSocket with live caption fragments and final speech-to-text output.
-- Local silence fallback: local low-volume auto-stop defaults to 30 seconds with a `0.03` threshold, less aggressive than the old 10-second / `0.04` default, so long dictation and quiet speech are less likely to be cut off. You can still adjust it in advanced settings.
+- Local silence fallback: local low-volume auto-stop defaults to 30 seconds with a `0.03` threshold, less aggressive than the old 10-second / `0.04` default, so long dictation and quiet speech are less likely to be cut off. You can adjust it in Options.
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions show text, processing state, and errors only.
-- Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`. VoxType then tries to restore the previous clipboard.
+- Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`; clipboard-only mode is also available. VoxType then tries to restore the previous clipboard.
 - Recent input card: after a successful input, the Home page can temporarily show and copy the latest recognized text. It is kept only in the current window memory and is cleared when the window closes or a new recording starts.
 - Optional LLM polishing: OpenAI-compatible API support for light text cleanup and style control.
 - Hotwords and prompts: maintain custom hotwords, scene notes, and polishing prompts.
-- Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count and retry.
+- Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count in `config.toml` and retry.
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. The tray menu can open config, open logs, check updates, restart the app, or exit.
-- Updates: the advanced Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
+- Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
@@ -110,7 +110,7 @@ min_chars = 40
 enable_thinking = false
 ```
 
-VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed. The final prompt preview now starts with a short summary showing whether scene context enters the LLM prompt and clarifying that recent context is only used for Doubao ASR context.
+VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed. The Hotwords page shows the User Prompt template, reset, preview, and minimum polishing length. System Prompt remains in `config.toml` to keep the app settings concise.
 
 Recommended trigger defaults:
 
@@ -168,7 +168,7 @@ VoxType works best in apps that accept clipboard paste, including browser fields
 
 ### Does VoxType store my transcript text?
 
-Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history are advanced features and stay off by default.
+Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default.
 
 ### Why does VoxType need Doubao ASR keys?
 

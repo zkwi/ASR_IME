@@ -32,7 +32,7 @@ mute_system_volume_while_recording = false
 # input_device = 1
 
 [request]
-# 豆包流式 ASR WebSocket 地址，通常保持默认
+# 豆包流式 ASR WebSocket 地址和模型名，通常保持默认；应用设置页不再展示
 ws_url = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
 model_name = "bigmodel"
 # 指定 ASR 可识别的输入语言；留空表示使用服务默认/自动。常用：zh-CN / en-US / ja-JP / yue-CN
@@ -81,9 +81,6 @@ middle_mouse_enabled = false
 right_alt_enabled = false
 
 [typing]
-# 以下粘贴等待、快照和重试参数属于高级/内部参数；应用设置页不再展示，可按需手动编辑
-# 复制文本后、尝试切回原窗口前的等待时间
-paste_delay_ms = 120
 # 粘贴方式：ctrl_v / shift_insert / clipboard_only
 paste_method = "ctrl_v"
 # 最终文本以中文句号或英文句点结尾时自动去掉
@@ -91,6 +88,9 @@ remove_trailing_period = true
 # 自动粘贴后恢复原剪贴板；会尽量恢复纯文本、HTML/RTF 等常见富文本和可复制内存格式
 # 图片、位图句柄或部分私有格式可能无法恢复，并会保留识别文本并提示
 restore_clipboard_after_paste = true
+# 以下粘贴等待、快照和重试参数属于高级/内部参数；应用设置页不再展示，可按需手动编辑
+# 复制文本后、尝试切回原窗口前的等待时间
+paste_delay_ms = 120
 # 发送粘贴快捷键后，等待目标应用读取剪贴板再恢复原剪贴板
 clipboard_restore_delay_ms = 800
 # 原剪贴板快照大小上限；超过上限的格式会跳过，避免大剪贴板卡顿

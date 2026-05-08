@@ -26,11 +26,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 14px;
     padding: 14px 16px;
     background: #f8fbff;
     border: 1px solid var(--border);
     border-radius: 8px;
+  }
+
+  .settings-mode-panel > div {
+    flex: 1 1 320px;
+    min-width: 0;
   }
 
   .settings-mode-panel h3 {
@@ -48,7 +54,8 @@
   }
 
   .settings-mode-panel button {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    max-width: 100%;
     min-height: 34px;
     padding: 0 12px;
     background: #ffffff;
@@ -56,6 +63,18 @@
     border-radius: 8px;
     color: #1f66b1;
     font-weight: 800;
+    white-space: normal;
     cursor: pointer;
+  }
+
+  @media (max-width: 640px) {
+    .settings-mode-panel {
+      align-items: stretch;
+    }
+
+    .settings-mode-panel > div,
+    .settings-mode-panel button {
+      flex-basis: 100%;
+    }
   }
 </style>

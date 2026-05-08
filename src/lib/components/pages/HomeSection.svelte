@@ -1,9 +1,8 @@
 <script lang="ts">
-  import type { AppConfig, LastSessionOutcome, StatsSnapshot, TriggerKey, UserErrorAction } from "$lib/types/app";
+  import type { AppConfig, LastSessionOutcome, StatsSnapshot, UserErrorAction } from "$lib/types/app";
   import type { CopyKey, UserErrorDetail } from "$lib/i18n";
   import {
     CalendarDays,
-    Check,
     ChevronRight,
     Clock3,
     Copy,
@@ -50,7 +49,6 @@
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
     onSelectSection: (section: "Options") => void;
-    onToggleTrigger: (key: TriggerKey) => void;
   };
 
   let {
@@ -84,7 +82,6 @@
     onCopyLastOutcomeText,
     onToggleRecording,
     onSelectSection,
-    onToggleTrigger,
   }: Props = $props();
 
   const outcomePreviewLimit = 500;
@@ -234,37 +231,18 @@
       {t("shortcutSettings")} <ChevronRight size={16} />
     </button>
   </div>
-  <div class="trigger-grid">
-    <label class:active={config.triggers.hotkey_enabled} class:disabled={saving} class="trigger-item">
-      <input class="trigger-input" type="checkbox" checked={config.triggers.hotkey_enabled} disabled={saving} onchange={() => onToggleTrigger("hotkey_enabled")} />
-      <span class="trigger-check">
-        {#if config.triggers.hotkey_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
-      </span>
+  <div class="trigger-summary">
+    <div class:active={config.triggers.hotkey_enabled} class="trigger-primary">
+      <span class="trigger-icon"><Keyboard size={uiCompact ? 18 : 22} /></span>
       <div>
         <strong>{formatHotkey(snapshotHotkey)}</strong>
         <p>{config.triggers.hotkey_enabled ? t("mainHotkey") : t("disabled")}</p>
       </div>
-    </label>
-    <label class:active={config.triggers.middle_mouse_enabled} class:disabled={saving} class="trigger-item">
-      <input class="trigger-input" type="checkbox" checked={config.triggers.middle_mouse_enabled} disabled={saving} onchange={() => onToggleTrigger("middle_mouse_enabled")} />
-      <span class="trigger-check">
-        {#if config.triggers.middle_mouse_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
-      </span>
-      <div>
-        <strong>{t("middleMouse")}</strong>
-        <p>{triggerLabel(config.triggers.middle_mouse_enabled)}</p>
-      </div>
-    </label>
-    <label class:active={config.triggers.right_alt_enabled} class:disabled={saving} class="trigger-item">
-      <input class="trigger-input" type="checkbox" checked={config.triggers.right_alt_enabled} disabled={saving} onchange={() => onToggleTrigger("right_alt_enabled")} />
-      <span class="trigger-check">
-        {#if config.triggers.right_alt_enabled}<Check size={uiCompact ? 18 : 24} />{/if}
-      </span>
-      <div>
-        <strong>{t("rightAlt")}</strong>
-        <p>{triggerLabel(config.triggers.right_alt_enabled)}</p>
-      </div>
-    </label>
+    </div>
+    <div class="trigger-secondary">
+      <span class:enabled={config.triggers.middle_mouse_enabled}>{t("middleMouse")}：{triggerLabel(config.triggers.middle_mouse_enabled)}</span>
+      <span class:enabled={config.triggers.right_alt_enabled}>{t("rightAlt")}：{triggerLabel(config.triggers.right_alt_enabled)}</span>
+    </div>
   </div>
 </section>
 <section class="performance-card">
@@ -743,21 +721,15 @@
     flex: 0 0 auto;
   }
 
-  .trigger-grid,
   .stats-row {
     display: grid;
     gap: 8px;
-  }
-
-  .trigger-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .stats-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .trigger-item,
   .stat-card {
     position: relative;
     display: grid;
@@ -768,43 +740,42 @@
     border-radius: 14px;
   }
 
-  .trigger-item {
-    grid-template-columns: 30px minmax(0, 1fr);
-    align-items: center;
-    gap: 9px;
-    padding: 10px;
-    cursor: pointer;
+  .trigger-summary {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.1fr) minmax(0, 1fr);
+    gap: 10px;
   }
 
-  .trigger-item > div {
+  .trigger-primary,
+  .trigger-secondary {
+    min-width: 0;
+    min-height: 74px;
+    background: #f8fbff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .trigger-primary {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .trigger-primary > div {
     min-width: 0;
   }
 
-  .trigger-item.active {
+  .trigger-primary.active {
     background: #edf6ff;
     border-color: rgba(47, 128, 237, 0.28);
   }
 
-  .trigger-item.disabled {
-    cursor: wait;
-    opacity: 0.68;
-  }
-
-  .trigger-input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .trigger-input:disabled {
-    cursor: wait;
-  }
-
-  .trigger-check {
+  .trigger-icon {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     place-items: center;
     color: var(--primary);
     background: #ffffff;
@@ -812,7 +783,7 @@
     border-radius: 10px;
   }
 
-  .trigger-item strong {
+  .trigger-primary strong {
     display: block;
     min-width: 0;
     color: var(--text-main);
@@ -822,12 +793,41 @@
     overflow-wrap: anywhere;
   }
 
-  .trigger-item p {
+  .trigger-primary p {
     margin: 3px 0 0;
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.25;
     overflow-wrap: anywhere;
+  }
+
+  .trigger-secondary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .trigger-secondary span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    color: var(--text-secondary);
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .trigger-secondary span.enabled {
+    color: #1f66b1;
+    background: #edf6ff;
+    border-color: rgba(47, 128, 237, 0.28);
   }
 
   .stat-card {
@@ -931,14 +931,14 @@
     height: 70px;
   }
 
-  :global(.ui-compact) .trigger-grid,
   :global(.ui-compact) .stats-row {
     gap: 7px;
   }
 
-  :global(.ui-compact) .trigger-item {
+  :global(.ui-compact) .trigger-primary,
+  :global(.ui-compact) .trigger-secondary {
     min-height: 64px;
-    padding: 9px;
+    padding: 10px;
   }
 
   :global(.ui-compact) .stat-card {
@@ -970,11 +970,13 @@
       justify-content: flex-start;
     }
 
-    .trigger-grid,
     .stats-row,
-    :global(.ui-compact) .trigger-grid,
     :global(.ui-compact) .stats-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .trigger-summary {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .voice-hero {
@@ -1006,7 +1008,6 @@
   }
 
   @media (max-width: 640px) {
-    .trigger-grid,
     .stats-row {
       grid-template-columns: minmax(0, 1fr);
     }

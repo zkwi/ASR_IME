@@ -165,7 +165,6 @@
           <div class="form-grid">
             <label><span>{t("minChars")}</span><input type="number" bind:value={config.llm_post_edit.min_chars} /></label>
           </div>
-          <label><span>{t("systemPrompt")}</span><textarea bind:value={config.llm_post_edit.system_prompt}></textarea></label>
         </div>
       {/if}
     </div>
@@ -179,9 +178,6 @@
           </div>
         </div>
         <label><span>{t("promptContext")}</span><textarea value={config.context.prompt_context.map((item) => item.text).join("\n")} oninput={(event) => onUpdatePromptContext(event.currentTarget.value)}></textarea></label>
-        <div class="form-grid">
-          <label><span>{t("recentContextRounds")}</span><input type="number" bind:value={config.context.recent_context_rounds} /></label>
-        </div>
         <div class="toggle-grid">
           <label class="check"><input type="checkbox" bind:checked={config.context.enable_recent_context} onchange={(event) => onOptionEnabledNotice("enable_recent_context", event.currentTarget.checked)} />{t("useRecentContext")}</label>
         </div>

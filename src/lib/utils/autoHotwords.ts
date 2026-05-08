@@ -7,6 +7,7 @@ type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 export function showAutoHotwordDetails(config: AppConfig, fieldError: (field: string) => string) {
   return (
     config.auto_hotwords.enabled ||
+    config.auto_hotwords.accepted_hotwords.length > 0 ||
     Boolean(fieldError("auto_hotwords.max_history_chars") || fieldError("auto_hotwords.max_candidates"))
   );
 }

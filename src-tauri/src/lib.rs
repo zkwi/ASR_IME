@@ -245,6 +245,9 @@ fn unchanged_hidden_config_field(
         "audio.sample_rate" => previous_config.audio.sample_rate == next_config.audio.sample_rate,
         "audio.channels" => previous_config.audio.channels == next_config.audio.channels,
         "audio.segment_ms" => previous_config.audio.segment_ms == next_config.audio.segment_ms,
+        "audio.max_record_seconds" => {
+            previous_config.audio.max_record_seconds == next_config.audio.max_record_seconds
+        }
         "audio.stop_grace_ms" => {
             previous_config.audio.stop_grace_ms == next_config.audio.stop_grace_ms
         }
@@ -263,6 +266,7 @@ fn unchanged_hidden_config_field(
             previous_config.typing.clipboard_snapshot_max_bytes
                 == next_config.typing.clipboard_snapshot_max_bytes
         }
+        "request.ws_url" => previous_config.request.ws_url == next_config.request.ws_url,
         "update.github_repo" => {
             previous_config.update.github_repo == next_config.update.github_repo
         }
@@ -1013,18 +1017,18 @@ mod tests {
     #[test]
     fn visible_config_validation_errors_still_block_even_when_unchanged() {
         let mut previous = AppConfig::default();
-        previous.request.ws_url = "http://example.com/asr".to_string();
+        previous.request.language = "auto".to_string();
 
         let next = previous.clone();
 
         let blocking = blocking_validation_errors(
-            vec![validation_error("request.ws_url")],
+            vec![validation_error("request.language")],
             Some(&previous),
             &next,
         );
 
         assert_eq!(blocking.len(), 1);
-        assert_eq!(blocking[0].field, "request.ws_url");
+        assert_eq!(blocking[0].field, "request.language");
     }
 
     #[test]

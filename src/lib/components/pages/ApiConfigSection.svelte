@@ -233,13 +233,7 @@
             {#if fieldError("request.final_result_timeout_seconds")}<small class="field-error">{fieldError("request.final_result_timeout_seconds")}</small>{/if}
             <small class="field-hint">{t("finalTimeoutHint")}</small>
           </label>
-          <label><span>{t("model")}</span><input bind:value={config.request.model_name} /></label>
         </div>
-        <label class:field-invalid={Boolean(fieldError("request.ws_url"))}>
-          <span>{t("websocketUrl")}</span>
-          <input bind:value={config.request.ws_url} />
-          {#if fieldError("request.ws_url")}<small class="field-error">{fieldError("request.ws_url")}</small>{/if}
-        </label>
       </div>
     {/if}
   </section>
@@ -323,13 +317,6 @@
                 {#if fieldError("llm_post_edit.timeout_seconds")}<small class="field-error">{fieldError("llm_post_edit.timeout_seconds")}</small>{/if}
               </label>
             </div>
-            <label class="check">
-              <input type="checkbox" bind:checked={config.llm_post_edit.enable_thinking} />
-              <span class="check-copy">
-                <span>{t("enableThinking")}</span>
-                <small>{t("enableThinkingHint")}</small>
-              </span>
-            </label>
           </div>
         {/if}
       </div>
