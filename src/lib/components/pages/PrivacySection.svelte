@@ -57,7 +57,7 @@
 
   <section class="form-panel">
     <div class="section-heading">
-      <h3>{t("privacyLocalDataTitle")}</h3>
+      <h3>{t("privacyDataTableTitle")}</h3>
       <p>{t("privacyLocalDataDescription")}</p>
     </div>
 
@@ -78,6 +78,13 @@
 
     <div class="table-scroll">
       <table>
+        <colgroup>
+          <col class="col-type" />
+          <col class="col-saved" />
+          <col class="col-location" />
+          <col class="col-upload" />
+          <col class="col-action" />
+        </colgroup>
         <thead>
           <tr>
             <th>{t("privacyDataType")}</th>
@@ -88,15 +95,18 @@
           </tr>
         </thead>
         <tbody>
+          <tr class="group-row">
+            <td colspan="5">{t("privacyLocalRecordsGroup")}</td>
+          </tr>
           <tr>
-            <td><strong>{t("privacyRecentContextData")}</strong></td>
-            <td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyRecentContextData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>
               {config.context.enable_recent_context ? t("privacySavedWhenEnabled") : t("privacyDisabledNoSave")}
               <small>{entriesCount(status?.recent_context_count)}</small>
             </td>
-            <td><code>context/recent_context.jsonl</code></td>
-            <td>{t("privacyUploadRecentContext")}</td>
-            <td>
+            <td data-label={t("privacyLocationColumn")}><code>context/recent_context.jsonl</code></td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadRecentContext")}</td>
+            <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
                 <label class="inline-check">
                   <input type="checkbox" bind:checked={config.context.enable_recent_context} />
@@ -115,18 +125,18 @@
           </tr>
 
           <tr>
-            <td><strong>{t("privacyAutoHotwordHistoryData")}</strong></td>
-            <td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyAutoHotwordHistoryData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>
               {config.auto_hotwords.enabled ? t("privacySavedWhenEnabled") : t("privacyDisabledNoSave")}
               <small>{entriesCount(status?.auto_hotword_entry_count)}</small>
             </td>
-            <td><code>context/hotword_history.jsonl</code></td>
-            <td>{t("privacyUploadAutoHotwords")}</td>
-            <td>
+            <td data-label={t("privacyLocationColumn")}><code>context/hotword_history.jsonl</code></td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadAutoHotwords")}</td>
+            <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
                 <label class="inline-check">
                   <input type="checkbox" bind:checked={config.auto_hotwords.enabled} />
-                  <span>{t("autoHotwordsEnabled")}</span>
+                  <span>{t("privacyAutoHotwordToggle")}</span>
                 </label>
                 <button
                   type="button"
@@ -141,14 +151,14 @@
           </tr>
 
           <tr>
-            <td><strong>{t("privacyStatsData")}</strong></td>
-            <td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyStatsData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>
               {t("privacyStatsSaved")}
               <small>{statsCount(status?.stats_event_count)}</small>
             </td>
-            <td><code>voice_input_stats.jsonl</code></td>
-            <td>{t("privacyUploadNever")}</td>
-            <td>
+            <td data-label={t("privacyLocationColumn")}><code>voice_input_stats.jsonl</code></td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadNever")}</td>
+            <td data-label={t("privacyActionColumn")}>
               <button
                 type="button"
                 class="danger-action"
@@ -160,33 +170,36 @@
             </td>
           </tr>
 
+          <tr class="group-row">
+            <td colspan="5">{t("privacyRuntimeDataGroup")}</td>
+          </tr>
           <tr>
-            <td><strong>{t("privacyAsrAudioData")}</strong></td>
-            <td>{t("privacyAsrAudioSaved")}</td>
-            <td>{t("privacyLocationNotStored")}</td>
-            <td>{t("privacyUploadAsrAudio")}</td>
-            <td><span class="muted-action">{t("privacyNotApplicable")}</span></td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyAsrAudioData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>{t("privacyAsrAudioSaved")}</td>
+            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadAsrAudio")}</td>
+            <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
           </tr>
 
           <tr>
-            <td><strong>{t("privacyScreenOcrData")}</strong></td>
-            <td>{config.screen_context.enabled ? t("privacyRuntimeOnly") : t("privacyDisabledNoSave")}</td>
-            <td>{t("privacyLocationNotStored")}</td>
-            <td>{t("privacyUploadScreenOcr")}</td>
-            <td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyScreenOcrData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>{config.screen_context.enabled ? t("privacyRuntimeOnly") : t("privacyDisabledNoSave")}</td>
+            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadScreenOcr")}</td>
+            <td data-label={t("privacyActionColumn")}>
               <label class="inline-check">
                 <input type="checkbox" bind:checked={config.screen_context.enabled} />
-                <span>{t("enableScreenContext")}</span>
+                <span>{t("privacyScreenOcrToggle")}</span>
               </label>
             </td>
           </tr>
 
           <tr>
-            <td><strong>{t("privacyLlmTextData")}</strong></td>
-            <td>{config.llm_post_edit.enabled ? t("privacyRuntimeOnly") : t("privacyDisabledNoSave")}</td>
-            <td>{t("privacyLocationNotStored")}</td>
-            <td>{t("privacyUploadLlmText")}</td>
-            <td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyLlmTextData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>{config.llm_post_edit.enabled ? t("privacyRuntimeOnly") : t("privacyDisabledNoSave")}</td>
+            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadLlmText")}</td>
+            <td data-label={t("privacyActionColumn")}>
               <label class="inline-check">
                 <input type="checkbox" bind:checked={config.llm_post_edit.enabled} />
                 <span>{t("privacyLlmPolishToggle")}</span>
@@ -195,14 +208,14 @@
           </tr>
 
           <tr>
-            <td><strong>{t("privacyClipboardData")}</strong></td>
-            <td>{config.typing.restore_clipboard_after_paste ? t("privacyMemoryOnly") : t("privacyClipboardNoRestore")}</td>
-            <td>{t("privacyLocationMemory")}</td>
-            <td>{t("privacyUploadNever")}</td>
-            <td>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyClipboardData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>{config.typing.restore_clipboard_after_paste ? t("privacyMemoryOnly") : t("privacyClipboardNoRestore")}</td>
+            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationMemory")}</td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadNever")}</td>
+            <td data-label={t("privacyActionColumn")}>
               <label class="inline-check">
                 <input type="checkbox" bind:checked={config.typing.restore_clipboard_after_paste} />
-                <span>{t("restoreClipboardAfterPaste")}</span>
+                <span>{t("privacyClipboardRestoreToggle")}</span>
               </label>
             </td>
           </tr>
@@ -280,6 +293,7 @@
     padding: 12px;
     background: #f8fbff;
     border: 1px solid var(--border);
+    border-left: 3px solid var(--primary);
     border-radius: 12px;
   }
 
@@ -304,9 +318,27 @@
 
   table {
     width: 100%;
-    min-width: 920px;
+    min-width: 980px;
     border-collapse: collapse;
+    table-layout: fixed;
     background: #ffffff;
+  }
+
+  .col-type {
+    width: 12%;
+  }
+
+  .col-saved,
+  .col-location {
+    width: 17%;
+  }
+
+  .col-upload {
+    width: 33%;
+  }
+
+  .col-action {
+    width: 21%;
   }
 
   th,
@@ -328,6 +360,19 @@
 
   tbody tr:last-child td {
     border-bottom: 0;
+  }
+
+  tbody tr:not(.group-row):hover td {
+    background: #fbfdff;
+  }
+
+  .group-row td {
+    padding: 9px 12px;
+    color: var(--primary);
+    background: #f3f8ff;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 800;
   }
 
   td strong {
@@ -431,6 +476,77 @@
 
     .secondary-action {
       width: 100%;
+    }
+  }
+
+  @media (max-width: 1120px) {
+    .table-scroll {
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+    }
+
+    table,
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+    }
+
+    table {
+      min-width: 0;
+      background: transparent;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: grid;
+      gap: 10px;
+    }
+
+    tbody tr:not(.group-row) {
+      display: grid;
+      gap: 9px;
+      min-width: 0;
+      padding: 12px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    tbody tr:not(.group-row):hover td {
+      background: transparent;
+    }
+
+    tbody tr:not(.group-row) td {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 12px;
+      min-width: 0;
+      padding: 0;
+      border-bottom: 0;
+    }
+
+    tbody tr:not(.group-row) td::before {
+      content: attr(data-label);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    tbody tr:not(.group-row) td > small {
+      grid-column: 2;
+      margin-top: -6px;
+    }
+
+    .group-row td {
+      border: 1px solid var(--border);
+      border-radius: 10px;
     }
   }
 </style>
