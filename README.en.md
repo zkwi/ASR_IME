@@ -17,6 +17,7 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 
 ## Documentation
 
+- Repository docs index: [docs/README.md](docs/README.md)
 - Wiki home: <https://github.com/zkwi/VoxType/wiki>
 - User configuration guide: <https://github.com/zkwi/VoxType/wiki/Setup-Guide-English>
 - Features and usage optimization: <https://github.com/zkwi/VoxType/wiki/Feature-Guide-English>

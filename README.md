@@ -17,6 +17,7 @@
 
 ## 文档
 
+- 仓库内文档索引：[docs/README.md](docs/README.md)
 - Wiki 首页：<https://github.com/zkwi/VoxType/wiki>
 - 用户配置指南：<https://github.com/zkwi/VoxType/wiki/Setup-Guide>
 - 功能特性与使用优化：<https://github.com/zkwi/VoxType/wiki/Feature-Guide>

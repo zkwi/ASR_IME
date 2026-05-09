@@ -14,10 +14,21 @@
 ## 提交前请确认
 
 - 已阅读根目录 `AGENTS.md` 中的主链路、隐私和配置同步规则。
-- 没有提交真实 API Key、个人热词、最近上下文、日志或统计文件。
+- 没有提交真实 API Key、个人热词、最近上下文、自动热词历史、日志、统计文件或包含 Windows 用户名路径的截图。
 - 用户可见文案已同步 `src/lib/i18n/zh-CN.ts`、`src/lib/i18n/zh-TW.ts`、`src/lib/i18n/en.ts`。
-- 修改配置字段时已同步 Rust 默认值、`config.example.toml`、前端设置项、三语言文案和 README。
-- 修改用户可见行为时已同步 README 或 `docs/`。
+- 修改配置字段时已同步 Rust 默认值、`config.example.toml`、前端设置项、三语言文案、README、英文 README 和 Wiki 配置指南。
+- 修改用户可见行为时已同步 README、英文 README、相关 `docs/wiki/` 草稿；需要发布给用户时再同步线上 Wiki。
+- 修改截图时确认已脱敏，并删除不再引用的旧截图。
+
+## 文档同步范围
+
+| 改动类型 | 需要同步 |
+| --- | --- |
+| 安装、首次配置、默认值 | README、README.en.md、`docs/wiki/Setup-Guide*.md` |
+| 功能行为、使用建议 | README、README.en.md、`docs/wiki/Feature-Guide*.md` |
+| 排障流程、诊断信息 | SUPPORT、`docs/wiki/Troubleshooting*.md` |
+| 隐私、安全、日志脱敏 | SECURITY、README、Wiki 相关段落 |
+| 目录或维护规则 | `docs/README.md`、`docs/directory-structure.md`、`docs/code-style.md` |
 
 ## 本地开发
 

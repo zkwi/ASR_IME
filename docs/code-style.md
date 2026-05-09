@@ -62,7 +62,7 @@ src/lib/components/
 4. 新增纯函数、格式化函数、状态映射函数应放到：
 
 ```text
-src/lib/
+src/lib/utils/
 ```
 
 5. 用户可见文案应放到：
@@ -95,7 +95,9 @@ en.ts
 4. `config.example.toml`。
 5. 前端设置页。
 6. 三语言文案。
-7. README 必要说明。
+7. README 和 README.en.md 必要说明。
+8. `docs/wiki/Setup-Guide*.md` 中的配置说明。
+9. 字段校验逻辑和默认值说明。
 
 默认值必须保守：
 

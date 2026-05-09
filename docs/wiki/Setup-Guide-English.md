@@ -255,7 +255,12 @@ github_repo = "zkwi/VoxType"
 7. Wait for final recognition and optional polishing.
 8. If text does not appear in the target field, press `Ctrl + V` manually.
 
-## 10. Common Questions
+## 10. Next Steps
+
+- To improve recognition quality, read [Features and Usage Optimization](Feature-Guide-English).
+- For shortcut, paste, microphone, startup, or update issues, read [Troubleshooting](Troubleshooting-English).
+
+## 11. Common Questions
 
 ### Is LLM API required?
 

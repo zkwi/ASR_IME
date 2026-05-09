@@ -2,6 +2,20 @@
 
 This page is the repository draft mirror for the GitHub Wiki `Troubleshooting-English` page, so the Wiki and repository docs do not drift apart.
 
+简体中文版本：[常见问题与排障](Troubleshooting)
+
+## Quick Checklist
+
+When something fails, check in this order:
+
+1. API Config setup health has no red blocking item.
+2. Doubao ASR App Key and Access Key are filled in.
+3. Windows allows desktop apps to access the microphone.
+4. Home shows at least one enabled trigger.
+5. The cursor is in an editable text field.
+6. The target app does not block paste shortcuts.
+7. Options can open logs or copy a redacted diagnostic report.
+
 ## Blank Startup Window or Stuck Startup Page
 
 ### Symptoms
@@ -33,38 +47,45 @@ You can also run this from an administrator PowerShell:
 Start-Process -Wait -Verb RunAs "C:\Temp\MicrosoftEdgeWebView2RuntimeInstallerX64.exe" -ArgumentList "/silent", "/install"
 ```
 
-### How to Confirm the Fix
+## `Ctrl + Q` Does Nothing
 
-- The VoxType main window shows the Home page.
-- WebView2-related processes start together with VoxType in Task Manager.
-- Microsoft Edge or other WebView2 apps can render pages normally.
+Possible causes:
 
-### What to Include When Reporting
+- ASR credentials are missing, so the main workflow is locked.
+- The main shortcut is disabled.
+- The shortcut is occupied by another app.
+- VoxType is starting, stopping, waiting for the final result, polishing, or outputting text.
+- The target app runs as administrator and blocks simulated input from a normal-permission app.
 
-- Windows version.
-- VoxType version.
-- Whether the machine has used system debloating tools, Edge/WebView2 uninstallers, browser component blocking policies, or security software blocks.
-- Whether the WebView2 overwrite install succeeded or showed an error.
-- Whether Microsoft Edge opens normally.
+Fix:
 
-Do not send real API keys, hotwords, prompts, recognized text, unredacted logs, or screenshots that expose Windows username paths.
+1. Open API Config and confirm required ASR fields are filled in.
+2. Open Options and confirm the main shortcut is `Ctrl + Q` and at least one trigger is enabled.
+3. Try another shortcut.
+4. If the target app runs as administrator, try starting VoxType with matching permissions.
 
-## Microphone Does Not Record
+## No Text Was Recognized
 
-Check Windows permission first:
+Possible causes:
 
-```text
-Windows Settings -> Privacy & security -> Microphone -> Let desktop apps access your microphone
-```
+- Microphone permission is disabled.
+- Wrong input device.
+- Microphone volume is too low or too far away.
+- The recording contains no useful speech.
+- Network or ASR service issue.
 
-Then select the correct input device in VoxType Options. If you use a Bluetooth headset, confirm that Windows is not still using a hands-free call input device.
+Fix:
 
-## Shortcut Does Not Respond
+1. Allow desktop microphone access in Windows Settings.
+2. Select the correct input device in Options.
+3. Test Doubao ASR from API Config.
+4. Try again in a quieter environment.
 
-- The default trigger is `Ctrl + Q`.
-- Right Alt and middle mouse are disabled by default and must be enabled manually.
-- If another app owns `Ctrl + Q`, choose a different global shortcut.
-- Target apps running as administrator may block simulated input from a normal-permission app. Try running VoxType with matching permissions.
+Notes:
+
+- Empty recognition becomes a failure. It does not run polishing, paste, or successful statistics.
+- Continuous low volume follows the manual-stop flow after 30 seconds by default, so a server endpointing miss does not record until the maximum duration.
+- If you need long pauses, adjust or disable the local silence fallback in `config.toml`.
 
 ## Recognition Works but Text Is Not Pasted
 
@@ -72,11 +93,76 @@ Press `Ctrl + V` manually first. If the text appears, recognition and clipboard 
 
 When Home shows "Input completed", VoxType has copied the recognized text and attempted to paste it. Use "Copy text" to write it to the clipboard again, or "View recognized text" to inspect the latest result. This text is kept only in the current window and is cleared when the window closes or the next recording starts.
 
-In Options, try:
+Fix:
 
-- Switch between automatic paste and clipboard-only output.
-- Adjust paste delay.
-- Test another target input field.
+1. Test in Notepad first.
+2. If text was copied, press `Ctrl + V` manually.
+3. Try `Shift + Insert` or clipboard-only output in Options.
+4. If the target app reads the clipboard slowly, increase clipboard restore delay in `config.toml`.
+
+## Previous Clipboard Was Not Fully Restored
+
+VoxType tries to restore common clipboard formats. Images, bitmap handles, file handles, large private formats, or very large clipboard content may not be fully backed up.
+
+Suggestions:
+
+- Plain text and common rich text are usually more stable.
+- Large clipboard content may hit the snapshot size limit.
+- If restore is partial, VoxType should keep the recognized text available and show a warning.
+- If you often handle large images, tables, or file lists, temporarily disable clipboard restore or use clipboard-only output.
+
+## LLM Polishing Does Not Run
+
+Possible causes:
+
+- LLM polishing is disabled.
+- Base URL, API Key, or model is incomplete.
+- Text length is below `min_chars`.
+- LLM connection test fails.
+
+Fix:
+
+1. Enable LLM polishing in API Config.
+2. Fill in Base URL, API Key, and model.
+3. Run the LLM test.
+4. Leave it off if short text does not need polishing.
+
+## LLM Polishing Is Slow
+
+Try:
+
+- Disable thinking.
+- Increase `min_chars` so short text skips polishing.
+- Use a faster model.
+- Increase timeout only for slow networks or models; timeout does not make polishing faster.
+
+## Hotwords Do Not Help Much
+
+Hotwords are context, not a forced replacement table.
+
+Tips:
+
+- Use one term per line.
+- Use real spelling.
+- Do not put long paragraphs into hotwords.
+- Proper nouns, names, product names, and abbreviations work best.
+- For style preferences, use scene notes instead.
+
+## Automatic Hotword Candidates Are Empty
+
+Possible causes:
+
+- Automatic hotwords are disabled.
+- Local history is empty.
+- LLM API is not configured.
+- There are no high-quality candidate terms.
+
+Fix:
+
+1. Enable automatic hotword candidates on Hotwords & prompts.
+2. Use voice input a few times to accumulate local history.
+3. Configure and test LLM API.
+4. Generate candidates manually.
 
 ## Screen OCR Text Has Extra Spaces
 
@@ -91,3 +177,17 @@ If in-app update fails, download the latest installer manually from GitHub Relea
 <https://github.com/zkwi/VoxType/releases>
 
 You usually do not need to uninstall the old version first. If the installer says files are in use, exit VoxType from the tray and try again.
+
+## Logs and Diagnostic Report
+
+Options and the tray menu can open logs. Options can also copy a redacted diagnostic report.
+
+When reporting an issue, include:
+
+- VoxType version.
+- Windows version.
+- Steps to reproduce.
+- Whether the issue reproduces in Notepad.
+- Redacted diagnostic report.
+
+Do not send real API keys, hotwords, prompts, recognized text, screen OCR text, automatic hotword history, unredacted logs, or screenshots that expose Windows username paths.

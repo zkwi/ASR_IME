@@ -131,18 +131,30 @@ src-tauri/
 
 ```text
 docs/
+├── README.md
 ├── code-style.md
 ├── directory-structure.md
-├── setup-guide.md
-└── ...
+├── wiki/
+│   ├── Home.md
+│   ├── Setup-Guide.md
+│   ├── Setup-Guide-English.md
+│   ├── Feature-Guide.md
+│   ├── Feature-Guide-English.md
+│   ├── Troubleshooting.md
+│   └── Troubleshooting-English.md
+├── audits/
+├── plans/
+└── 豆包流式语音识别参考文档.md
 ```
 
 ### 规则
 
 1. 面向用户的说明优先放 README。
-2. 面向开发和 AI 的规则放 docs。
-3. 接口参考文档可以放 docs，但不要混入真实密钥。
-4. 大改功能时，如果影响维护规则，应同步更新 docs。
+2. Wiki 页面草稿放 `docs/wiki/`，线上 Wiki 更新时同步检查本地草稿。
+3. 面向开发和 AI 的规则放 docs。
+4. 发布审计记录放 `docs/audits/`，计划和设计草稿放 `docs/plans/`。
+5. 接口参考文档可以放 docs，但不要混入真实密钥。
+6. 大改功能时，如果影响维护规则，应同步更新 docs。
 
 ---
 
@@ -196,4 +208,6 @@ release-assets/
 是开发规范？ → docs/
 是本地脚本？ → scripts/
 是用户说明？ → README.md
+是 Wiki 草稿？ → docs/wiki/
+是发布审计？ → docs/audits/
 ```
