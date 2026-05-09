@@ -293,7 +293,9 @@ fn resize_bgra_nearest(image: CapturedImage, next_width: i32, next_height: i32) 
 fn normalize_screen_context_text(text: &str, max_chars: usize) -> String {
     text.replace('\r', "\n")
         .lines()
-        .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
+        .map(|line| {
+            merge_cjk_character_spaces(&line.split_whitespace().collect::<Vec<_>>().join(" "))
+        })
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
         .join("\n")
@@ -302,6 +304,29 @@ fn normalize_screen_context_text(text: &str, max_chars: usize) -> String {
         .collect::<String>()
         .trim()
         .to_string()
+}
+
+fn merge_cjk_character_spaces(text: &str) -> String {
+    let mut merged = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == ' ' {
+            let previous = merged.chars().next_back();
+            let next = chars.peek().copied();
+            if previous.is_some_and(is_cjk_character) && next.is_some_and(is_cjk_character) {
+                continue;
+            }
+        }
+        merged.push(ch);
+    }
+    merged
+}
+
+fn is_cjk_character(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{3400}'..='\u{4DBF}' | '\u{4E00}'..='\u{9FFF}' | '\u{F900}'..='\u{FAFF}'
+    )
 }
 
 fn capture_foreground_window_bitmap() -> Result<CapturedImage, String> {
@@ -503,7 +528,16 @@ mod tests {
     #[test]
     fn normalizes_ocr_text_lightly() {
         let text = normalize_screen_context_text("  豆 包  ASR\r\n\r\n  VoxType   main  ", 1_000);
-        assert_eq!(text, "豆 包 ASR\nVoxType main");
+        assert_eq!(text, "豆包 ASR\nVoxType main");
+    }
+
+    #[test]
+    fn removes_spaces_between_cjk_characters_only() {
+        let text = normalize_screen_context_text(
+            "屏 幕 OCR 上 下 文  Ctrl + Q  ASR 和 大 模 型  VoxType 首 页",
+            1_000,
+        );
+        assert_eq!(text, "屏幕 OCR 上下文 Ctrl + Q ASR 和大模型 VoxType 首页");
     }
 
     #[test]

@@ -1,6 +1,5 @@
 <script lang="ts">
   import SettingTags from "$lib/components/common/SettingTags.svelte";
-  import SettingsToolbar from "$lib/components/settings/SettingsToolbar.svelte";
   import type { AppConfig, SelectableHotwordCandidate } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
   import { AlertCircle, Check, FileText, Info, Sparkles, Trash2 } from "lucide-svelte";
@@ -11,9 +10,6 @@
     config: AppConfig;
     autoHotwordCandidates: SelectableHotwordCandidate[];
     t: Translate;
-    saving: boolean;
-    settingsDirty: boolean;
-    toolbarMessage: string;
     generatingAutoHotwords: boolean;
     clearingAutoHotwordHistory: boolean;
     autoHotwordError: string;
@@ -25,7 +21,6 @@
     autoHotwordStatusText: string;
     fieldError: (field: string) => string;
     candidateConfidenceLabel: (confidence: number) => string;
-    onReload: () => void;
     onUpdateHotwords: (value: string) => void;
     onTidyHotwords: () => void;
     onClearHotwords: () => void;
@@ -47,9 +42,6 @@
     config = $bindable<AppConfig>(),
     autoHotwordCandidates = $bindable<SelectableHotwordCandidate[]>(),
     t,
-    saving,
-    settingsDirty,
-    toolbarMessage,
     generatingAutoHotwords,
     clearingAutoHotwordHistory,
     autoHotwordError,
@@ -61,7 +53,6 @@
     autoHotwordStatusText,
     fieldError,
     candidateConfidenceLabel,
-    onReload,
     onUpdateHotwords,
     onTidyHotwords,
     onClearHotwords,
@@ -83,15 +74,6 @@
 </script>
 
 <section class="settings-stack">
-  <SettingsToolbar
-    title={t("settingsActionTitle")}
-    hint={t("settingsActionHint")}
-    statusMessage={toolbarMessage}
-    reloadLabel={t("reload")}
-    {saving}
-    dirty={settingsDirty}
-    onReload={onReload}
-  />
   <section class="settings-group">
     <div class="settings-group-heading">
       <h3>{t("hotwordsPageTitle")}</h3>

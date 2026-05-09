@@ -151,7 +151,7 @@
       class:session-error={inputStatus === "error"}
       class="content"
     >
-      {#if selectedSection !== "Home"}
+      {#if selectedSection === "History"}
         <header class="topbar">
           <div>
             <h2>{t(navLabelKeys[selectedSection])}</h2>
@@ -480,7 +480,8 @@
     width: 8px;
     height: 8px;
     flex: 0 0 8px;
-    margin-right: 5px;
+    align-self: center;
+    margin: 0 6px 0 auto;
     background: var(--success);
     border-radius: 999px;
   }

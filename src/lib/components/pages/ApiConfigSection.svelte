@@ -4,9 +4,8 @@
     type SetupStatusItem,
     type SetupStatusWarning,
   } from "$lib/components/overview/SetupStatusCard.svelte";
-  import SettingsToolbar from "$lib/components/settings/SettingsToolbar.svelte";
-  import type { AppConfig } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
+  import type { AppConfig } from "$lib/types/app";
   import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
@@ -44,9 +43,6 @@
     config: AppConfig;
     llmApiConfigVisible: boolean;
     t: Translate;
-    saving: boolean;
-    settingsDirty: boolean;
-    toolbarMessage: string;
     configExists: boolean;
     setupChecking: boolean;
     setupStatusReady: boolean;
@@ -63,7 +59,6 @@
     setupRequiredMessage: () => string;
     setupActionText: (action: string) => string;
     formatHotkey: (value: string) => string;
-    onReload: () => void;
     onScrollToSettingsPanel: (id: string) => void;
     onOpenSetupGuide: () => void;
     onRefreshSetupStatus: () => void;
@@ -76,9 +71,6 @@
     config = $bindable<AppConfig>(),
     llmApiConfigVisible = $bindable<boolean>(),
     t,
-    saving,
-    settingsDirty,
-    toolbarMessage,
     configExists,
     setupChecking,
     setupStatusReady,
@@ -95,7 +87,6 @@
     setupRequiredMessage,
     setupActionText,
     formatHotkey,
-    onReload,
     onScrollToSettingsPanel,
     onOpenSetupGuide,
     onRefreshSetupStatus,
@@ -118,15 +109,6 @@
       </div>
     </section>
   {/if}
-  <SettingsToolbar
-    title={t("settingsActionTitle")}
-    hint={t("settingsActionHint")}
-    statusMessage={toolbarMessage}
-    reloadLabel={t("reload")}
-    {saving}
-    dirty={settingsDirty}
-    onReload={onReload}
-  />
   <SetupStatusCard
     ready={setupStatusReady}
     checking={setupChecking}

@@ -10,6 +10,7 @@
     Keyboard,
     MessageSquareText,
     Mic,
+    MousePointerClick,
     PenLine,
     Sparkles,
     Zap,
@@ -184,11 +185,38 @@
         <span><MessageSquareText size={17} />{t("speakAnywhere")}</span>
         <span><Globe2 size={17} />{t("mixedInput")}</span>
       </div>
+      <div class="hero-launch">
+        <div class="hero-launch-heading">
+          <span>{t("desktopControl")}</span>
+          <button type="button" onclick={() => onSelectSection("Options")}>
+            {t("shortcutSettings")} <ChevronRight size={15} />
+          </button>
+        </div>
+        <div class="hero-trigger-grid">
+          <span class:enabled={config.triggers.hotkey_enabled} class="hero-trigger">
+            <Keyboard size={15} />
+            <span>
+              <strong>{formatHotkey(snapshotHotkey)}</strong>
+              <small>{config.triggers.hotkey_enabled ? t("mainHotkey") : t("disabled")}</small>
+            </span>
+          </span>
+          <span class:enabled={config.triggers.middle_mouse_enabled} class="hero-trigger">
+            <MousePointerClick size={15} />
+            <span>
+              <strong>{t("middleMouse")}</strong>
+              <small>{triggerLabel(config.triggers.middle_mouse_enabled)}</small>
+            </span>
+          </span>
+          <span class:enabled={config.triggers.right_alt_enabled} class="hero-trigger">
+            <Keyboard size={15} />
+            <span>
+              <strong>{t("rightAlt")}</strong>
+              <small>{triggerLabel(config.triggers.right_alt_enabled)}</small>
+            </span>
+          </span>
+        </div>
+      </div>
     </div>
-    <button class="shortcut-help" type="button" onclick={() => onSelectSection("Options")}>
-      <Keyboard size={14} />
-      <span>{formatHotkey(snapshotHotkey)}</span>
-    </button>
   </div>
 </section>
 {#if lastSessionOutcome?.kind === "success"}
@@ -224,27 +252,6 @@
     {/if}
   </section>
 {/if}
-<section class="launch-card">
-  <div class="section-title-row">
-    <h3>{t("desktopControl")}</h3>
-    <button class="link-action" type="button" onclick={() => onSelectSection("Options")}>
-      {t("shortcutSettings")} <ChevronRight size={16} />
-    </button>
-  </div>
-  <div class="trigger-summary">
-    <div class:active={config.triggers.hotkey_enabled} class="trigger-primary">
-      <span class="trigger-icon"><Keyboard size={uiCompact ? 18 : 22} /></span>
-      <div>
-        <strong>{formatHotkey(snapshotHotkey)}</strong>
-        <p>{config.triggers.hotkey_enabled ? t("mainHotkey") : t("disabled")}</p>
-      </div>
-    </div>
-    <div class="trigger-secondary">
-      <span class:enabled={config.triggers.middle_mouse_enabled}>{t("middleMouse")}：{triggerLabel(config.triggers.middle_mouse_enabled)}</span>
-      <span class:enabled={config.triggers.right_alt_enabled}>{t("rightAlt")}：{triggerLabel(config.triggers.right_alt_enabled)}</span>
-    </div>
-  </div>
-</section>
 <section class="performance-card">
   <div class="section-title-row">
     <h3>{t("recentUsage")}</h3>
@@ -281,7 +288,6 @@
 <style>
   .voice-card,
   .last-outcome-card,
-  .launch-card,
   .performance-card {
     min-width: 0;
     padding: 14px;
@@ -292,7 +298,6 @@
     box-shadow: var(--shadow-card);
   }
 
-  .launch-card,
   .performance-card {
     margin-top: 0;
   }
@@ -303,10 +308,6 @@
 
   .performance-card {
     order: 2;
-  }
-
-  .launch-card {
-    order: 3;
   }
 
   .section-title-row {
@@ -532,7 +533,7 @@
     grid-template-columns: 116px minmax(0, 1fr);
     align-items: center;
     gap: 24px;
-    min-height: 168px;
+    min-height: 204px;
     height: auto;
     padding: 22px 28px;
     overflow: hidden;
@@ -595,12 +596,11 @@
     position: relative;
     z-index: 1;
     min-width: 0;
-    padding-right: 140px;
   }
 
   .hero-status {
     display: inline-flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
     max-width: 100%;
     margin-bottom: 10px;
@@ -672,32 +672,6 @@
     overflow-wrap: anywhere;
   }
 
-  .shortcut-help {
-    position: absolute;
-    right: 18px;
-    bottom: 16px;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    max-width: min(150px, 34%);
-    min-height: 34px;
-    padding: 0 11px;
-    color: rgba(255, 255, 255, 0.95);
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-  }
-
-  .shortcut-help span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .link-action {
     display: inline-flex;
     flex: 0 1 auto;
@@ -740,94 +714,102 @@
     border-radius: 14px;
   }
 
-  .trigger-summary {
+  .hero-launch {
     display: grid;
-    grid-template-columns: minmax(220px, 1.1fr) minmax(0, 1fr);
-    gap: 10px;
+    gap: 8px;
+    max-width: 720px;
+    margin-top: 14px;
   }
 
-  .trigger-primary,
-  .trigger-secondary {
-    min-width: 0;
-    min-height: 74px;
-    background: #f8fbff;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-  }
-
-  .trigger-primary {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .trigger-primary > div {
-    min-width: 0;
-  }
-
-  .trigger-primary.active {
-    background: #edf6ff;
-    border-color: rgba(47, 128, 237, 0.28);
-  }
-
-  .trigger-icon {
-    display: grid;
-    width: 34px;
-    height: 34px;
-    place-items: center;
-    color: var(--primary);
-    background: #ffffff;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-
-  .trigger-primary strong {
-    display: block;
-    min-width: 0;
-    color: var(--text-main);
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-  }
-
-  .trigger-primary p {
-    margin: 3px 0 0;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
-  }
-
-  .trigger-secondary {
+  .hero-launch-heading {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
   }
 
-  .trigger-secondary span {
+  .hero-launch-heading > span {
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .hero-launch-heading button {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    color: var(--text-secondary);
-    background: #ffffff;
-    border: 1px solid var(--border);
+    gap: 3px;
+    min-height: 26px;
+    padding: 0 9px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.2;
-    overflow-wrap: anywhere;
   }
 
-  .trigger-secondary span.enabled {
-    color: #1f66b1;
-    background: #edf6ff;
-    border-color: rgba(47, 128, 237, 0.28);
+  .hero-trigger-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hero-trigger {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 7px 9px;
+    color: rgba(255, 255, 255, 0.74);
+    background: rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+  }
+
+  .hero-trigger.enabled {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .hero-trigger :global(svg) {
+    justify-self: center;
+    opacity: 0.95;
+  }
+
+  .hero-trigger span {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .hero-trigger strong,
+  .hero-trigger small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero-trigger strong {
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .hero-trigger small {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .hero-trigger.enabled small {
+    color: rgba(255, 255, 255, 0.8);
   }
 
   .stat-card {
@@ -905,7 +887,6 @@
 
   :global(.ui-compact) .voice-card,
   :global(.ui-compact) .last-outcome-card,
-  :global(.ui-compact) .launch-card,
   :global(.ui-compact) .performance-card {
     padding: 12px;
   }
@@ -917,7 +898,7 @@
   :global(.ui-compact) .voice-hero {
     grid-template-columns: 92px minmax(0, 1fr);
     gap: 18px;
-    min-height: 148px;
+    min-height: 184px;
     padding: 18px 22px;
   }
 
@@ -935,10 +916,13 @@
     gap: 7px;
   }
 
-  :global(.ui-compact) .trigger-primary,
-  :global(.ui-compact) .trigger-secondary {
-    min-height: 64px;
-    padding: 10px;
+  :global(.ui-compact) .hero-launch {
+    margin-top: 12px;
+  }
+
+  :global(.ui-compact) .hero-trigger {
+    min-height: 40px;
+    padding: 7px 8px;
   }
 
   :global(.ui-compact) .stat-card {
@@ -975,10 +959,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .trigger-summary {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
     .voice-hero {
       grid-template-columns: 86px minmax(0, 1fr);
       padding: 18px 22px;
@@ -994,10 +974,6 @@
       height: 64px;
     }
 
-    .voice-copy {
-      padding-right: 106px;
-    }
-
     .hero-status {
       font-size: 21px;
     }
@@ -1009,6 +985,10 @@
 
   @media (max-width: 640px) {
     .stats-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hero-trigger-grid {
       grid-template-columns: minmax(0, 1fr);
     }
   }

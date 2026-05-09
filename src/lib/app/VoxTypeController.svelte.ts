@@ -674,14 +674,6 @@ export function createVoxTypeController() {
     if (showNotice) showActionNotice(statusMessage, "warning");
     return false;
   }
-  async function reloadConfigFromUi() {
-    const loaded = await loadAll();
-    if (loaded) {
-      showActionNotice(t("configReloaded"), "success");
-    } else if (hasTauriApi() && statusMessage) {
-      showActionNotice(statusMessage, "error");
-    }
-  }
   async function testAsrConfig() {
     if (testingAsr) return;
     if (!requireAuthFields()) return;
@@ -895,13 +887,6 @@ export function createVoxTypeController() {
     });
   }
 
-  function settingsToolbarMessage() {
-    if (saving) return t("settingsAutoSavingHint");
-    if (Object.keys(validationErrors).length > 0 && statusMessage) return statusMessage;
-    if (settingsDirty) return t("settingsAutoSavePendingHint");
-    return statusMessage || t("settingsActionHint");
-  }
-
   function updateHotwords(value: string) {
     config.context.hotwords = normalizeHotwords(value);
   }
@@ -1108,8 +1093,6 @@ export function createVoxTypeController() {
       uiCompact,
       recording,
       saving,
-      settingsDirty,
-      toolbarMessage: settingsToolbarMessage(),
       inputStatus: inputStatus(),
       inputStatusLabel: inputStatusLabel(),
       inputStatusDesc: inputStatusDesc(),
@@ -1178,7 +1161,6 @@ export function createVoxTypeController() {
       onCopyLastOutcomeText: copyLastOutcomeText,
       onToggleRecording: toggleRecordingFromUi,
       onSelectSection: settingsNav.selectSection,
-      onReload: reloadConfigFromUi,
       onUpdateHotwords: updateHotwords,
       onTidyHotwords: tidyHotwords,
       onClearHotwords: clearHotwords,

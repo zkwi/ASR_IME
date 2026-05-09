@@ -1,5 +1,4 @@
 <script lang="ts">
-  import SettingsToolbar from "$lib/components/settings/SettingsToolbar.svelte";
   import type {
     AppConfig,
     AudioDeviceInfo,
@@ -17,9 +16,6 @@
   type Props = {
     config: AppConfig;
     t: Translate;
-    saving: boolean;
-    settingsDirty: boolean;
-    toolbarMessage: string;
     hotkeyCaptureState: HotkeyCaptureState;
     hotkeyValidationMessage: string;
     overlayColorPresets: OverlayColorPreset[];
@@ -43,7 +39,6 @@
     updatePanelTitle: () => string;
     updatePanelDescription: () => string;
     updateMetaText: () => string;
-    onReload: () => void;
     onHotkeyKeydown: (event: KeyboardEvent) => void;
     onBeginHotkeyCapture: () => void;
     onOptionEnabledNotice: (key: SoftConfigNoticeKey, enabled: boolean) => void;
@@ -60,9 +55,6 @@
   let {
     config = $bindable<AppConfig>(),
     t,
-    saving,
-    settingsDirty,
-    toolbarMessage,
     hotkeyCaptureState,
     hotkeyValidationMessage,
     overlayColorPresets,
@@ -86,7 +78,6 @@
     updatePanelTitle,
     updatePanelDescription,
     updateMetaText,
-    onReload,
     onHotkeyKeydown,
     onBeginHotkeyCapture,
     onOptionEnabledNotice,
@@ -103,15 +94,6 @@
 </script>
 
 <section class="settings-stack">
-  <SettingsToolbar
-    title={t("settingsActionTitle")}
-    hint={t("settingsActionHint")}
-    statusMessage={toolbarMessage}
-    reloadLabel={t("reload")}
-    {saving}
-    dirty={settingsDirty}
-    onReload={onReload}
-  />
   <section class="settings-group">
     <div class="settings-group-heading">
       <h3>{t("optionsPageTitle")}</h3>

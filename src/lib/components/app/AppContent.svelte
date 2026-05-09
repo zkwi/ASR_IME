@@ -34,8 +34,6 @@
     uiCompact: boolean;
     recording: boolean;
     saving: boolean;
-    settingsDirty: boolean;
-    toolbarMessage: string;
     inputStatus: "idle" | "listening" | "error";
     inputStatusLabel: string;
     inputStatusDesc: string;
@@ -104,7 +102,6 @@
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
     onSelectSection: (section: Section) => void;
-    onReload: () => void;
     onUpdateHotwords: (value: string) => void;
     onTidyHotwords: () => void;
     onClearHotwords: () => void;
@@ -147,8 +144,6 @@
     uiCompact,
     recording,
     saving,
-    settingsDirty,
-    toolbarMessage,
     inputStatus,
     inputStatusLabel,
     inputStatusDesc,
@@ -217,7 +212,6 @@
     onCopyLastOutcomeText,
     onToggleRecording,
     onSelectSection,
-    onReload,
     onUpdateHotwords,
     onTidyHotwords,
     onClearHotwords,
@@ -289,9 +283,6 @@
     bind:config
     bind:autoHotwordCandidates
     {t}
-    {saving}
-    {settingsDirty}
-    {toolbarMessage}
     {generatingAutoHotwords}
     {clearingAutoHotwordHistory}
     {autoHotwordError}
@@ -303,7 +294,6 @@
     {autoHotwordStatusText}
     {fieldError}
     {candidateConfidenceLabel}
-    onReload={onReload}
     onUpdateHotwords={onUpdateHotwords}
     onTidyHotwords={onTidyHotwords}
     onClearHotwords={onClearHotwords}
@@ -325,9 +315,6 @@
     bind:config
     bind:llmApiConfigVisible
     {t}
-    {saving}
-    {settingsDirty}
-    {toolbarMessage}
     {configExists}
     {setupChecking}
     {setupStatusReady}
@@ -344,7 +331,6 @@
     {setupRequiredMessage}
     {setupActionText}
     {formatHotkey}
-    onReload={onReload}
     onScrollToSettingsPanel={onScrollToSettingsPanel}
     onOpenSetupGuide={onOpenSetupGuide}
     onRefreshSetupStatus={onRefreshSetupStatus}
@@ -356,9 +342,6 @@
   <OptionsSection
     bind:config
     {t}
-    {saving}
-    {settingsDirty}
-    {toolbarMessage}
     {hotkeyCaptureState}
     {hotkeyValidationMessage}
     {overlayColorPresets}
@@ -382,7 +365,6 @@
     {updatePanelTitle}
     {updatePanelDescription}
     {updateMetaText}
-    onReload={onReload}
     onHotkeyKeydown={onHotkeyKeydown}
     onBeginHotkeyCapture={onBeginHotkeyCapture}
     onOptionEnabledNotice={onOptionEnabledNotice}
