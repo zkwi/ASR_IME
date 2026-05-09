@@ -27,6 +27,16 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - License: [MIT](LICENSE)
 
+## Interface Preview
+
+The Home page centers the current input state, the primary shortcut, middle mouse, and right Alt in one compact voice card. After a successful input, VoxType shows that the text was copied and paste was attempted; the latest recognized text can be copied or viewed temporarily, then is cleared when the window closes or the next recording starts. Input performance cards show recent 24-hour input, recent 7-day input, average speed, and saved time.
+
+<img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
+
+API Config starts with a setup health check instead of a generic status header. ASR keys, microphone, paste method, trigger method, and privacy status are shown separately, and Doubao ASR plus optional LLM sections include test actions. The screenshot below has credentials blurred; public screenshots and logs should do the same.
+
+<img src="screenshots/ScreenShot_2026-05-09_130827_317.png" alt="VoxType English API Config and setup health check" width="820">
+
 ## Windows Voice Typing Features
 
 - Global trigger: `Ctrl + Q` is enabled by default. Right Alt and middle mouse can be enabled manually.

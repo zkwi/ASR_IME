@@ -13,7 +13,7 @@ VoxType/
 ├── docs/                # 文档
 ├── scripts/             # 本地脚本
 ├── static/              # 静态资源
-├── screenshots/         # README 或发布说明使用的截图
+├── screenshots/         # README、Wiki 或发布说明使用的截图
 ├── config.example.toml  # 配置模板
 ├── package.json
 ├── svelte.config.js

@@ -41,6 +41,16 @@ VoxType 保留五个主页面：
 
 首页顶部语音卡片同时展示空闲/录音状态和三种启动方式（主快捷键、鼠标中键、右 Alt），三种入口使用单行紧凑标签；最近输入和输入表现放在下方，避免首页重复分区。
 
+### 当前界面参考
+
+首页识别完成后会提示“已完成本次输入”，说明文本已复制并尝试粘贴。若目标输入框没有出现文字，可直接按 `Ctrl + V`，也可以在首页临时复制或查看本次识别文本；这份文本只保留在当前窗口内。
+
+<img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130744_793.png" alt="声写 VoxType 首页：语音输入状态、启动方式和输入表现" width="820">
+
+API配置页顶部是配置健康检查：ASR 密钥、麦克风、粘贴方式、触发方式和隐私设置分开展示。只有真正阻断录音、识别或粘贴主流程的问题才应作为明显警告；右 Alt、鼠标中键、最近上下文和自动热词这类可选项只作为弱提醒。公开截图时请像下图一样隐藏真实 App Key、Access Key 和其他密钥。
+
+<img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130838_673.png" alt="声写 VoxType API 配置与健康检查" width="820">
+
 ## 3. 必填：配置豆包 ASR
 
 VoxType 的主链路依赖豆包流式 ASR。没有 ASR 认证时，录音、识别和粘贴入口会被锁定。

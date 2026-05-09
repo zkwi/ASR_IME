@@ -70,6 +70,8 @@ Then select the correct input device in VoxType Options. If you use a Bluetooth 
 
 Press `Ctrl + V` manually first. If the text appears, recognition and clipboard writing succeeded, and the target app probably blocked simulated paste.
 
+When Home shows "Input completed", VoxType has copied the recognized text and attempted to paste it. Use "Copy text" to write it to the clipboard again, or "View recognized text" to inspect the latest result. This text is kept only in the current window and is cleared when the window closes or the next recording starts.
+
 In Options, try:
 
 - Switch between automatic paste and clipboard-only output.
