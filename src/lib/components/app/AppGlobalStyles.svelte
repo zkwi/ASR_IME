@@ -6,9 +6,9 @@
     --blue-500: #2f8cff;
     --blue-600: #176ee6;
     --blue-700: #1158bb;
-    --ink: #202933;
-    --muted: #7a8794;
-    --line: #e7edf3;
+    --ink: #17202b;
+    --muted: #6f8194;
+    --line: #e2eaf3;
     --panel: #ffffff;
     --canvas: #f6f8fb;
   }
@@ -25,8 +25,8 @@
     height: 100%;
     overflow: hidden;
     color: var(--ink);
-    background: #e9eef5;
-    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #edf3fa;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
     font-size: 16px;
     letter-spacing: 0;
     text-rendering: optimizeLegibility;
@@ -80,15 +80,15 @@
     --primary-hover: #256fe0;
     --primary-light: #eaf3ff;
     --gradient-start: #2f80ed;
-    --gradient-end: #7c3aed;
-    --text-main: #111827;
-    --text-secondary: #64748b;
-    --text-muted: #94a3b8;
-    --bg-page: #f8fafc;
-    --bg-sidebar: #f3f8ff;
+    --gradient-end: #4f6ff0;
+    --text-main: #0f172a;
+    --text-secondary: #5f7188;
+    --text-muted: #8ea0b5;
+    --bg-page: #f7fafe;
+    --bg-sidebar: #eef5fc;
     --bg-card: #ffffff;
-    --border: #dde6f3;
-    --border-strong: #cbd5e1;
+    --border: #dbe6f2;
+    --border-strong: #c4d2e3;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
@@ -96,14 +96,14 @@
     --radius-md: 12px;
     --radius-lg: 16px;
     --radius-xl: 24px;
-    --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.06);
-    --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.08);
+    --shadow-card: 0 10px 26px rgba(15, 23, 42, 0.045);
+    --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.055);
   }
 
   :global(html:not(:has(.overlay-root)):not(:has(.toast-root))),
   :global(body:not(:has(.overlay-root)):not(:has(.toast-root))) {
     background: var(--bg-page);
-    font-family: "Microsoft YaHei", "Segoe UI", "PingFang SC", "SF Pro Display", "Noto Sans CJK SC", sans-serif;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SF Pro Display", "Noto Sans CJK SC", sans-serif;
   }
 
   :global(.settings-stack),

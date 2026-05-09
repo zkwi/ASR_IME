@@ -81,27 +81,34 @@
 <style>
   .history-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
   }
 
   .history-card {
     min-width: 0;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: var(--shadow-card);
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   }
 
   .history-card {
-    min-height: 104px;
-    padding: 16px;
+    min-height: 110px;
+    padding: 18px;
+  }
+
+  .history-card:hover {
+    border-color: rgba(47, 128, 237, 0.2);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.055);
+    transform: translateY(-1px);
   }
 
   .history-card p {
     margin: 0;
-    color: var(--text-secondary);
-    font-size: 14px;
+    color: #5f7188;
+    font-size: 13px;
     font-weight: 700;
     text-transform: none;
   }
@@ -110,7 +117,7 @@
     display: block;
     margin-top: 10px;
     color: var(--text-main);
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 800;
     line-height: 1.2;
     overflow-wrap: anywhere;
@@ -121,22 +128,23 @@
     margin-top: 8px;
     color: var(--text-secondary);
     font-size: 13px;
+    line-height: 1.35;
   }
 
   .history-card.blue {
-    border-top: 4px solid var(--primary);
+    border-top: 3px solid var(--primary);
   }
 
   .history-card.purple {
-    border-top: 4px solid var(--gradient-end);
+    border-top: 3px solid var(--gradient-end);
   }
 
   .history-card.green {
-    border-top: 4px solid var(--success);
+    border-top: 3px solid var(--success);
   }
 
   .history-card.orange {
-    border-top: 4px solid #f97316;
+    border-top: 3px solid #f97316;
   }
 
   .daily-panel {
@@ -155,17 +163,17 @@
     display: grid;
     grid-template-columns: minmax(104px, 1.05fr) minmax(92px, 0.9fr) minmax(72px, 0.62fr) minmax(104px, 0.9fr) minmax(84px, 0.76fr);
     align-items: center;
-    column-gap: 14px;
-    min-height: 48px;
-    padding: 10px 0;
+    column-gap: 16px;
+    min-height: 46px;
+    padding: 9px 0;
     border-bottom: 1px solid var(--border);
   }
 
   .day-list-head {
     min-height: 34px;
     padding-top: 0;
-    color: var(--text-muted);
-    font-size: 12px;
+    color: #66788e;
+    font-size: 13px;
     font-weight: 700;
   }
 
@@ -175,6 +183,14 @@
 
   .day-list article:last-child {
     border-bottom: 0;
+  }
+
+  .day-list article {
+    transition: background-color 160ms ease;
+  }
+
+  .day-list article:hover {
+    background: #f8fbff;
   }
 
   .day-list span {

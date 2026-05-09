@@ -197,7 +197,7 @@
   .app-frame {
     position: relative;
     display: grid;
-    grid-template-rows: 48px minmax(0, 1fr);
+    grid-template-rows: 46px minmax(0, 1fr);
     width: 100vw;
     height: 100vh;
     overflow: hidden;
@@ -205,16 +205,16 @@
   }
 
   .app-frame.ui-compact {
-    grid-template-rows: 44px minmax(0, 1fr);
+    grid-template-rows: 42px minmax(0, 1fr);
   }
 
   .window-titlebar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 48px;
+    height: 46px;
     padding: 0 18px;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid var(--border);
     box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
     user-select: none;
@@ -222,7 +222,7 @@
   }
 
   .ui-compact .window-titlebar {
-    height: 44px;
+    height: 42px;
     padding: 0 16px;
   }
 
@@ -241,7 +241,7 @@
   .window-title strong {
     min-width: 0;
     overflow: hidden;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -250,7 +250,7 @@
   .window-product-name {
     min-width: 0;
     overflow: hidden;
-    color: var(--text-secondary);
+    color: #64758a;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -402,23 +402,23 @@
 
   .shell {
     display: grid;
-    grid-template-columns: 230px minmax(0, 1fr);
+    grid-template-columns: 224px minmax(0, 1fr);
     min-height: 0;
     overflow: hidden;
     background: var(--bg-page);
   }
 
   .ui-compact .shell {
-    grid-template-columns: 212px minmax(0, 1fr);
+    grid-template-columns: 208px minmax(0, 1fr);
   }
 
   .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     min-width: 0;
     min-height: 0;
-    padding: 18px 20px;
+    padding: 16px 18px;
     overflow-x: hidden;
     overflow-y: auto;
     background: var(--bg-sidebar);
@@ -438,13 +438,13 @@
   }
 
   .ui-compact .sidebar {
-    gap: 11px;
-    padding: 14px 16px;
+    gap: 10px;
+    padding: 13px 15px;
   }
 
   nav {
     display: grid;
-    gap: 7px;
+    gap: 6px;
   }
 
   .ui-compact nav {
@@ -456,17 +456,17 @@
     display: flex;
     align-items: center;
     width: 100%;
-    min-height: 42px;
+    min-height: 40px;
     margin: 0;
-    padding: 0 12px;
+    padding: 0 11px;
     gap: 10px;
     color: #334155;
     border: 1px solid transparent;
     border-radius: var(--radius-md);
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     text-align: left;
-    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   }
 
   .nav-icon {
@@ -511,6 +511,7 @@
     color: var(--primary);
     background: rgba(234, 243, 255, 0.78);
     border-color: rgba(47, 128, 237, 0.18);
+    transform: translateY(-1px);
   }
 
   nav button:hover .nav-icon {
@@ -526,9 +527,10 @@
 
   nav button.active {
     color: #ffffff;
-    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-    box-shadow: 0 10px 22px rgba(47, 128, 237, 0.22);
+    background: linear-gradient(135deg, var(--primary), #256fe0);
+    box-shadow: 0 8px 18px rgba(47, 128, 237, 0.18);
     font-weight: 800;
+    transform: none;
   }
 
   nav button.active .nav-icon {
@@ -705,7 +707,7 @@
   .content {
     min-width: 0;
     min-height: 0;
-    padding: 16px 20px;
+    padding: 18px 22px;
     overflow: auto;
     overflow-x: hidden;
     background: var(--bg-page);
@@ -736,7 +738,7 @@
   .topbar h2 {
     margin: 0;
     color: var(--text-main);
-    font-size: 24px;
+    font-size: 23px;
     font-weight: 800;
     line-height: 1.2;
     letter-spacing: 0;
@@ -747,7 +749,7 @@
   }
 
   .ui-compact .topbar h2 {
-    font-size: 22px;
+    font-size: 21px;
   }
 
   .ui-compact .content {
@@ -757,14 +759,14 @@
   .content.overview-content {
     display: grid;
     grid-auto-rows: max-content;
-    gap: 14px;
+    gap: 16px;
     align-content: start;
     overflow-y: auto;
     overflow-x: hidden;
   }
 
   .ui-compact .content.overview-content {
-    gap: 12px;
+    gap: 13px;
   }
 
   @media (max-width: 920px) {
