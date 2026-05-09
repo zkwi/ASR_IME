@@ -13,16 +13,19 @@ const TRAY_ICON_RGBA: &[u8] = include_bytes!("../icons/32x32.rgba");
 const OPEN_CONFIG_ID: &str = "open_config";
 const OPEN_LOG_ID: &str = "open_log";
 const OPEN_SETUP_GUIDE_ID: &str = "open_setup_guide";
+const OPEN_ISSUES_ID: &str = "open_issues";
 const CHECK_UPDATE_ID: &str = "check_update";
 const RESTART_ID: &str = "restart";
 const EXIT_ID: &str = "exit";
 const CHECK_UPDATE_EVENT: &str = "check-update-requested";
+const ISSUES_URL: &str = "https://github.com/zkwi/VoxType/issues/new/choose";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TrayLabels {
     open_config: &'static str,
     open_log: &'static str,
     open_setup_guide: &'static str,
+    open_issues: &'static str,
     check_update: &'static str,
     restart: &'static str,
     exit: &'static str,
@@ -46,6 +49,11 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
             }
             OPEN_SETUP_GUIDE_ID => {
                 if let Err(err) = crate::setup_guide::open(app) {
+                    app_log::warn(err);
+                }
+            }
+            OPEN_ISSUES_ID => {
+                if let Err(err) = open_issues_page(app) {
                     app_log::warn(err);
                 }
             }
@@ -102,6 +110,9 @@ fn build_tray_menu(app: &AppHandle, labels: TrayLabels) -> Result<Menu<tauri::Wr
         None::<&str>,
     )
     .map_err(|err| format!("创建托盘菜单失败: {}", err))?;
+    let open_issues =
+        MenuItem::with_id(app, OPEN_ISSUES_ID, labels.open_issues, true, None::<&str>)
+            .map_err(|err| format!("创建托盘菜单失败: {}", err))?;
     let check_update = MenuItem::with_id(
         app,
         CHECK_UPDATE_ID,
@@ -122,6 +133,7 @@ fn build_tray_menu(app: &AppHandle, labels: TrayLabels) -> Result<Menu<tauri::Wr
             &open_config,
             &open_log,
             &open_setup_guide,
+            &open_issues,
             &check_update,
             &restart,
             &separator,
@@ -172,6 +184,7 @@ fn tray_labels(language: &str) -> TrayLabels {
             open_config: "Open config file",
             open_log: "View logs",
             open_setup_guide: "Setup guide",
+            open_issues: "Report issue",
             check_update: "Check updates",
             restart: "Restart app",
             exit: "Exit",
@@ -180,6 +193,7 @@ fn tray_labels(language: &str) -> TrayLabels {
             open_config: "打開配置檔",
             open_log: "查看日誌",
             open_setup_guide: "配置指南",
+            open_issues: "問題回報",
             check_update: "檢查更新",
             restart: "重新啟動程式",
             exit: "退出",
@@ -188,6 +202,7 @@ fn tray_labels(language: &str) -> TrayLabels {
             open_config: "打开配置文件",
             open_log: "查看日志",
             open_setup_guide: "配置指南",
+            open_issues: "问题反馈",
             check_update: "检查更新",
             restart: "重启程序",
             exit: "退出",
@@ -279,6 +294,13 @@ fn restart_app(app: &AppHandle) {
     app.request_restart();
 }
 
+fn open_issues_page(app: &AppHandle) -> Result<(), String> {
+    app_log::info("用户从托盘菜单打开问题反馈页面。");
+    app.opener()
+        .open_url(ISSUES_URL, None::<&str>)
+        .map_err(|err| format!("打开问题反馈页面失败: {}", err))
+}
+
 fn open_log_file_with_source(app: &AppHandle, source: &str) -> Result<(), String> {
     app_log::info(format!("用户从{}打开日志文件。", source));
     let path = app_log::log_path();
@@ -344,6 +366,7 @@ mod tests {
         assert_eq!(labels.open_config, "Open config file");
         assert_eq!(labels.open_log, "View logs");
         assert_eq!(labels.open_setup_guide, "Setup guide");
+        assert_eq!(labels.open_issues, "Report issue");
         assert_eq!(labels.check_update, "Check updates");
         assert_eq!(labels.restart, "Restart app");
         assert_eq!(labels.exit, "Exit");
@@ -356,6 +379,7 @@ mod tests {
         assert_eq!(labels.open_config, "打開配置檔");
         assert_eq!(labels.open_log, "查看日誌");
         assert_eq!(labels.open_setup_guide, "配置指南");
+        assert_eq!(labels.open_issues, "問題回報");
         assert_eq!(labels.check_update, "檢查更新");
         assert_eq!(labels.restart, "重新啟動程式");
         assert_eq!(labels.exit, "退出");
@@ -366,6 +390,7 @@ mod tests {
         let labels = tray_labels("fr");
 
         assert_eq!(labels.open_config, "打开配置文件");
+        assert_eq!(labels.open_issues, "问题反馈");
         assert_eq!(labels.restart, "重启程序");
         assert_eq!(tray_tooltip("fr", false), "声写");
         assert_eq!(tray_tooltip("en", true), "VoxType · Listening");
