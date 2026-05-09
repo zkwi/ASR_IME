@@ -34,7 +34,7 @@ The Home page centers the current input state, the primary shortcut, middle mous
 
 <img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
 
-The sidebar is organized by task: Home, Hotwords & prompts, API Config, Options, Privacy & local data, and Analytics. The privacy page explains where recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots are stored or sent, and it provides clearing actions for local context, hotword history, and stats.
+The sidebar is organized by task: Home, Hotwords & prompts, API Config, Options, Privacy & local data, and Analytics. The privacy page explains where the config file, logs, recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots are stored or sent, and it provides clearing actions for local context, hotword history, and stats.
 
 API Config starts with a setup health check instead of a generic status header. ASR keys, microphone, paste method, trigger method, and privacy status are shown separately, and Doubao ASR plus optional LLM sections include test actions. The screenshot below has credentials blurred; public screenshots and logs should do the same.
 
@@ -57,7 +57,7 @@ API Config starts with a setup health check instead of a generic status header. 
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. Single-click the tray icon to open the main window; the tray menu can open config, open logs, report an issue, check updates, restart the app, or exit.
 - Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
-- Privacy & local data: available from the sidebar and Options. It shows local storage and upload boundaries, and can clear recent context, automatic hotword history, and usage stats.
+- Privacy & local data: available from the sidebar and Options. It shows storage and upload boundaries for config and keys, logs and diagnostic reports, recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots; it can clear recent context, automatic hotword history, and usage stats.
 - Settings layout: visible settings are shown directly by task page. Hotwords, API Config, and Options no longer repeat a generic status header at the top. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
@@ -114,6 +114,8 @@ resource_id = "volc.seedasr.sauc.duration"
 API Config also includes the Doubao ASR input language. The default is `zh-CN` for Chinese speech. For multilingual use, switch to a supported language code such as `en-US`, `ja-JP`, or `yue-CN`, or choose Auto/service default to omit the parameter. Doubao documents this option as supported only by some streaming modes, so if the ASR test fails, switch back to Auto/service default or confirm the current API mode.
 
 Without `app_key` and `access_key`, recording, recognition, and paste actions are locked.
+
+Settings edited in the UI auto-save. The title bar briefly shows pending, saving, and saved states so you can tell when a change has taken effect.
 
 Optional LLM polishing:
 

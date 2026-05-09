@@ -404,7 +404,10 @@
     clearingRecentContext={privacyClearingRecentContext}
     clearingAutoHotwordHistory={privacyClearingAutoHotwordHistory}
     clearingUsageStats={privacyClearingUsageStats}
+    {hasLlmApiConfig}
     onRefreshStatus={onRefreshPrivacyStatus}
+    onOpenLlmApiSettings={onOpenLlmApiSettings}
+    onOptionEnabledNotice={onOptionEnabledNotice}
     onClearRecentContext={onClearPrivacyRecentContext}
     onClearAutoHotwordHistory={onClearPrivacyAutoHotwordHistory}
     onClearUsageStats={onClearPrivacyUsageStats}

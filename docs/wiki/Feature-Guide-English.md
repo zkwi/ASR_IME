@@ -176,8 +176,9 @@ Privacy and stability:
 
 Privacy & local data answers four questions in one place: what VoxType stores, where it lives, whether it is uploaded, and whether it can be cleared. The page shows counts, switch state, logical paths, and upload boundaries only. It does not show transcripts, OCR text, hotword history text, prompts, or keys.
 
-The page separates data into two groups:
+The page separates data into three groups:
 
+- Base local files: the config file and local logs. The config file can contain API keys and basic settings, but recent context text is kept out of `config.toml`. Logs and diagnostic reports are redacted by default and should not contain transcripts, hotwords, prompts, or raw keys.
 - Local clearable data: recent context, automatic hotword history, and usage stats. Recent context and automatic hotword history contain voice-input text history and are off by default. Usage stats contain non-content metrics such as character count, duration, and speed.
 - Runtime and third-party service data: ASR audio, screen OCR, LLM polishing text, and temporary clipboard snapshots. These are normally not written to disk, but ASR audio, OCR context, and LLM polishing text can be sent with the current request depending on enabled features.
 

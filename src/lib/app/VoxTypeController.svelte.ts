@@ -113,6 +113,7 @@ import type {
 } from "$lib/types/app";
 
 const copyRecentInputCommand = "copy_recent_input_text_to_clipboard";
+type ConfigSaveState = "idle" | "pending" | "saving" | "saved";
 
 export function createVoxTypeController() {
 
@@ -127,6 +128,7 @@ export function createVoxTypeController() {
   let language = $state<Language>("zh-CN");
   let statusMessage = $state(copy["zh-CN"].bridgeLoading);
   let saving = $state(false);
+  let configSavedRecently = $state(false);
   let configExists = $state(true);
   let configLoaded = $state(false);
   let audioLevel = $state(0);
@@ -213,6 +215,7 @@ export function createVoxTypeController() {
   });
   let succeededIdleTimer: number | undefined;
   let autoSaveTimer: number | undefined;
+  let configSavedIndicatorTimer: number | undefined;
   let setupStatusLoading = $state(false);
   const hotkeyCapture = createHotkeyCaptureController({
     getConfig: () => config,
@@ -330,6 +333,7 @@ export function createVoxTypeController() {
       notifications.dispose();
       if (succeededIdleTimer !== undefined) window.clearTimeout(succeededIdleTimer);
       clearAutoSaveTimer();
+      clearConfigSavedIndicatorTimer();
       overlay.dispose();
       window.removeEventListener("resize", refreshMainDensity);
       window.removeEventListener("resize", overlay.refreshLayout);
@@ -361,6 +365,19 @@ export function createVoxTypeController() {
   function clearAutoSaveTimer() {
     if (autoSaveTimer !== undefined && browser) window.clearTimeout(autoSaveTimer);
     autoSaveTimer = undefined;
+  }
+  function clearConfigSavedIndicatorTimer() {
+    if (configSavedIndicatorTimer !== undefined && browser) window.clearTimeout(configSavedIndicatorTimer);
+    configSavedIndicatorTimer = undefined;
+  }
+  function markConfigSavedRecently() {
+    if (!browser) return;
+    clearConfigSavedIndicatorTimer();
+    configSavedRecently = true;
+    configSavedIndicatorTimer = window.setTimeout(() => {
+      configSavedRecently = false;
+      configSavedIndicatorTimer = undefined;
+    }, 2400);
   }
   function canAutoSaveConfig() {
     return configLoaded && !isOverlay && !isToast && hasTauriApi() && hotkeyCapture.isIdle;
@@ -628,6 +645,7 @@ export function createVoxTypeController() {
         configExists = result.exists;
         configLoaded = true;
         statusMessage = t("configSaved");
+        markConfigSavedRecently();
       }
       return result;
     } catch (error) {
@@ -950,6 +968,13 @@ export function createVoxTypeController() {
     if (status === "error") return statusMessage;
     return sessionPhaseMessage(sessionPhase);
   }
+  function configSaveState(): ConfigSaveState {
+    if (!configLoaded || !hasTauriApi() || isOverlay || isToast) return "idle";
+    if (saving) return "saving";
+    if (settingsDirty) return "pending";
+    if (configSavedRecently) return "saved";
+    return "idle";
+  }
   function formatSavedHours(hours: number) {
     return formatSavedHoursForLanguage(hours, language);
   }
@@ -1034,6 +1059,7 @@ export function createVoxTypeController() {
       selectedSection: settingsNav.selectedSection,
       language,
       recording,
+      configSaveState: configSaveState(),
       inputStatus: inputStatus(),
       inputStatusLabel: inputStatusLabel(),
       inputStatusDesc: inputStatusDesc(),

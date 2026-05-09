@@ -192,7 +192,7 @@ Resource ID、ASR WebSocket 地址、模型名、最终结果等待超时、最�
 
 ## 8. `config.toml` 关键字段
 
-界面会自动保存配置。需要手动编辑时，可参考 `config.example.toml`。
+界面会自动保存配置，标题栏会短暂显示待保存、保存中和已保存状态。需要手动编辑时，可参考 `config.example.toml`。
 
 最小 ASR 配置：
 

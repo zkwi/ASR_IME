@@ -5,19 +5,20 @@
   import {
     BarChart3,
     Download,
-    Gauge,
+    House,
+    KeyRound,
     LockKeyhole,
     Maximize2,
     Mic,
     Minus,
     Settings,
-    ShieldCheck,
     Sparkles,
     X as XIcon,
   } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type MaybeAsync = void | Promise<void>;
+  type ConfigSaveState = "idle" | "pending" | "saving" | "saved";
 
   type Props = {
     children?: Snippet;
@@ -25,6 +26,7 @@
     selectedSection: Section;
     language: Language;
     recording: boolean;
+    configSaveState: ConfigSaveState;
     inputStatus: string;
     inputStatusLabel: string;
     inputStatusDesc: string;
@@ -50,6 +52,7 @@
     selectedSection,
     language,
     recording,
+    configSaveState,
     inputStatus,
     inputStatusLabel,
     inputStatusDesc,
@@ -70,9 +73,9 @@
   }: Props = $props();
 
   const navItems = [
-    { id: "Home", icon: Gauge },
+    { id: "Home", icon: House },
     { id: "Hotwords", icon: Sparkles },
-    { id: "ApiConfig", icon: ShieldCheck },
+    { id: "ApiConfig", icon: KeyRound },
     { id: "Options", icon: Settings },
     { id: "Privacy", icon: LockKeyhole },
     { id: "History", icon: BarChart3 },
@@ -86,6 +89,12 @@
     Privacy: "navPrivacy",
     History: "navHistory",
   };
+
+  function configSaveStatusText() {
+    if (configSaveState === "pending") return t("settingsSavePending");
+    if (configSaveState === "saving") return t("settingsSaving");
+    return t("settingsSaved");
+  }
 </script>
 
 <div class:ui-compact={uiCompact} class="app-frame">
@@ -93,7 +102,20 @@
     <div class="window-title" data-tauri-drag-region>
       <span class="window-title-mark"><Mic size={12} strokeWidth={2.6} /></span>
       <strong data-tauri-drag-region>{t("appTitle")}</strong>
-      <span data-tauri-drag-region>VoxType</span>
+      <span class="window-product-name" data-tauri-drag-region>VoxType</span>
+      {#if configSaveState !== "idle"}
+        <span
+          class:pending={configSaveState === "pending"}
+          class:saved={configSaveState === "saved"}
+          class:saving={configSaveState === "saving"}
+          class="save-status"
+          aria-live="polite"
+          data-tauri-drag-region
+        >
+          <span class="save-dot" data-tauri-drag-region></span>
+          <span class="save-text" data-tauri-drag-region>{configSaveStatusText()}</span>
+        </span>
+      {/if}
     </div>
     <div class="window-controls">
       <button class="tray-action" aria-label={t("minimizeToTray")} title={t("minimizeToTray")} onclick={onClose}>
@@ -111,12 +133,15 @@
       <nav aria-label={t("mainSections")}>
         {#each navItems as item}
           {@const Icon = item.icon}
+          {@const label = t(navLabelKeys[item.id])}
           <button
+            aria-current={selectedSection === item.id ? "page" : undefined}
             class:active={selectedSection === item.id}
+            title={label}
             onclick={() => onSelectSection(item.id)}
           >
-            <Icon size={17} />
-            <span>{t(navLabelKeys[item.id])}</span>
+            <span class="nav-icon" aria-hidden="true"><Icon size={17} strokeWidth={2.25} /></span>
+            <span class="nav-text">{label}</span>
           </button>
         {/each}
       </nav>
@@ -221,12 +246,68 @@
     white-space: nowrap;
   }
 
-  .window-title > span:last-child {
+  .window-product-name {
     min-width: 0;
     overflow: hidden;
     color: var(--text-secondary);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .save-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 150px;
+    min-height: 24px;
+    padding: 0 8px;
+    flex: 0 1 auto;
+    color: #245b93;
+    background: rgba(240, 247, 255, 0.96);
+    border: 1px solid rgba(47, 128, 237, 0.22);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .save-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    background: var(--primary);
+    border-radius: 999px;
+  }
+
+  .save-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .save-status.pending {
+    color: #854d0e;
+    background: rgba(255, 251, 235, 0.96);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .save-status.pending .save-dot {
+    background: #f59e0b;
+  }
+
+  .save-status.saved {
+    color: #047857;
+    background: rgba(236, 253, 245, 0.96);
+    border-color: rgba(16, 185, 129, 0.26);
+  }
+
+  .save-status.saved .save-dot {
+    background: #10b981;
+  }
+
+  .save-status.saving .save-dot {
+    animation: save-pulse 900ms ease-in-out infinite;
   }
 
   .window-title-mark {
@@ -326,9 +407,22 @@
     min-width: 0;
     min-height: 0;
     padding: 18px 20px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     background: var(--bg-sidebar);
     border-right: 1px solid var(--border);
+    scrollbar-color: #cbd8e7 transparent;
+    scrollbar-width: thin;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: #cbd8e7;
+    border: 2px solid var(--bg-sidebar);
+    border-radius: 999px;
   }
 
   .ui-compact .sidebar {
@@ -338,7 +432,7 @@
 
   nav {
     display: grid;
-    gap: 8px;
+    gap: 7px;
   }
 
   .ui-compact nav {
@@ -346,21 +440,55 @@
   }
 
   nav button {
+    position: relative;
     display: flex;
     align-items: center;
     width: 100%;
     min-height: 42px;
     margin: 0;
-    padding: 0 14px;
-    gap: 12px;
-    color: var(--text-main);
+    padding: 0 12px;
+    gap: 10px;
+    color: #334155;
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
     font-size: 15px;
-    font-weight: 500;
-    transition: all 160ms ease;
+    font-weight: 600;
+    text-align: left;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
   }
 
-  nav button span {
+  nav button::before {
+    position: absolute;
+    left: 4px;
+    width: 3px;
+    height: 18px;
+    content: "";
+    background: currentColor;
+    border-radius: 999px;
+    opacity: 0;
+    transform: scaleY(0.65);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .nav-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    color: #5b6f88;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(203, 216, 231, 0.7);
+    border-radius: 9px;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  }
+
+  .nav-icon :global(svg) {
+    width: 17px;
+    height: 17px;
+  }
+
+  .nav-text {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -369,24 +497,55 @@
 
   .ui-compact nav button {
     min-height: 38px;
-    padding: 0 12px;
+    padding: 0 10px;
+    gap: 9px;
     font-size: 14px;
+  }
+
+  .ui-compact .nav-icon {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
   }
 
   nav button:hover {
     color: var(--primary);
-    background: var(--primary-light);
+    background: rgba(234, 243, 255, 0.78);
+    border-color: rgba(47, 128, 237, 0.18);
+  }
+
+  nav button:hover .nav-icon {
+    color: var(--primary);
+    background: #ffffff;
+    border-color: rgba(47, 128, 237, 0.24);
+  }
+
+  nav button:focus-visible {
+    outline: 2px solid rgba(47, 128, 237, 0.32);
+    outline-offset: 2px;
   }
 
   nav button.active {
     color: #ffffff;
-    background: var(--primary);
-    box-shadow: 0 12px 28px rgba(47, 128, 237, 0.24);
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    box-shadow: 0 10px 22px rgba(47, 128, 237, 0.22);
+    font-weight: 800;
+  }
+
+  nav button.active::before {
+    opacity: 0.9;
+    transform: scaleY(1);
+  }
+
+  nav button.active .nav-icon {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.24);
   }
 
   .language-control {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     margin: 6px 0 0;
   }
 
@@ -396,8 +555,8 @@
   }
 
   .language-control span {
-    color: var(--text-secondary);
-    font-size: 14px;
+    color: #516b8a;
+    font-size: 13px;
     font-weight: 700;
     text-transform: none;
   }
@@ -409,8 +568,16 @@
     color: var(--text-main);
     background: #ffffff;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 15px;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .language-control select:focus {
+    border-color: rgba(47, 128, 237, 0.45);
+    outline: 2px solid rgba(47, 128, 237, 0.16);
+    outline-offset: 2px;
   }
 
   .ui-compact .language-control select {
@@ -422,13 +589,13 @@
     display: grid;
     gap: 7px;
     margin: auto 0 0;
-    padding: 12px;
+    padding: 13px;
     min-width: 0;
     overflow: hidden;
     background: #ffffff;
     border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: var(--shadow-card);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
   }
 
   .ui-compact .bridge-card {
@@ -618,6 +785,25 @@
 
     .content.overview-content {
       overflow: auto;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .save-status {
+      max-width: 112px;
+    }
+  }
+
+  @keyframes save-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.82);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 </style>

@@ -12,7 +12,10 @@
     clearingRecentContext: boolean;
     clearingAutoHotwordHistory: boolean;
     clearingUsageStats: boolean;
+    hasLlmApiConfig: boolean;
     onRefreshStatus: () => void;
+    onOpenLlmApiSettings: () => void;
+    onOptionEnabledNotice: (key: "enable_recent_context", enabled: boolean) => void;
     onClearRecentContext: () => void;
     onClearAutoHotwordHistory: () => void;
     onClearUsageStats: () => void;
@@ -25,7 +28,10 @@
     clearingRecentContext,
     clearingAutoHotwordHistory,
     clearingUsageStats,
+    hasLlmApiConfig,
     onRefreshStatus,
+    onOpenLlmApiSettings,
+    onOptionEnabledNotice,
     onClearRecentContext,
     onClearAutoHotwordHistory,
     onClearUsageStats,
@@ -40,13 +46,18 @@
     return t("privacyEntriesCount", { count: String(count) });
   }
 
+  function entriesCharsCount(count: number | undefined, chars: number | undefined) {
+    if (count === undefined || chars === undefined) return t("privacyStatusLoading");
+    return t("privacyEntriesCharsCount", { count: String(count), chars: String(chars) });
+  }
+
   function statsCount(count: number | undefined) {
     if (count === undefined) return t("privacyStatusLoading");
     return t("privacyStatsCount", { count: String(count) });
   }
 
   function clearDisabled(isClearing: boolean, count: number | undefined) {
-    return isClearing || count === 0;
+    return isClearing || count === undefined || count === 0;
   }
 </script>
 
@@ -72,7 +83,7 @@
       </div>
       <div>
         <span>{t("privacyAutoHotwordHistoryData")}</span>
-        <strong>{entriesCount(status?.auto_hotword_entry_count)}</strong>
+        <strong>{entriesCharsCount(status?.auto_hotword_entry_count, status?.auto_hotword_total_chars)}</strong>
       </div>
       <div>
         <span>{t("privacyStatsData")}</span>
@@ -100,6 +111,25 @@
         </thead>
         <tbody>
           <tr class="group-row">
+            <td colspan="5">{t("privacyBaseFilesGroup")}</td>
+          </tr>
+          <tr>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyConfigData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>{t("privacyConfigSaved")}</td>
+            <td data-label={t("privacyLocationColumn")}><code>config.toml</code></td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadConfig")}</td>
+            <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
+          </tr>
+
+          <tr>
+            <td data-label={t("privacyDataType")}><strong>{t("privacyLogsDiagnosticsData")}</strong></td>
+            <td data-label={t("privacySavedColumn")}>{t("privacyLogsDiagnosticsSaved")}</td>
+            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationLogsDiagnostics")}</td>
+            <td data-label={t("privacyUploadColumn")}>{t("privacyUploadLogsDiagnostics")}</td>
+            <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
+          </tr>
+
+          <tr class="group-row">
             <td colspan="5">{t("privacyLocalRecordsGroup")}</td>
           </tr>
           <tr>
@@ -113,7 +143,11 @@
             <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
                 <label class="inline-check">
-                  <input type="checkbox" bind:checked={config.context.enable_recent_context} />
+                  <input
+                    type="checkbox"
+                    bind:checked={config.context.enable_recent_context}
+                    onchange={(event) => onOptionEnabledNotice("enable_recent_context", event.currentTarget.checked)}
+                  />
                   <span>{t("useRecentContext")}</span>
                 </label>
                 <button
@@ -132,7 +166,7 @@
             <td data-label={t("privacyDataType")}><strong>{t("privacyAutoHotwordHistoryData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>
               {config.auto_hotwords.enabled ? t("privacySavedWhenEnabled") : t("privacyDisabledNoSave")}
-              <small>{entriesCount(status?.auto_hotword_entry_count)}</small>
+              <small>{entriesCharsCount(status?.auto_hotword_entry_count, status?.auto_hotword_total_chars)}</small>
             </td>
             <td data-label={t("privacyLocationColumn")}><code>context/hotword_history.jsonl</code></td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadAutoHotwords")}</td>
@@ -204,10 +238,17 @@
             <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadLlmText")}</td>
             <td data-label={t("privacyActionColumn")}>
-              <label class="inline-check">
-                <input type="checkbox" bind:checked={config.llm_post_edit.enabled} />
-                <span>{t("privacyLlmPolishToggle")}</span>
-              </label>
+              {#if !config.llm_post_edit.enabled && !hasLlmApiConfig}
+                <div class="action-cell">
+                  <button type="button" class="secondary-action" onclick={onOpenLlmApiSettings}>{t("goApiConfig")}</button>
+                  <small class="action-hint">{t("llmApiRequiredForPolishing")}</small>
+                </div>
+              {:else}
+                <label class="inline-check">
+                  <input type="checkbox" bind:checked={config.llm_post_edit.enabled} />
+                  <span>{t("privacyLlmPolishToggle")}</span>
+                </label>
+              {/if}
             </td>
           </tr>
 
@@ -333,16 +374,16 @@
   }
 
   .col-saved,
-  .col-location {
+  .col-action {
     width: 17%;
+  }
+
+  .col-location {
+    width: 21%;
   }
 
   .col-upload {
     width: 33%;
-  }
-
-  .col-action {
-    width: 21%;
   }
 
   th,
@@ -395,7 +436,7 @@
   code {
     color: var(--text-main);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 12px;
+    font-size: 11px;
     overflow-wrap: anywhere;
   }
 
@@ -403,6 +444,13 @@
     display: grid;
     gap: 8px;
     min-width: 0;
+  }
+
+  .action-hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.35;
   }
 
   .inline-check {
@@ -550,6 +598,27 @@
     }
 
     .secondary-action {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .form-panel {
+      padding: 14px;
+    }
+
+    tbody tr:not(.group-row) td {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+
+    tbody tr:not(.group-row) td > small {
+      grid-column: 1;
+      margin-top: 0;
+    }
+
+    .inline-check,
+    .danger-action {
       width: 100%;
     }
   }

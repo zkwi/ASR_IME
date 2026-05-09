@@ -182,6 +182,8 @@ Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, mode
 
 ## 8. Key `config.toml` Fields
 
+Settings edited in the UI auto-save. The title bar briefly shows pending, saving, and saved states. For manual edits, use `config.example.toml` as the reference.
+
 Minimum ASR config:
 
 ```toml
