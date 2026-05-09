@@ -6,9 +6,7 @@
     ChevronRight,
     Clock3,
     Copy,
-    Globe2,
     Keyboard,
-    MessageSquareText,
     Mic,
     MousePointerClick,
     PenLine,
@@ -181,18 +179,9 @@
       </div>
       <h4>{requiresAsrAuth ? t("authGateTitle") : recording ? t("clickStop") : sessionBusy ? inputStatusLabel : t("clickStart")}</h4>
       <p>{requiresAsrAuth ? t("authGateDescription") : inputStatusDesc}</p>
-      <div class="hero-features">
-        <span><MessageSquareText size={17} />{t("speakAnywhere")}</span>
-        <span><Globe2 size={17} />{t("mixedInput")}</span>
-      </div>
       <div class="hero-launch">
-        <div class="hero-launch-heading">
-          <span>{t("desktopControl")}</span>
-          <button type="button" onclick={() => onSelectSection("Options")}>
-            {t("shortcutSettings")} <ChevronRight size={15} />
-          </button>
-        </div>
-        <div class="hero-trigger-grid">
+        <span class="hero-launch-label">{t("desktopControl")}</span>
+        <div class="hero-trigger-row">
           <span class:enabled={config.triggers.hotkey_enabled} class="hero-trigger">
             <Keyboard size={15} />
             <span>
@@ -215,6 +204,9 @@
             </span>
           </span>
         </div>
+        <button type="button" class="hero-shortcut-button" onclick={() => onSelectSection("Options")}>
+          {t("shortcutSettings")} <ChevronRight size={15} />
+        </button>
       </div>
     </div>
   </div>
@@ -530,12 +522,12 @@
   .voice-hero {
     position: relative;
     display: grid;
-    grid-template-columns: 116px minmax(0, 1fr);
+    grid-template-columns: 94px minmax(0, 1fr);
     align-items: center;
-    gap: 24px;
-    min-height: 204px;
+    gap: 22px;
+    min-height: 156px;
     height: auto;
-    padding: 22px 28px;
+    padding: 20px 28px;
     overflow: hidden;
     color: #ffffff;
     background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
@@ -555,8 +547,8 @@
     position: relative;
     z-index: 1;
     display: grid;
-    width: 108px;
-    height: 108px;
+    width: 92px;
+    height: 92px;
     place-items: center;
     color: var(--primary);
     background: rgba(255, 255, 255, 0.18);
@@ -576,8 +568,8 @@
 
   .mic-ring {
     display: grid;
-    width: 86px;
-    height: 86px;
+    width: 72px;
+    height: 72px;
     place-items: center;
     background: #ffffff;
     border-radius: 999px;
@@ -603,8 +595,8 @@
     align-items: center;
     gap: 8px;
     max-width: 100%;
-    margin-bottom: 10px;
-    font-size: 26px;
+    margin-bottom: 5px;
+    font-size: 24px;
     font-weight: 800;
     line-height: 1.16;
   }
@@ -632,7 +624,7 @@
   }
 
   .voice-copy h4 {
-    margin: 0 0 8px;
+    margin: 0 0 5px;
     max-width: 100%;
     font-size: 17px;
     line-height: 1.35;
@@ -644,31 +636,7 @@
     margin: 0;
     color: rgba(255, 255, 255, 0.88);
     font-size: 14px;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-  }
-
-  .hero-features {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 14px;
-    overflow: visible;
-  }
-
-  .hero-features span {
-    display: inline-flex;
-    flex: 0 1 auto;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    min-height: 30px;
-    padding: 6px 10px;
-    background: rgba(255, 255, 255, 0.16);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.34;
     overflow-wrap: anywhere;
   }
 
@@ -716,26 +684,22 @@
 
   .hero-launch {
     display: grid;
-    gap: 8px;
-    max-width: 720px;
-    margin-top: 14px;
-  }
-
-  .hero-launch-heading {
-    display: flex;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-width: 0;
+    gap: 8px;
+    max-width: 100%;
+    margin-top: 11px;
   }
 
-  .hero-launch-heading > span {
+  .hero-launch-label {
+    min-width: 0;
     color: rgba(255, 255, 255, 0.86);
     font-size: 12px;
     font-weight: 800;
+    white-space: nowrap;
   }
 
-  .hero-launch-heading button {
+  .hero-shortcut-button {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -748,26 +712,28 @@
     font-size: 12px;
     font-weight: 800;
     line-height: 1.2;
+    white-space: nowrap;
   }
 
-  .hero-trigger-grid {
+  .hero-trigger-row {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 7px;
+    min-width: 0;
   }
 
   .hero-trigger {
     display: grid;
-    grid-template-columns: 22px minmax(0, 1fr);
+    grid-template-columns: 18px minmax(0, 1fr);
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     min-width: 0;
-    min-height: 44px;
-    padding: 7px 9px;
+    min-height: 32px;
+    padding: 4px 8px;
     color: rgba(255, 255, 255, 0.74);
     background: rgba(15, 23, 42, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 12px;
+    border-radius: 999px;
   }
 
   .hero-trigger.enabled {
@@ -783,7 +749,6 @@
 
   .hero-trigger span {
     display: grid;
-    gap: 1px;
     min-width: 0;
   }
 
@@ -896,33 +861,29 @@
   }
 
   :global(.ui-compact) .voice-hero {
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 18px;
-    min-height: 184px;
-    padding: 18px 22px;
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 16px;
+    min-height: 140px;
+    padding: 16px 22px;
   }
 
   :global(.ui-compact) .mic-orb {
-    width: 88px;
-    height: 88px;
+    width: 76px;
+    height: 76px;
   }
 
   :global(.ui-compact) .mic-ring {
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
   }
 
   :global(.ui-compact) .stats-row {
     gap: 7px;
   }
 
-  :global(.ui-compact) .hero-launch {
-    margin-top: 12px;
-  }
-
   :global(.ui-compact) .hero-trigger {
-    min-height: 40px;
-    padding: 7px 8px;
+    min-height: 30px;
+    padding: 4px 8px;
   }
 
   :global(.ui-compact) .stat-card {
@@ -988,7 +949,13 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .hero-trigger-grid {
+    .hero-launch {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: start;
+    }
+
+    .hero-trigger-row {
+      width: 100%;
       grid-template-columns: minmax(0, 1fr);
     }
   }

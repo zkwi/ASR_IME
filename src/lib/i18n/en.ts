@@ -23,8 +23,6 @@ export const en = {
   "clickStart": "Click to start voice input",
   "clickStop": "Click to stop voice input",
   "quickStart": "Press {hotkey} to start quickly",
-  "speakAnywhere": "Dictate into any input box",
-  "mixedInput": "Chinese/English mixed input",
   "mainHotkey": "Primary",
   "enabled": "Enabled",
   "disabled": "Off",

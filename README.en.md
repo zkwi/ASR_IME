@@ -36,14 +36,15 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions show text, processing state, and errors only.
 - Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`; clipboard-only mode is also available. VoxType then tries to restore the previous clipboard.
 - Recent input card: after a successful input, the Home page can temporarily show and copy the latest recognized text. It is kept only in the current window memory and is cleared when the window closes or a new recording starts.
+- Home layout: the top voice card shows the current state plus the primary hotkey, middle mouse, and right Alt in compact single-line chips. Recent input and input stats stay below it.
 - Optional LLM polishing: OpenAI-compatible API support for light text cleanup and style control.
-- Screen OCR context: on by default. When recording starts, VoxType captures only the current foreground window, runs Windows OCR locally, and sends the temporary text context to Doubao ASR and the optional LLM to improve names, filenames, code identifiers, and UI terms. Timeout or OCR failure is skipped automatically.
+- Screen OCR context: on by default. When recording starts, VoxType captures only the current foreground window, runs Windows OCR locally, lightly merges extra spaces between adjacent CJK characters, and sends the temporary text context to Doubao ASR and the optional LLM to improve names, filenames, code identifiers, and UI terms. Timeout or OCR failure is skipped automatically.
 - Hotwords and prompts: maintain custom hotwords, scene notes, and polishing prompts.
 - Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count in `config.toml` and retry.
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. The tray menu can open config, open logs, check updates, restart the app, or exit.
 - Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
-- Settings layout: visible settings are shown directly by task page. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
+- Settings layout: visible settings are shown directly by task page. Hotwords, API Config, and Options no longer repeat a generic status header at the top. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
 ## Main Workflow Guarantees
@@ -114,7 +115,7 @@ enable_thinking = false
 
 VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed. The Hotwords page shows the User Prompt template, reset, preview, and minimum polishing length. System Prompt remains in `config.toml` to keep the app settings concise.
 
-Screen OCR context is on by default and can be disabled or tested in Options. It captures only the current foreground window at recording start, not the full screen. OCR text is kept only for the current request and is not written to logs, stats, or config files. The default wait is 700 ms; timeout or failure does not block recording, ASR, or paste.
+Screen OCR context is on by default and can be disabled or tested in Options. It captures only the current foreground window at recording start, not the full screen. OCR text is kept only for the current request and is not written to logs, stats, or config files; VoxType does not cache the latest 2-3 screenshot OCR results. Before sending the context, VoxType lightly merges extra spaces between adjacent CJK characters, so text such as `屏 幕 OCR 上 下 文` becomes easier for ASR/LLM context matching while English acronyms, shortcuts, and paths keep their spacing. The default wait is 700 ms; timeout or failure does not block recording, ASR, or paste.
 
 ```toml
 [screen_context]
@@ -179,7 +180,7 @@ VoxType works best in apps that accept clipboard paste, including browser fields
 
 ### Does VoxType store my transcript text?
 
-Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default. Screen OCR context is on by default but is not persisted; it is only sent temporarily with the current ASR/LLM request and can be disabled in Options.
+Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default. Screen OCR context is on by default but is not persisted or cached across recordings; it is only sent temporarily with the current ASR/LLM request and can be disabled in Options.
 
 ### Why does VoxType need Doubao ASR keys?
 

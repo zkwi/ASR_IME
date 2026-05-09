@@ -23,8 +23,6 @@ export const zhTW = {
   "clickStart": "點擊開始語音輸入",
   "clickStop": "點擊停止語音輸入",
   "quickStart": "按 {hotkey} 快速啟動",
-  "speakAnywhere": "在任何輸入框直接說話",
-  "mixedInput": "支援中英文混合輸入",
   "mainHotkey": "主快捷鍵",
   "enabled": "已啟用",
   "disabled": "已關閉",

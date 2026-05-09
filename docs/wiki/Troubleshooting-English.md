@@ -76,6 +76,12 @@ In Options, try:
 - Adjust paste delay.
 - Test another target input field.
 
+## Screen OCR Text Has Extra Spaces
+
+Since 0.1.62, VoxType merges extra spaces between adjacent CJK characters before sending screen OCR context to Doubao ASR and the optional LLM. For example, `屏 幕 OCR 上 下 文` is normalized to `屏幕 OCR 上下文`. English acronyms, shortcuts, paths, and number spacing are kept as much as possible.
+
+If the test preview is still obviously poor, confirm that the Windows Chinese OCR language capability is available, and keep the foreground window text clear and unobstructed. If the current window contains sensitive information, disable Screen OCR context in Options; recording, ASR, and paste still work without it.
+
 ## Update Fails
 
 If in-app update fails, download the latest installer manually from GitHub Releases:

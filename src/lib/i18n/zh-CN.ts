@@ -22,8 +22,6 @@ export const zhCN = {
   "clickStart": "点击开始语音输入",
   "clickStop": "点击停止语音输入",
   "quickStart": "按 {hotkey} 快速启动",
-  "speakAnywhere": "在任何输入框直接说话",
-  "mixedInput": "支持中英文混合输入",
   "mainHotkey": "主快捷键",
   "enabled": "已启用",
   "disabled": "已关闭",
