@@ -110,6 +110,7 @@ impl OwnedGlobalMemory {
         HANDLE(self.handle().0)
     }
 
+    /// `SetClipboardData` 成功后系统接管 `HGLOBAL`，此后本对象不能再释放它。
     fn transfer_to_clipboard(mut self) {
         self.handle = None;
     }

@@ -38,6 +38,7 @@ src/
     │   ├── settings/
     │   ├── overlay/
     │   └── common/
+    ├── app/
     ├── i18n/
     ├── utils/
     └── types/
@@ -54,6 +55,7 @@ src/
 7. 三语言文案放到 `src/lib/i18n/`。
 8. 格式化函数、状态映射函数放到 `src/lib/utils/`。
 9. 共享类型放到 `src/lib/types/`。
+10. 前端状态 controller 放到 `src/lib/app/`，命名为 `*Controller.svelte.ts`。`VoxTypeController.svelte.ts` 只作为组合入口，新增业务状态优先拆到独立 controller。
 
 ### 禁止
 
@@ -165,7 +167,12 @@ scripts/
 ├── ai-check.ps1
 ├── ai-release-check.ps1
 ├── enable_git_hooks.ps1
-└── scan-secrets.mjs
+├── rust-audit.ps1
+├── scan-secrets.mjs
+├── test-scan-secrets.mjs
+├── check-governance.mjs
+├── test-governance.mjs
+└── test-stats.mjs
 ```
 
 ### 规则
