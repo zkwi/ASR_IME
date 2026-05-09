@@ -278,12 +278,6 @@
 </section>
 
 <style>
-  .privacy-stack {
-    display: grid;
-    gap: 14px;
-    max-width: 1120px;
-  }
-
   .privacy-heading {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -292,8 +286,7 @@
     padding: 0 2px;
   }
 
-  .privacy-heading h3,
-  .section-heading h3 {
+  .privacy-heading h3 {
     margin: 0;
     color: var(--text-main);
     font-weight: 800;
@@ -303,31 +296,11 @@
     font-size: 20px;
   }
 
-  .privacy-heading p,
-  .section-heading p {
+  .privacy-heading p {
     margin: 4px 0 0;
     color: var(--text-secondary);
     font-size: 13px;
     line-height: 1.45;
-  }
-
-  .form-panel {
-    display: grid;
-    gap: 14px;
-    min-width: 0;
-    padding: 18px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-  }
-
-  .section-heading {
-    display: grid;
-    gap: 4px;
-  }
-
-  .section-heading h3 {
-    font-size: 16px;
   }
 
   .status-strip {
@@ -624,10 +597,6 @@
   }
 
   @media (max-width: 620px) {
-    .form-panel {
-      padding: 14px;
-    }
-
     tbody tr:not(.group-row) td {
       grid-template-columns: 1fr;
       gap: 4px;

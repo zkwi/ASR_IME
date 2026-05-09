@@ -711,7 +711,6 @@
 
   .content > header {
     width: min(100%, 1120px);
-    margin-left: auto;
     margin-right: auto;
   }
 

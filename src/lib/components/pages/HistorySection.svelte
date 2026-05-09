@@ -79,20 +79,13 @@
 </section>
 
 <style>
-  .history-page {
-    display: grid;
-    gap: 14px;
-    max-width: 1120px;
-  }
-
   .history-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 12px;
   }
 
-  .history-card,
-  .form-panel {
+  .history-card {
     min-width: 0;
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -148,25 +141,6 @@
 
   .daily-panel {
     min-width: 0;
-    padding: 18px;
-  }
-
-  .section-heading {
-    display: grid;
-    gap: 4px;
-  }
-
-  .section-heading h3 {
-    margin: 0 0 6px;
-    color: var(--text-main);
-    font-size: 18px;
-    font-weight: 800;
-  }
-
-  .section-heading p {
-    margin: 0;
-    color: var(--text-secondary);
-    line-height: 1.5;
   }
 
   .day-list {
@@ -257,10 +231,6 @@
   }
 
   @media (max-width: 720px) {
-    .daily-panel {
-      padding: 14px;
-    }
-
     .day-list {
       gap: 10px;
     }
