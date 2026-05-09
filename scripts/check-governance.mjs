@@ -193,6 +193,12 @@ function checkVersionConsistency(root, failures) {
     ["src-tauri/tauri.conf.json", tauriVersion],
     ["src-tauri/Cargo.toml", cargoVersion],
   ]);
+  const packageLockPath = path.join(root, "package-lock.json");
+  if (fs.existsSync(packageLockPath)) {
+    const packageLock = readJson(packageLockPath);
+    versions.set("package-lock.json", packageLock.version);
+    versions.set('package-lock.json packages[""].version', packageLock.packages?.[""]?.version);
+  }
 
   for (const [file, version] of versions.entries()) {
     if (!version) failures.push(`${file}: missing version`);

@@ -32,6 +32,24 @@ function withProject(callback) {
 
 function createValidProject(dir) {
   writeFile(path.join(dir, "package.json"), JSON.stringify({ version: "1.2.3" }, null, 2));
+  writeFile(
+    path.join(dir, "package-lock.json"),
+    JSON.stringify(
+      {
+        name: "voxtype-desktop",
+        version: "1.2.3",
+        lockfileVersion: 3,
+        packages: {
+          "": {
+            name: "voxtype-desktop",
+            version: "1.2.3",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
   writeFile(path.join(dir, "CHANGELOG.md"), "# Changelog\n\n## [1.2.3]\n");
   writeFile(
     path.join(dir, "src-tauri", "Cargo.toml"),
@@ -80,6 +98,15 @@ withProject((dir) => {
   const result = runGovernance(dir);
   assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /version mismatch/);
+});
+
+withProject((dir) => {
+  const packageLock = JSON.parse(fs.readFileSync(path.join(dir, "package-lock.json"), "utf8"));
+  packageLock.packages[""].version = "9.9.9";
+  writeFile(path.join(dir, "package-lock.json"), JSON.stringify(packageLock, null, 2));
+  const result = runGovernance(dir);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /package-lock\.json packages\[""\]\.version=9\.9\.9/);
 });
 
 withProject((dir) => {

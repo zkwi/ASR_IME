@@ -6,6 +6,10 @@
 
 ## [未发布]
 
+暂无。
+
+## [0.1.65] - 2026-05-09
+
 ### 文档
 
 - 更新 README 和 Wiki 草稿的界面截图，改用 2026-05-09 的首页、API 配置和健康检查预览，并移除失效的旧首页截图引用。
@@ -14,8 +18,8 @@
 
 ### 工程治理
 
-- 新增 `npm run check:governance`，自动检查版本号一致性、Markdown 本地链接、截图引用和 README/Wiki 镜像覆盖情况，并接入 `npm run ai:check` 与 GitHub Actions CI。
-- 新增 `npm run test:governance`，为治理检查脚本覆盖通过、版本不一致和 Wiki 镜像缺失三类回归场景。
+- 新增 `npm run check:governance`，自动检查 `package.json`、`package-lock.json`、Tauri 和 Cargo 版本号一致性、Markdown 本地链接、截图引用和 README/Wiki 镜像覆盖情况，并接入 `npm run ai:check` 与 GitHub Actions CI。
+- 新增 `npm run test:governance`，为治理检查脚本覆盖通过、版本不一致、锁文件版本不一致和 Wiki 镜像缺失等回归场景。
 - 拆出前端通知和统计 controller，减少 `VoxTypeController.svelte.ts` 的横切状态职责，让主 controller 更接近组合入口。
 - 将剪贴板输出中的 Win32 剪贴板和全局内存管理改为 RAII 小封装，降低后续修改时漏关剪贴板、漏解锁或错误释放内存的风险。
 
