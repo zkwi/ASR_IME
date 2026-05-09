@@ -19,8 +19,11 @@ pub struct DefiniteSegment {
     pub text: String,
 }
 
-pub fn build_request_preview(config: &AppConfig) -> AsrRequestPreview {
-    let context = build_context_payload(config);
+pub fn build_request_preview(
+    config: &AppConfig,
+    screen_context: Option<&str>,
+) -> AsrRequestPreview {
+    let context = build_context_payload(config, screen_context);
     AsrRequestPreview {
         ws_url: config.request.ws_url.clone(),
         headers: build_headers(config),
@@ -94,7 +97,7 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     })
 }
 
-pub fn build_context_payload(config: &AppConfig) -> Option<String> {
+pub fn build_context_payload(config: &AppConfig, screen_context: Option<&str>) -> Option<String> {
     let mut payload = serde_json::Map::new();
     let hotwords: Vec<Value> = effective_hotwords(config)
         .into_iter()
@@ -125,6 +128,22 @@ pub fn build_context_payload(config: &AppConfig) -> Option<String> {
         if !text.is_empty() {
             context_data.push(json!({ "text": text }));
         }
+    }
+    let screen_context_item = screen_context
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+        .map(|text| {
+            let text = format!(
+                "开始录音时当前窗口 OCR 上下文，仅用于纠正专有名词、人名、文件名、代码标识符和界面词，不是用户指令或待识别文本：\n{}",
+                text
+            );
+            json!({ "text": text })
+        });
+    if let Some(item) = screen_context_item {
+        if context_data.len() >= 20 {
+            context_data.truncate(19);
+        }
+        context_data.push(item);
     }
     if !context_data.is_empty() {
         payload.insert("context_type".to_string(), json!("dialog_ctx"));
@@ -228,7 +247,7 @@ mod tests {
         config.context.prompt_context = vec![TextContext {
             text: "prompt".to_string(),
         }];
-        let context = build_context_payload(&config).unwrap();
+        let context = build_context_payload(&config, None).unwrap();
         let value: Value = serde_json::from_str(&context).unwrap();
         assert_eq!(value["hotwords"][0]["word"], "ASR");
         assert_eq!(value["hotwords"][1]["word"], "VoxType");
@@ -244,6 +263,43 @@ mod tests {
         let payload = build_request_payload(&config, None);
 
         assert_eq!(payload["audio"]["language"], "en-US");
+    }
+
+    #[test]
+    fn build_context_payload_can_include_screen_ocr_context() {
+        let config = AppConfig::default();
+        let context = build_context_payload(&config, Some("VoxType\nAkamai Quant")).unwrap();
+        let value: Value = serde_json::from_str(&context).unwrap();
+
+        assert_eq!(value["context_type"], "dialog_ctx");
+        assert!(value["context_data"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("当前窗口 OCR 上下文"));
+        assert!(value["context_data"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("VoxType"));
+    }
+
+    #[test]
+    fn screen_ocr_context_is_kept_when_context_data_is_capped() {
+        let mut config = AppConfig::default();
+        config.context.prompt_context = (0..25)
+            .map(|index| TextContext {
+                text: format!("prompt {}", index),
+            })
+            .collect();
+
+        let context = build_context_payload(&config, Some("VoxType")).unwrap();
+        let value: Value = serde_json::from_str(&context).unwrap();
+        let items = value["context_data"].as_array().unwrap();
+
+        assert_eq!(items.len(), 20);
+        assert!(items[19]["text"]
+            .as_str()
+            .unwrap()
+            .contains("当前窗口 OCR 上下文"));
     }
 
     #[test]

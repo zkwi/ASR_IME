@@ -7,6 +7,7 @@ export function settingsPanelForField(field: string) {
   }
   if (field.startsWith("llm_post_edit.")) return "settings-llm-api";
   if (field.startsWith("auto_hotwords.")) return "settings-auto-hotwords";
+  if (field.startsWith("screen_context.")) return "settings-screen-context";
   if (field.startsWith("context.") && field !== "context.hotwords") return "settings-prompt-context";
   if (field.startsWith("context.")) return "settings-context";
   if (field === "typing.paste_method" || field === "typing.remove_trailing_period" || field === "typing.restore_clipboard_after_paste") return "settings-basic-output";

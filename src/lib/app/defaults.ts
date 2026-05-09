@@ -83,6 +83,11 @@ export const fallbackConfig: AppConfig = {
     prompt_context: [],
     recent_context: [],
   },
+  screen_context: {
+    enabled: true,
+    max_chars: 1200,
+    timeout_ms: 700,
+  },
   triggers: { hotkey_enabled: true, middle_mouse_enabled: false, right_alt_enabled: false },
   typing: {
     paste_delay_ms: 120,

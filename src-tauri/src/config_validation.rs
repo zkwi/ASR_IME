@@ -150,6 +150,22 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         100,
         "自动热词候选数量需在 5 到 100 之间。",
     );
+    validate_usize_range(
+        &mut errors,
+        "screen_context.max_chars",
+        config.screen_context.max_chars,
+        100,
+        4_000,
+        "屏幕 OCR 上下文字数上限需在 100 到 4000 之间。",
+    );
+    validate_u64_range(
+        &mut errors,
+        "screen_context.timeout_ms",
+        config.screen_context.timeout_ms,
+        100,
+        3_000,
+        "屏幕 OCR 等待时间需在 100 到 3000 毫秒之间。",
+    );
     validate_f64_range(
         &mut errors,
         "request.final_result_timeout_seconds",

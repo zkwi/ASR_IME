@@ -13,6 +13,7 @@ mod llm_post_edit;
 mod main_window;
 mod overlay;
 mod protocol;
+mod screen_context;
 mod session;
 mod setup_guide;
 mod stats;
@@ -291,6 +292,12 @@ fn unchanged_hidden_config_field(
         "auto_hotwords.max_candidates" => {
             previous_config.auto_hotwords.max_candidates == next_config.auto_hotwords.max_candidates
         }
+        "screen_context.max_chars" => {
+            previous_config.screen_context.max_chars == next_config.screen_context.max_chars
+        }
+        "screen_context.timeout_ms" => {
+            previous_config.screen_context.timeout_ms == next_config.screen_context.timeout_ms
+        }
         _ => false,
     }
 }
@@ -324,6 +331,30 @@ async fn test_llm_config(config: AppConfig) -> Result<ConnectionTestResult, Stri
         }
         Err(err) => {
             app_log::warn(format!("大模型配置测试失败: {}", err));
+            Err(err)
+        }
+    }
+}
+
+#[tauri::command]
+fn test_screen_context(
+    config: AppConfig,
+) -> Result<screen_context::ScreenContextTestResult, String> {
+    app_log::info("用户开始测试屏幕 OCR 上下文。");
+    match screen_context::test_current_window(&config.screen_context) {
+        Ok(result) => {
+            app_log::info(format!(
+                "屏幕 OCR 上下文测试完成: chars={}, elapsed_ms={}, language={}, image={}x{}",
+                result.text_chars,
+                result.elapsed_ms,
+                result.selected_language.as_deref().unwrap_or("unknown"),
+                result.image_width,
+                result.image_height
+            ));
+            Ok(result)
+        }
+        Err(err) => {
+            app_log::warn(format!("屏幕 OCR 上下文测试失败: {}", err));
             Err(err)
         }
     }
@@ -420,7 +451,7 @@ LLM 润色: {}\n\
 触发方式: {}\n\
 最近会话状态: {:?}\n\
 最近错误码: {}\n\
-诊断报告内容: 不包含识别正文、热词、Prompt、最近上下文正文、自动热词历史正文、候选词、密钥原文\n\
+诊断报告内容: 不包含识别正文、屏幕 OCR 正文、热词、Prompt、最近上下文正文、自动热词历史正文、候选词、密钥原文\n\
 日志脱敏范围: key/token/bearer/password/secret 类字段和本机用户路径\n",
         env!("CARGO_PKG_VERSION"),
         std::env::consts::OS,
@@ -643,6 +674,7 @@ pub fn run() {
             save_app_config,
             test_asr_config,
             test_llm_config,
+            test_screen_context,
             open_setup_guide,
             open_log_file,
             get_diagnostic_report,

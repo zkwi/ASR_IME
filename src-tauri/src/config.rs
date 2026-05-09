@@ -25,6 +25,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub context: ContextConfig,
     #[serde(default)]
+    pub screen_context: ScreenContextConfig,
+    #[serde(default)]
     pub triggers: TriggerConfig,
     #[serde(default)]
     pub typing: TypingConfig,
@@ -126,6 +128,16 @@ pub struct ContextConfig {
 pub struct TextContext {
     #[serde(default)]
     pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScreenContextConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_screen_context_max_chars")]
+    pub max_chars: usize,
+    #[serde(default = "default_screen_context_timeout_ms")]
+    pub timeout_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -265,6 +277,7 @@ impl Default for AppConfig {
             audio: AudioConfig::default(),
             request: RequestConfig::default(),
             context: ContextConfig::default(),
+            screen_context: ScreenContextConfig::default(),
             triggers: TriggerConfig::default(),
             typing: TypingConfig::default(),
             startup: StartupConfig::default(),
@@ -333,6 +346,16 @@ impl Default for ContextConfig {
             hotwords: Vec::new(),
             prompt_context: Vec::new(),
             recent_context: Vec::new(),
+        }
+    }
+}
+
+impl Default for ScreenContextConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_chars: default_screen_context_max_chars(),
+            timeout_ms: default_screen_context_timeout_ms(),
         }
     }
 }
@@ -758,6 +781,12 @@ fn default_final_timeout() -> f64 {
 }
 fn default_recent_context_rounds() -> usize {
     5
+}
+fn default_screen_context_max_chars() -> usize {
+    1_200
+}
+fn default_screen_context_timeout_ms() -> u64 {
+    700
 }
 fn default_paste_delay_ms() -> u64 {
     120

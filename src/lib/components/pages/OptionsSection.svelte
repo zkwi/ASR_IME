@@ -4,11 +4,12 @@
     AppConfig,
     AudioDeviceInfo,
     HotkeyCaptureState,
+    ScreenContextTestResult,
     SoftConfigNoticeKey,
     UpdateStatus,
   } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
-  import { ClipboardCopy, Download, FileText, Keyboard, ShieldCheck } from "lucide-svelte";
+  import { ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type OverlayColorPreset = { label: CopyKey; background: string; text: string };
@@ -29,6 +30,8 @@
     installingUpdate: boolean;
     openingLog: boolean;
     copyingDiagnosticReport: boolean;
+    testingScreenContext: boolean;
+    screenContextTestResult: ScreenContextTestResult | null;
     fieldError: (field: string) => string;
     formatHotkey: (value: string) => string;
     overlayBackgroundRgb: () => string;
@@ -51,6 +54,7 @@
     onDownloadLatestUpdate: () => void;
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
+    onTestScreenContext: () => void;
   };
 
   let {
@@ -69,6 +73,8 @@
     installingUpdate,
     openingLog,
     copyingDiagnosticReport,
+    testingScreenContext,
+    screenContextTestResult,
     fieldError,
     formatHotkey,
     overlayBackgroundRgb,
@@ -91,6 +97,7 @@
     onDownloadLatestUpdate,
     onOpenLog,
     onCopyDiagnosticReport,
+    onTestScreenContext,
   }: Props = $props();
 
 </script>
@@ -161,6 +168,43 @@
       </div>
       <p class="field-hint">{t("removeTrailingPeriodHint")}</p>
       <p class="field-hint">{t("clipboardTextRestoreHint")}</p>
+    </div>
+    <div id="settings-screen-context" class="form-panel">
+      <div class="section-heading"><h3>{t("screenContextTitle")}</h3><p>{t("screenContextDescription")}</p></div>
+      <div class="toggle-grid">
+        <label class="check">
+          <input type="checkbox" bind:checked={config.screen_context.enabled} />
+          <span class="check-copy">
+            <span>{t("enableScreenContext")}</span>
+            <small>{t("screenContextSentToService")}</small>
+          </span>
+        </label>
+      </div>
+      <p class="field-hint">{t("screenContextPrivacyHint")}</p>
+      <div class="update-card">
+        <div>
+          <strong>{t("screenContextTestTitle")}</strong>
+          <p>{t("screenContextTestDescription")}</p>
+          {#if screenContextTestResult}
+            <small>{t("screenContextTestMeta", {
+              chars: String(screenContextTestResult.text_chars),
+              ms: String(screenContextTestResult.elapsed_ms),
+              lang: screenContextTestResult.selected_language ?? "-"
+            })}</small>
+          {/if}
+        </div>
+        <div class="update-actions">
+          <button type="button" onclick={onTestScreenContext} disabled={testingScreenContext}>
+            <ScanText size={16} />{testingScreenContext ? t("testingScreenContext") : t("testScreenContext")}
+          </button>
+        </div>
+      </div>
+      {#if screenContextTestResult}
+        <div class="ocr-preview" class:empty={!screenContextTestResult.text.trim()}>
+          <strong>{screenContextTestResult.warning ?? t("screenContextRecognizedText")}</strong>
+          <pre>{screenContextTestResult.text || t("screenContextNoText")}</pre>
+        </div>
+      {/if}
     </div>
     <div id="settings-overlay" class="form-panel">
       <div class="section-heading"><h3>{t("floatingCaptionAppearance")}</h3><p>{t("floatingCaptionAppearanceDescription")}</p></div>
@@ -697,6 +741,38 @@
     font-weight: 700;
     line-height: 1.2;
     white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ocr-preview {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 12px;
+    background: #f8fbff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .ocr-preview.empty {
+    background: #fff8ed;
+  }
+
+  .ocr-preview strong {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .ocr-preview pre {
+    max-height: 168px;
+    margin: 0;
+    overflow: auto;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 

@@ -49,6 +49,16 @@ export type InstallUpdateResult = {
 
 export type ConnectionTestResult = { message: string };
 export type DiagnosticReport = { text: string };
+export type ScreenContextTestResult = {
+  available_languages: string[];
+  selected_language: string | null;
+  elapsed_ms: number;
+  text: string;
+  text_chars: number;
+  image_width: number;
+  image_height: number;
+  warning: string | null;
+};
 
 export type ConfigValidationError = {
   field: string;
@@ -193,6 +203,11 @@ export type AppConfig = {
     hotwords: string[];
     prompt_context: TextContext[];
     recent_context: TextContext[];
+  };
+  screen_context: {
+    enabled: boolean;
+    max_chars: number;
+    timeout_ms: number;
   };
   triggers: {
     hotkey_enabled: boolean;

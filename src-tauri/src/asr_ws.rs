@@ -1,7 +1,7 @@
 use crate::session::{SessionController, SessionPhase};
 use crate::{
     app_log, asr, config, config::AppConfig, hotword_history, llm_post_edit, overlay, protocol,
-    stats, text_output,
+    screen_context, stats, text_output,
 };
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
@@ -34,6 +34,7 @@ pub fn spawn_asr_worker(
     app: AppHandle,
     session: SessionController,
     generation: u64,
+    screen_context_rx: Option<screen_context::ScreenContextReceiver>,
 ) {
     thread::spawn(move || {
         app_log::info(format!("ASR worker 已启动: generation={}", generation));
@@ -71,6 +72,9 @@ pub fn spawn_asr_worker(
         };
         let typing = config.typing.clone();
         let remove_trailing_period = config.typing.remove_trailing_period;
+        let screen_context =
+            screen_context::wait_for_context(screen_context_rx, config.screen_context.timeout_ms);
+        let screen_context_text = screen_context.as_ref().map(|item| item.text.clone());
         let runtime_result = runtime.block_on(async {
             let text = run_websocket_session(
                 config.clone(),
@@ -78,6 +82,7 @@ pub fn spawn_asr_worker(
                 app.clone(),
                 session.clone(),
                 generation,
+                screen_context_text.as_deref(),
             )
             .await?;
             if text.trim().is_empty() {
@@ -88,7 +93,15 @@ pub fn spawn_asr_worker(
             }
             if llm_post_edit::should_polish(&config, &text) {
                 Ok::<llm_post_edit::PolishOutcome, String>(
-                    polish_with_delayed_status(&config, &text, &app, &session, generation).await,
+                    polish_with_delayed_status(
+                        &config,
+                        &text,
+                        screen_context_text.as_deref(),
+                        &app,
+                        &session,
+                        generation,
+                    )
+                    .await,
                 )
             } else {
                 Ok::<llm_post_edit::PolishOutcome, String>(llm_post_edit::PolishOutcome {
@@ -241,7 +254,7 @@ pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
     test_config.context.hotwords.clear();
     test_config.context.prompt_context.clear();
     test_config.context.recent_context.clear();
-    let preview = asr::build_request_preview(&test_config);
+    let preview = asr::build_request_preview(&test_config, None);
     let mut request = preview
         .ws_url
         .as_str()
@@ -304,6 +317,7 @@ pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
 async fn polish_with_delayed_status(
     config: &AppConfig,
     text: &str,
+    screen_context: Option<&str>,
     app: &AppHandle,
     session: &SessionController,
     generation: u64,
@@ -311,8 +325,10 @@ async fn polish_with_delayed_status(
     let config = config.clone();
     let original_text = text.to_string();
     let task_text = original_text.clone();
-    let mut polish_task =
-        tokio::spawn(async move { llm_post_edit::polish(&config, &task_text).await });
+    let screen_context = screen_context.map(str::to_string);
+    let mut polish_task = tokio::spawn(async move {
+        llm_post_edit::polish(&config, &task_text, screen_context.as_deref()).await
+    });
 
     match tokio::time::timeout(POST_EDITING_OVERLAY_DELAY, &mut polish_task).await {
         Ok(Ok(outcome)) => outcome,
@@ -363,9 +379,10 @@ async fn run_websocket_session(
     app: AppHandle,
     session: SessionController,
     generation: u64,
+    screen_context: Option<&str>,
 ) -> Result<String, String> {
     let remove_trailing_period = config.typing.remove_trailing_period;
-    let preview = asr::build_request_preview(&config);
+    let preview = asr::build_request_preview(&config, screen_context);
     let mut request = preview
         .ws_url
         .as_str()

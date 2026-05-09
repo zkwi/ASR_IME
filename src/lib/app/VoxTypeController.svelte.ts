@@ -105,6 +105,7 @@ import type {
   OverlayConfig,
   OverlayText,
   PersistConfigOptions,
+  ScreenContextTestResult,
   SelectableHotwordCandidate,
   SessionPhase,
   SessionState,
@@ -164,6 +165,8 @@ export function createVoxTypeController() {
   let asrConnectionStatus = $state<AsrConnectionStatus>("missing_auth");
   let asrTestedConfigFingerprint = $state("");
   let testingLlm = $state(false);
+  let testingScreenContext = $state(false);
+  let screenContextTestResult = $state<ScreenContextTestResult | null>(null);
   let validationErrors = $state<Record<string, string>>({});
   const autoHotwords = createAutoHotwordsController({
     getConfig: () => config,
@@ -715,6 +718,26 @@ export function createVoxTypeController() {
       testingLlm = false;
     }
   }
+  async function testScreenContext() {
+    if (testingScreenContext) return;
+    testingScreenContext = true;
+    screenContextTestResult = null;
+    try {
+      const result = await safeInvoke<ScreenContextTestResult>("test_screen_context", { config: clonePlain(config) });
+      if (result) {
+        screenContextTestResult = result;
+        statusMessage = t("screenContextTestSucceeded", {
+          chars: formatNumber(result.text_chars),
+          ms: formatNumber(result.elapsed_ms),
+        });
+        showActionNotice(statusMessage, result.warning ? "warning" : "success");
+      } else if (statusMessage) {
+        showActionNotice(statusMessage, "error");
+      }
+    } finally {
+      testingScreenContext = false;
+    }
+  }
   function showActionNotice(
     message: string,
     kind: "success" | "info" | "warning" | "error",
@@ -1106,6 +1129,8 @@ export function createVoxTypeController() {
       setupWarningCount: setupWarningCount(),
       testingAsr,
       testingLlm,
+      testingScreenContext,
+      screenContextTestResult,
       hotkeyCaptureState: hotkeyCapture.state,
       hotkeyValidationMessage: hotkeyCapture.validationMessage,
       overlayColorPresets,
@@ -1174,6 +1199,7 @@ export function createVoxTypeController() {
       onSetupAction: handleSetupAction,
       onTestAsrConfig: testAsrConfig,
       onTestLlmConfig: testLlmConfig,
+      onTestScreenContext: testScreenContext,
       onHotkeyKeydown: hotkeyCapture.handleKeydown,
       onBeginHotkeyCapture: hotkeyCapture.beginCapture,
       onApplyOverlayPreset: overlay.applyPreset,

@@ -13,6 +13,7 @@
     AppConfig,
     AudioDeviceInfo,
     LastSessionOutcome,
+    ScreenContextTestResult,
     Section,
     SelectableHotwordCandidate,
     SoftConfigNoticeKey,
@@ -54,6 +55,8 @@
     setupWarningCount: number;
     testingAsr: boolean;
     testingLlm: boolean;
+    testingScreenContext: boolean;
+    screenContextTestResult: ScreenContextTestResult | null;
     hotkeyCaptureState: "idle" | "recording";
     hotkeyValidationMessage: string;
     overlayColorPresets: Array<{ label: CopyKey; background: string; text: string }>;
@@ -122,6 +125,7 @@
     onSetupAction: (action: string) => void;
     onTestAsrConfig: () => void;
     onTestLlmConfig: () => void;
+    onTestScreenContext: () => void;
     onHotkeyKeydown: (event: KeyboardEvent) => void;
     onBeginHotkeyCapture: () => void;
     onApplyOverlayPreset: (background: string, text: string) => void;
@@ -164,6 +168,8 @@
     setupWarningCount,
     testingAsr,
     testingLlm,
+    testingScreenContext,
+    screenContextTestResult,
     hotkeyCaptureState,
     hotkeyValidationMessage,
     overlayColorPresets,
@@ -232,6 +238,7 @@
     onSetupAction,
     onTestAsrConfig,
     onTestLlmConfig,
+    onTestScreenContext,
     onHotkeyKeydown,
     onBeginHotkeyCapture,
     onApplyOverlayPreset,
@@ -362,6 +369,8 @@
     {installingUpdate}
     {openingLog}
     {copyingDiagnosticReport}
+    {testingScreenContext}
+    {screenContextTestResult}
     {fieldError}
     {formatHotkey}
     {overlayBackgroundRgb}
@@ -384,6 +393,7 @@
     onDownloadLatestUpdate={onDownloadLatestUpdate}
     onOpenLog={onOpenLog}
     onCopyDiagnosticReport={onCopyDiagnosticReport}
+    onTestScreenContext={onTestScreenContext}
   />
 {:else if selectedSection === "History"}
   <HistorySection

@@ -14,6 +14,7 @@ export function userFacingInvokeFailure(command: string, error: unknown, generic
   if (
     (command === "test_asr_config" ||
       command === "test_llm_config" ||
+      command === "test_screen_context" ||
       command === "generate_hotword_candidates") &&
     isSafeShortUserMessage(raw)
   ) {

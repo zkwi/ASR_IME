@@ -9,6 +9,7 @@ use crate::asr_ws;
 use crate::audio::{self, AudioCapture};
 use crate::config;
 use crate::overlay;
+use crate::screen_context;
 use crate::system_audio::{self, VolumeState};
 use crate::tray;
 
@@ -147,6 +148,7 @@ impl SessionController {
             None
         };
         let started_at = Instant::now();
+        let screen_context_rx = screen_context::spawn_capture(&loaded.data.screen_context);
         app_log::info(format!(
             "录音启动请求: max_seconds={}, stop_grace_ms={}, silence_auto_stop_seconds={}, silence_level_threshold={}, mute_system_volume={}",
             max_seconds,
@@ -276,6 +278,7 @@ impl SessionController {
                 app,
                 self.clone(),
                 generation,
+                screen_context_rx,
             );
         }
 
