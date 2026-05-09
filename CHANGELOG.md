@@ -6,6 +6,20 @@
 
 ## [未发布]
 
+## [0.1.61] - 2026-05-09
+
+### 修复
+
+- 修复安装版点击“测试 OCR”时可能直接报错 `Cannot change thread mode after it is set. (0x80010106)` 的问题。测试入口会在独立工作线程里调用 Windows OCR，避免受 Tauri 命令线程 COM 模式影响；如果遇到已初始化线程，也会沿用既有线程模式，不再把该状态视为失败。
+
+### 测试
+
+- 补充 `RPC_E_CHANGED_MODE` 回归测试。
+- 运行 `npm run audit:npm`，未发现 npm 漏洞。
+- 运行 `npm run ai:check`，覆盖前端类型检查、构建、密钥扫描、Rust fmt/check/test。
+- 运行 `npm run ai:release-check`，覆盖本地检查、Rust 依赖审计、clippy 和 Tauri debug build；Rust 审计仅报告当前 Tauri 依赖链中已允许的 warnings。
+- 运行 `npx tauri build`，生成 Windows x64 安装包。
+
 ## [0.1.60] - 2026-05-09
 
 ### 新增

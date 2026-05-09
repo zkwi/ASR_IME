@@ -14,7 +14,7 @@ use windows::{
     Media::Ocr::OcrEngine,
     Storage::Streams::DataWriter,
     Win32::{
-        Foundation::RECT,
+        Foundation::{RECT, RPC_E_CHANGED_MODE},
         Graphics::Gdi::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
             GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CAPTUREBLT,
@@ -140,6 +140,15 @@ pub fn test_current_window(
         image_width: recognized.image_width,
         image_height: recognized.image_height,
     })
+}
+
+pub fn test_current_window_on_worker(
+    config: &ScreenContextConfig,
+) -> Result<ScreenContextTestResult, String> {
+    let config = config.clone();
+    thread::spawn(move || test_current_window(&config))
+        .join()
+        .map_err(|_| "屏幕 OCR 测试线程异常结束。".to_string())?
 }
 
 fn recognize_image_context(
@@ -445,20 +454,38 @@ impl Drop for SelectedObject {
     }
 }
 
-struct WinRtApartment;
+struct WinRtApartment {
+    should_uninitialize: bool,
+}
 
 impl WinRtApartment {
     fn init_mta() -> Result<Self, String> {
         unsafe {
-            RoInitialize(RO_INIT_MULTITHREADED)
-                .map_err(|err| windows_error("初始化 Windows OCR 运行时失败", err))?;
+            match RoInitialize(RO_INIT_MULTITHREADED) {
+                Ok(()) => Ok(Self {
+                    should_uninitialize: true,
+                }),
+                Err(err) if is_changed_thread_mode(&err) => {
+                    // Tauri 命令线程可能已初始化为 STA；WinRT OCR 可以沿用既有 apartment。
+                    Ok(Self {
+                        should_uninitialize: false,
+                    })
+                }
+                Err(err) => Err(windows_error("初始化 Windows OCR 运行时失败", err)),
+            }
         }
-        Ok(Self)
     }
+}
+
+fn is_changed_thread_mode(err: &WindowsError) -> bool {
+    err.code() == RPC_E_CHANGED_MODE
 }
 
 impl Drop for WinRtApartment {
     fn drop(&mut self) {
+        if !self.should_uninitialize {
+            return;
+        }
         unsafe {
             RoUninitialize();
         }
@@ -483,5 +510,11 @@ mod tests {
     fn limits_ocr_text_length() {
         let text = normalize_screen_context_text("abcdef", 3);
         assert_eq!(text, "abc");
+    }
+
+    #[test]
+    fn treats_existing_com_apartment_as_usable() {
+        let err = WindowsError::from_hresult(RPC_E_CHANGED_MODE);
+        assert!(is_changed_thread_mode(&err));
     }
 }

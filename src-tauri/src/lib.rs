@@ -341,7 +341,7 @@ fn test_screen_context(
     config: AppConfig,
 ) -> Result<screen_context::ScreenContextTestResult, String> {
     app_log::info("用户开始测试屏幕 OCR 上下文。");
-    match screen_context::test_current_window(&config.screen_context) {
+    match screen_context::test_current_window_on_worker(&config.screen_context) {
         Ok(result) => {
             app_log::info(format!(
                 "屏幕 OCR 上下文测试完成: chars={}, elapsed_ms={}, language={}, image={}x{}",
