@@ -30,9 +30,9 @@ const REQUIRED_WIKI_PAGES = [
 ];
 
 const I18N_EXPORTS = [
-  { locale: "zh-CN", file: "src/lib/i18n/zh-CN.ts", exportName: "zhCN" },
-  { locale: "zh-TW", file: "src/lib/i18n/zh-TW.ts", exportName: "zhTW" },
-  { locale: "en", file: "src/lib/i18n/en.ts", exportName: "en" },
+  { file: "src/lib/i18n/zh-CN.ts", exportName: "zhCN" },
+  { file: "src/lib/i18n/zh-TW.ts", exportName: "zhTW" },
+  { file: "src/lib/i18n/en.ts", exportName: "en" },
 ];
 
 function runGit(args, cwd) {
@@ -273,8 +273,9 @@ function collectObjectKeyPaths(objectLiteral, prefix = []) {
 
     const keyPath = [...prefix, name];
     paths.push(keyPath.join("."));
-    if (ts.isObjectLiteralExpression(property.initializer)) {
-      paths.push(...collectObjectKeyPaths(property.initializer, keyPath));
+    const childObject = unwrapObjectLiteralExpression(property.initializer);
+    if (childObject) {
+      paths.push(...collectObjectKeyPaths(childObject, keyPath));
     }
   }
   return paths;

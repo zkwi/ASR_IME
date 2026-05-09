@@ -90,9 +90,9 @@ function createValidProject(dir) {
 
 function writeI18nFiles(dir, overrides = {}) {
   const files = {
-    "zh-CN.ts": 'export const zhCN = {\n  "appName": "声写",\n  "setup": {\n    "title": "配置",\n    "description": "说明"\n  }\n};\n',
-    "zh-TW.ts": 'export const zhTW = {\n  "appName": "聲寫",\n  "setup": {\n    "title": "配置",\n    "description": "說明"\n  }\n};\n',
-    "en.ts": 'export const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup",\n    "description": "Description"\n  }\n};\n',
+    "zh-CN.ts": 'export const zhCN = {\n  "appName": "声写",\n  "setup": {\n    "title": "配置",\n    "description": "说明"\n  } as const\n} as const;\n',
+    "zh-TW.ts": 'import type { TranslationCopy } from "./types";\nexport const zhTW = {\n  "appName": "聲寫",\n  "setup": {\n    "title": "配置",\n    "description": "說明"\n  }\n} satisfies TranslationCopy;\n',
+    "en.ts": 'import type { TranslationCopy } from "./types";\nexport const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup",\n    "description": "Description"\n  }\n} satisfies TranslationCopy;\n',
     ...overrides,
   };
   for (const [filename, content] of Object.entries(files)) {
@@ -132,12 +132,22 @@ withProject((dir) => {
 
 withProject((dir) => {
   writeI18nFiles(dir, {
-    "en.ts": 'export const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup"\n  }\n};\n',
+    "en.ts": 'import type { TranslationCopy } from "./types";\nexport const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup"\n  }\n} satisfies TranslationCopy;\n',
   });
   const result = runGovernance(dir);
   assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /i18n keys missing/);
   assert.match(result.stdout, /setup\.description/);
+});
+
+withProject((dir) => {
+  writeI18nFiles(dir, {
+    "en.ts": 'import type { TranslationCopy } from "./types";\nexport const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup",\n    "description": "Description"\n  },\n  "extra": "Unexpected"\n} satisfies TranslationCopy;\n',
+  });
+  const result = runGovernance(dir);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /i18n keys extra/);
+  assert.match(result.stdout, /\bextra\b/);
 });
 
 console.log("[test-governance] all checks passed");
