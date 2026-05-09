@@ -44,6 +44,10 @@
     if (count === undefined) return t("privacyStatusLoading");
     return t("privacyStatsCount", { count: String(count) });
   }
+
+  function clearDisabled(isClearing: boolean, count: number | undefined) {
+    return isClearing || count === 0;
+  }
 </script>
 
 <section class="privacy-stack">
@@ -116,7 +120,7 @@
                   type="button"
                   class="danger-action"
                   onclick={onClearRecentContext}
-                  disabled={clearingRecentContext || (status?.recent_context_count ?? 1) === 0}
+                  disabled={clearDisabled(clearingRecentContext, status?.recent_context_count)}
                 >
                   {clearingRecentContext ? t("privacyClearing") : t("privacyClear")}
                 </button>
@@ -142,7 +146,7 @@
                   type="button"
                   class="danger-action"
                   onclick={onClearAutoHotwordHistory}
-                  disabled={clearingAutoHotwordHistory || (status?.auto_hotword_entry_count ?? 1) === 0}
+                  disabled={clearDisabled(clearingAutoHotwordHistory, status?.auto_hotword_entry_count)}
                 >
                   {clearingAutoHotwordHistory ? t("privacyClearing") : t("privacyClear")}
                 </button>
@@ -163,7 +167,7 @@
                 type="button"
                 class="danger-action"
                 onclick={onClearUsageStats}
-                disabled={clearingUsageStats || (status?.stats_event_count ?? 1) === 0}
+                disabled={clearDisabled(clearingUsageStats, status?.stats_event_count)}
               >
                 {clearingUsageStats ? t("privacyClearing") : t("privacyClear")}
               </button>
@@ -468,17 +472,6 @@
     line-height: 1.45;
   }
 
-  @media (max-width: 920px) {
-    .privacy-heading,
-    .status-strip {
-      grid-template-columns: 1fr;
-    }
-
-    .secondary-action {
-      width: 100%;
-    }
-  }
-
   @media (max-width: 1120px) {
     .table-scroll {
       overflow: visible;
@@ -547,6 +540,17 @@
     .group-row td {
       border: 1px solid var(--border);
       border-radius: 10px;
+    }
+  }
+
+  @media (max-width: 920px) {
+    .privacy-heading,
+    .status-strip {
+      grid-template-columns: 1fr;
+    }
+
+    .secondary-action {
+      width: 100%;
     }
   }
 </style>

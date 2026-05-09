@@ -172,7 +172,18 @@ Privacy and stability:
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
 - Disable it in Options or Privacy & local data when the current foreground window contains sensitive content.
 
-## 11. Floating Captions
+## 11. Privacy & Local Data
+
+Privacy & local data answers four questions in one place: what VoxType stores, where it lives, whether it is uploaded, and whether it can be cleared. The page shows counts, switch state, logical paths, and upload boundaries only. It does not show transcripts, OCR text, hotword history text, prompts, or keys.
+
+The page separates data into two groups:
+
+- Local clearable data: recent context, automatic hotword history, and usage stats. Recent context and automatic hotword history contain voice-input text history and are off by default. Usage stats contain non-content metrics such as character count, duration, and speed.
+- Runtime and third-party service data: ASR audio, screen OCR, LLM polishing text, and temporary clipboard snapshots. These are normally not written to disk, but ASR audio, OCR context, and LLM polishing text can be sent with the current request depending on enabled features.
+
+Clear actions remove VoxType local files only. They do not mean third-party ASR/LLM providers have deleted data they already received; retention depends on the provider configured by the user.
+
+## 12. Floating Captions
 
 Captions are designed for recording feedback:
 
@@ -184,7 +195,7 @@ Captions do not show paste-state noise, internal paths, or debug stacks.
 
 Use presets first. Fine-tune width, height, colors, and bottom margin in `config.toml` only if captions block your content.
 
-## 12. Statistics
+## 13. Statistics
 
 Stats record:
 
@@ -198,7 +209,7 @@ Saved time is estimated as manual typing time for the same character count minus
 
 Stats do not store recognized text.
 
-## 13. Tray, Startup, and Updates
+## 14. Tray, Startup, and Updates
 
 Tray:
 
@@ -217,7 +228,7 @@ Updates:
 - When a new version is available, notices and the update panel provide an "Update now" action.
 - Updates download the NSIS installer from GitHub Releases, exit the current app to release files, and try to open the new version after installation.
 
-## 14. Latency Optimization
+## 15. Latency Optimization
 
 | Goal | Tune first |
 | --- | --- |

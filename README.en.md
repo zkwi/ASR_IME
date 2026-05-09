@@ -194,7 +194,7 @@ VoxType works best in apps that accept clipboard paste, including browser fields
 
 ### Does VoxType store my transcript text?
 
-Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default. Screen OCR context is on by default but is not persisted or cached across recordings; it is only sent temporarily with the current ASR/LLM request and can be disabled in Options or Privacy & local data. Local context, hotword history, and usage stats can be cleared from Privacy & local data.
+Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default. Screen OCR context is on by default but is not persisted or cached across recordings; it is only sent temporarily with the current ASR/LLM request and can be disabled in Options or Privacy & local data. Local context, hotword history, and usage stats can be cleared from Privacy & local data. Clear actions only remove VoxType local files; retention by third-party ASR/LLM providers depends on the provider you configure.
 
 ### Why does VoxType need Doubao ASR keys?
 
