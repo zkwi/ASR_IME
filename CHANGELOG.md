@@ -16,6 +16,8 @@
 
 - 新增 `npm run check:governance`，自动检查版本号一致性、Markdown 本地链接、截图引用和 README/Wiki 镜像覆盖情况，并接入 `npm run ai:check` 与 GitHub Actions CI。
 - 新增 `npm run test:governance`，为治理检查脚本覆盖通过、版本不一致和 Wiki 镜像缺失三类回归场景。
+- 拆出前端通知和统计 controller，减少 `VoxTypeController.svelte.ts` 的横切状态职责，让主 controller 更接近组合入口。
+- 将剪贴板输出中的 Win32 剪贴板和全局内存管理改为 RAII 小封装，降低后续修改时漏关剪贴板、漏解锁或错误释放内存的风险。
 
 ### 修复
 
@@ -24,6 +26,7 @@
 ### 测试
 
 - 新增 `npm run test:stats`，覆盖 24 小时、7 日和按日统计的节省时间净值口径，并接入 `npm run ai:check` 与 GitHub Actions CI。
+- 补充剪贴板全局内存 ownership 转移单元测试，覆盖 `GlobalAlloc` 内存锁定后转交剪贴板所有权的关键路径。
 
 ## [0.1.64] - 2026-05-09
 

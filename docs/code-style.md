@@ -40,6 +40,7 @@ cargo test
 4. 用户可见错误不要直接返回底层错误字符串，应转换成用户能理解的提示。
 5. 日志必须脱敏，不得记录真实密钥、识别正文或最近上下文正文。
 6. 统计只记录非正文数据，例如字数、时长、速度、错误码。
+7. `text_output.rs` 中直接接触 Win32 剪贴板和全局内存的代码应优先通过 RAII 小封装管理 `OpenClipboard`、`GlobalAlloc` 和 `GlobalLock` 生命周期。`SetClipboardData` 成功后才转移内存所有权。
 
 ---
 
@@ -82,6 +83,7 @@ en.ts
 7. 首页不显示调试路径、协议细节、内部状态码。
 8. 设置页优先展示用户可理解的基础和低频项；协议、快照、重试等底层参数不放入 UI，保留在 `config.toml`。
 9. 悬浮字幕不显示瞬时成功状态；普通成功输出完成后应立即隐藏，仅错误或需要用户注意的告警可短暂停留。
+10. `VoxTypeController.svelte.ts` 应作为前端组合入口使用。新增功能优先放入 `src/lib/app/*Controller.svelte.ts` 或 `src/lib/utils/`，不要把新的业务状态继续堆进主 controller。
 
 ---
 

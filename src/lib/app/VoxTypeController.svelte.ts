@@ -3,17 +3,16 @@ import { browser } from "$app/environment";
 import { createAutoHotwordsController } from "$lib/app/autoHotwordsController.svelte";
 import { createDiagnosticsController } from "$lib/app/diagnosticsController.svelte";
 import { createHotkeyCaptureController } from "$lib/app/hotkeyCaptureController.svelte";
+import { createNotificationController } from "$lib/app/notificationController.svelte";
 import { createOverlayController } from "$lib/app/overlayController.svelte";
 import { createSettingsNavigationController } from "$lib/app/settingsNavigationController.svelte";
+import { createStatsController } from "$lib/app/statsController.svelte";
 import { createUpdateController } from "$lib/app/updateController.svelte";
 import { createWindowController } from "$lib/app/windowController.svelte";
 import type { SetupStatusItem } from "$lib/components/overview/SetupStatusCard.svelte";
-import type { HistoryDayRow, HistorySummaryCard } from "$lib/components/pages/HistorySection.svelte";
 import {
   autoSaveDelayMs,
   chineseTypingCharsPerMinute,
-  emptyStats,
-  emptyUsage,
   fallbackConfig,
   fallbackSnapshot,
   micBars,
@@ -68,9 +67,6 @@ import {
   formatHours,
   formatNumber as formatNumberForLanguage,
   formatSavedHours as formatSavedHoursForLanguage,
-  historySummaryCards as buildHistorySummaryCards,
-  recentSevenDayDisplayRows as buildRecentSevenDayDisplayRows,
-  weeklySavedHours as weeklySavedHoursForStats,
 } from "$lib/utils/stats";
 import {
   asrConfigFingerprint as buildAsrConfigFingerprint,
@@ -111,17 +107,10 @@ import type {
   SessionState,
   SoftConfigNoticeKey,
   StatsSnapshot,
-  UsageStats,
   UserErrorAction,
 } from "$lib/types/app";
 
 const copyRecentInputCommand = "copy_recent_input_text_to_clipboard";
-type ActionNoticeAction = {
-  label: string;
-  busyLabel?: string;
-  isBusy?: () => boolean;
-  onClick: () => void | Promise<void>;
-};
 
 export function createVoxTypeController() {
 
@@ -129,7 +118,6 @@ export function createVoxTypeController() {
   let config = $state<AppConfig>(clonePlain(fallbackConfig));
   let savedConfigFingerprint = $state(configFingerprint(fallbackConfig));
   let settingsDirty = $derived(configFingerprint(config) !== savedConfigFingerprint);
-  let stats = $state<StatsSnapshot>(emptyStats);
   let recording = $state(false);
   let sessionPhase = $state<SessionPhase>("idle");
   let sessionErrorCode = $state<string | null>(null);
@@ -145,6 +133,17 @@ export function createVoxTypeController() {
   let isOverlay = $state(initialParams.has("overlay"));
   let isToast = $state(initialParams.has("toast"));
   let toastHotkey = $state(initialParams.get("hotkey") || "Ctrl + Q");
+  const notifications = createNotificationController({
+    t,
+    setStatusMessage: (message) => {
+      statusMessage = message;
+    },
+    logError: logFrontendError,
+  });
+  const stats = createStatsController({
+    t,
+    getLanguage: () => language,
+  });
   const overlay = createOverlayController({
     getConfig: () => config,
     updateUi: (ui) => {
@@ -156,10 +155,6 @@ export function createVoxTypeController() {
     safeInvoke,
   });
   let uiCompact = $state(false);
-  let actionNotice = $state("");
-  let actionNoticeKind = $state<"success" | "info" | "warning" | "error">("success");
-  let actionNoticeAction = $state<ActionNoticeAction | null>(null);
-  let actionNoticeTimer: number | undefined;
   let setupStatus = $state<SetupStatus | null>(readCachedSetupStatus(browser));
   let testingAsr = $state(false);
   let asrConnectionStatus = $state<AsrConnectionStatus>("missing_auth");
@@ -177,7 +172,7 @@ export function createVoxTypeController() {
     setStatusMessage: (message) => {
       statusMessage = message;
     },
-    showActionNotice,
+    showActionNotice: notifications.show,
     safeInvoke,
     canConfirm: () => browser,
   });
@@ -190,7 +185,7 @@ export function createVoxTypeController() {
     setStatusMessage: (message) => {
       statusMessage = message;
     },
-    showActionNotice,
+    showActionNotice: notifications.show,
   });
   const diagnostics = createDiagnosticsController({
     hasTauriApi,
@@ -198,7 +193,7 @@ export function createVoxTypeController() {
     setStatusMessage: (message) => {
       statusMessage = message;
     },
-    showActionNotice,
+    showActionNotice: notifications.show,
     logError: logFrontendError,
   });
   const windows = createWindowController({
@@ -265,7 +260,7 @@ export function createVoxTypeController() {
         if (event.payload.error) {
           sessionErrorCode = event.payload.error_code;
           statusMessage = userErrorMessage(event.payload.error_code, event.payload.error);
-          showActionNotice(statusMessage, "error");
+          notifications.show(statusMessage, "error");
           if (shouldOpenSettingsForError(event.payload.error, event.payload.error_code)) {
             settingsNav.scrollToSettingsPanel(settingsPanelForError(event.payload.error, event.payload.error_code));
           }
@@ -275,7 +270,7 @@ export function createVoxTypeController() {
           ? event.payload.warning
           : null;
         if (visibleWarning) {
-          showActionNotice(visibleWarning, "warning");
+          notifications.show(visibleWarning, "warning");
         }
         lastSessionOutcome = {
           kind: "success",
@@ -295,7 +290,7 @@ export function createVoxTypeController() {
       });
       const unlistenStats = listen<StatsSnapshot>("usage-stats-updated", (event) => {
         if (!isOverlay && !isToast) {
-          stats = event.payload;
+          stats.apply(event.payload);
           void autoHotwords.refreshStatus();
         }
       });
@@ -322,7 +317,7 @@ export function createVoxTypeController() {
     }
     return () => {
       if (overlayPoll !== undefined) window.clearInterval(overlayPoll);
-      if (actionNoticeTimer !== undefined) window.clearTimeout(actionNoticeTimer);
+      notifications.dispose();
       if (succeededIdleTimer !== undefined) window.clearTimeout(succeededIdleTimer);
       clearAutoSaveTimer();
       overlay.dispose();
@@ -451,18 +446,18 @@ export function createVoxTypeController() {
     if (!text) return false;
     if (!hasTauriApi()) {
       statusMessage = t("browserPreview");
-      showActionNotice(statusMessage, "error");
+      notifications.show(statusMessage, "error");
       return false;
     }
     try {
       await invoke(copyRecentInputCommand, { text });
       statusMessage = t("lastOutcomeCopied");
-      showActionNotice(statusMessage, "success");
+      notifications.show(statusMessage, "success");
       return true;
     } catch (error) {
       statusMessage = userFacingInvokeFailure(copyRecentInputCommand, error, t("operationFailedGeneric"));
       logFrontendError(`copy last outcome text failed: ${formatFrontendError(error)}`);
-      showActionNotice(statusMessage, "error");
+      notifications.show(statusMessage, "error");
       return false;
     }
   }
@@ -520,7 +515,7 @@ export function createVoxTypeController() {
         }
       }
     }
-    if (statsResult) stats = statsResult;
+    if (statsResult) stats.apply(statsResult);
     if (devicesResult) audioDevices = devicesResult;
     if (!configResult && hasTauriApi() && !isOverlay && !isToast) configLoaded = true;
     if (setupResult) {
@@ -671,7 +666,7 @@ export function createVoxTypeController() {
     validationErrors = { ...validationErrors, ...errors };
     statusMessage = authGateMessage();
     if (focusTarget) settingsNav.focusAsrAuthSettings();
-    if (showNotice) showActionNotice(statusMessage, "warning");
+    if (showNotice) notifications.show(statusMessage, "warning");
     return false;
   }
   async function testAsrConfig() {
@@ -685,11 +680,11 @@ export function createVoxTypeController() {
         asrConnectionStatus = "tested_ok";
         asrTestedConfigFingerprint = asrConfigFingerprint();
         statusMessage = t("asrTestSucceeded");
-        showActionNotice(statusMessage, "success");
+        notifications.show(statusMessage, "success");
       } else if (statusMessage) {
         asrConnectionStatus = "tested_failed";
         asrTestedConfigFingerprint = asrConfigFingerprint();
-        showActionNotice(statusMessage, "error");
+        notifications.show(statusMessage, "error");
       }
     } finally {
       testingAsr = false;
@@ -702,9 +697,9 @@ export function createVoxTypeController() {
       const result = await safeInvoke<ConnectionTestResult>("test_llm_config", { config: clonePlain(config) });
       if (result) {
         statusMessage = t("llmTestSucceeded");
-        showActionNotice(statusMessage, "success");
+        notifications.show(statusMessage, "success");
       } else if (statusMessage) {
-        showActionNotice(statusMessage, "error");
+        notifications.show(statusMessage, "error");
       }
     } finally {
       testingLlm = false;
@@ -722,44 +717,14 @@ export function createVoxTypeController() {
           chars: formatNumber(result.text_chars),
           ms: formatNumber(result.elapsed_ms),
         });
-        showActionNotice(statusMessage, result.warning ? "warning" : "success");
+        notifications.show(statusMessage, result.warning ? "warning" : "success");
       } else if (statusMessage) {
-        showActionNotice(statusMessage, "error");
+        notifications.show(statusMessage, "error");
       }
     } finally {
       testingScreenContext = false;
     }
   }
-  function showActionNotice(
-    message: string,
-    kind: "success" | "info" | "warning" | "error",
-    action: ActionNoticeAction | undefined = undefined,
-  ) {
-    actionNotice = message;
-    actionNoticeKind = kind;
-    actionNoticeAction = action ?? null;
-    if (actionNoticeTimer !== undefined) window.clearTimeout(actionNoticeTimer);
-    const baseDuration = action ? 12_000 : kind === "error" ? 6400 : kind === "warning" ? 5200 : 3200;
-    const extraDuration = message.length > 80 ? 1800 : 0;
-    actionNoticeTimer = window.setTimeout(() => {
-      actionNotice = "";
-      actionNoticeAction = null;
-      actionNoticeTimer = undefined;
-    }, baseDuration + extraDuration);
-  }
-
-  async function runActionNoticeAction() {
-    const action = actionNoticeAction;
-    if (!action || action.isBusy?.()) return;
-    try {
-      await action.onClick();
-    } catch (error) {
-      logFrontendError(`action notice handler failed: ${formatFrontendError(error)}`);
-      statusMessage = t("operationFailedGeneric");
-      showActionNotice(statusMessage, "error");
-    }
-  }
-
   function optionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     if (!enabled) return "";
     if (key === "middle_mouse_enabled" || key === "right_alt_enabled") return t("extraTriggerEnabledNotice");
@@ -768,7 +733,7 @@ export function createVoxTypeController() {
   }
   function maybeShowOptionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     const notice = optionEnabledNotice(key, enabled);
-    if (notice) showActionNotice(notice, "info");
+    if (notice) notifications.show(notice, "info");
   }
   function triggerLabel(enabled: boolean) {
     return enabled ? t("enabled") : t("disabled");
@@ -879,14 +844,6 @@ export function createVoxTypeController() {
       ? t("sidebarMicConnected")
       : t("sidebarMicUnavailable");
   }
-  function usageTipText() {
-    if (stats.recent_7d.session_count <= 0) return t("usageTipEmpty");
-    return t("usageTipData", {
-      sessions: formatNumber(stats.recent_7d.session_count),
-      chars: formatNumber(stats.recent_7d.total_chars),
-    });
-  }
-
   function updateHotwords(value: string) {
     config.context.hotwords = normalizeHotwords(value);
   }
@@ -901,13 +858,13 @@ export function createVoxTypeController() {
 
   function tidyHotwords() {
     config.context.hotwords = dedupeHotwords(config.context.hotwords);
-    showActionNotice(t("hotwordsTidied"), "success");
+    notifications.show(t("hotwordsTidied"), "success");
   }
 
   function clearHotwords() {
     if (!browser || window.confirm(t("clearHotwordsConfirm"))) {
       config.context.hotwords = [];
-      showActionNotice(t("hotwordsCleared"), "success");
+      notifications.show(t("hotwordsCleared"), "success");
     }
   }
 
@@ -922,7 +879,7 @@ export function createVoxTypeController() {
   function restoreDefaultLlmPrompt() {
     config.llm_post_edit.system_prompt = fallbackConfig.llm_post_edit.system_prompt;
     config.llm_post_edit.user_prompt_template = fallbackConfig.llm_post_edit.user_prompt_template;
-    showActionNotice(t("defaultPromptRestored"), "success");
+    notifications.show(t("defaultPromptRestored"), "success");
   }
 
   function previewFinalPrompt() {
@@ -973,17 +930,8 @@ export function createVoxTypeController() {
     if (status === "error") return statusMessage;
     return sessionPhaseMessage(sessionPhase);
   }
-  function weeklySavedHours() {
-    return weeklySavedHoursForStats(stats, chineseTypingCharsPerMinute);
-  }
   function formatSavedHours(hours: number) {
     return formatSavedHoursForLanguage(hours, language);
-  }
-  function historySummaryCards(): HistorySummaryCard[] {
-    return buildHistorySummaryCards(stats, t, language, chineseTypingCharsPerMinute);
-  }
-  function recentSevenDayDisplayRows(): HistoryDayRow[] {
-    return buildRecentSevenDayDisplayRows(stats, t, language, chineseTypingCharsPerMinute, emptyUsage);
   }
   function hasAuth(configValue = config) {
     return configHasAuth(configValue);
@@ -1014,7 +962,7 @@ export function createVoxTypeController() {
     if (!requiresAsrAuth()) return false;
     statusMessage = authGateMessage();
     settingsNav.focusAsrAuthSettings();
-    if (showNotice) showActionNotice(statusMessage, "warning");
+    if (showNotice) notifications.show(statusMessage, "warning");
     return true;
   }
   function configSetupMessage(loaded: LoadedConfig | null) {
@@ -1088,7 +1036,7 @@ export function createVoxTypeController() {
   function appContentProps() {
     return {
       selectedSection: settingsNav.selectedSection,
-      stats,
+      stats: stats.snapshot,
       t,
       uiCompact,
       recording,
@@ -1140,8 +1088,8 @@ export function createVoxTypeController() {
       formatNumber,
       formatHours,
       formatSavedHours,
-      weeklySavedHours,
-      usageTipText,
+      weeklySavedHours: stats.weeklySavedHours,
+      usageTipText: stats.usageTipText,
       triggerLabel,
       setupActionText,
       overlayBackgroundRgb: overlay.backgroundRgb,
@@ -1153,8 +1101,8 @@ export function createVoxTypeController() {
       updatePanelTitle: updates.panelTitle,
       updatePanelDescription: updates.panelDescription,
       updateMetaText: updates.metaText,
-      historySummaryCards,
-      recentSevenDayDisplayRows,
+      historySummaryCards: stats.historySummaryCards,
+      recentSevenDayDisplayRows: stats.recentSevenDayDisplayRows,
       onOpenSettings: openSettings,
       onOpenSetupGuide: openSetupGuide,
       onUserErrorAction: handleUserErrorAction,
@@ -1212,11 +1160,11 @@ export function createVoxTypeController() {
     get overlayRootStyle() { return overlay.rootStyle; },
     get toastTitle() { return t("startupToastTitle"); },
     get toastHint() { return t("startupToastHint").replace("{hotkey}", formatHotkey(toastHotkey)); },
-    get actionNotice() { return actionNotice; },
-    get actionNoticeKind() { return actionNoticeKind; },
-    get actionNoticeActionLabel() { return actionNoticeAction?.label ?? ""; },
-    get actionNoticeActionBusyLabel() { return actionNoticeAction?.busyLabel ?? ""; },
-    get actionNoticeActionBusy() { return actionNoticeAction?.isBusy?.() ?? false; },
+    get actionNotice() { return notifications.message; },
+    get actionNoticeKind() { return notifications.kind; },
+    get actionNoticeActionLabel() { return notifications.actionLabel; },
+    get actionNoticeActionBusyLabel() { return notifications.actionBusyLabel; },
+    get actionNoticeActionBusy() { return notifications.actionBusy; },
     get closePromptVisible() { return windows.closePromptVisible; },
     get closePromptTitle() { return t("closePromptTitle"); },
     get closePromptBody() { return t("closePromptBody"); },
@@ -1231,7 +1179,7 @@ export function createVoxTypeController() {
     set llmApiConfigVisible(value: boolean) { settingsNav.llmApiConfigVisible = value; },
     appShellProps,
     appContentProps,
-    runActionNoticeAction,
+    runActionNoticeAction: notifications.runAction,
     overlayMeterBarHeight: overlay.meterBarHeight,
     overlayMeterBarOpacity: overlay.meterBarOpacity,
     closeWindowWithoutFuturePrompt: windows.closeWithoutFuturePrompt,

@@ -68,6 +68,94 @@ struct ClipboardFormatBackup {
     bytes: Vec<u8>,
 }
 
+struct ClipboardGuard;
+
+impl ClipboardGuard {
+    fn open() -> Result<Self, String> {
+        unsafe {
+            OpenClipboard(None).map_err(|err| format!("打开剪贴板失败: {}", err))?;
+        }
+        Ok(Self)
+    }
+}
+
+impl Drop for ClipboardGuard {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = CloseClipboard();
+        }
+    }
+}
+
+struct OwnedGlobalMemory {
+    handle: Option<HGLOBAL>,
+}
+
+impl OwnedGlobalMemory {
+    fn alloc(byte_len: usize) -> Result<Self, String> {
+        let handle = unsafe {
+            GlobalAlloc(GMEM_MOVEABLE, byte_len)
+                .map_err(|err| format!("分配剪贴板内存失败: {}", err))?
+        };
+        Ok(Self {
+            handle: Some(handle),
+        })
+    }
+
+    fn handle(&self) -> HGLOBAL {
+        *self.handle.as_ref().expect("global memory handle exists")
+    }
+
+    fn clipboard_handle(&self) -> HANDLE {
+        HANDLE(self.handle().0)
+    }
+
+    fn transfer_to_clipboard(mut self) {
+        self.handle = None;
+    }
+}
+
+impl Drop for OwnedGlobalMemory {
+    fn drop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            unsafe {
+                let _ = GlobalFree(Some(handle));
+            }
+        }
+    }
+}
+
+struct LockedMemory<T> {
+    memory: HGLOBAL,
+    ptr: *mut T,
+}
+
+impl<T> LockedMemory<T> {
+    unsafe fn lock(memory: HGLOBAL) -> Result<Self, String> {
+        let ptr = unsafe { GlobalLock(memory) } as *mut T;
+        if ptr.is_null() {
+            return Err("锁定剪贴板内存失败".to_string());
+        }
+        Ok(Self { memory, ptr })
+    }
+
+    fn as_ptr(&self) -> *const T {
+        self.ptr as *const T
+    }
+
+    fn as_mut_ptr(&self) -> *mut T {
+        self.ptr
+    }
+}
+
+impl<T> Drop for LockedMemory<T> {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = GlobalUnlock(self.memory);
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum ClipboardFormatSnapshotAction {
     TakeFormat,
@@ -255,82 +343,71 @@ fn clipboard_text_ready_for_paste(expected: &str, actual: &str) -> bool {
 }
 
 fn read_clipboard_backup(typing: &TypingConfig) -> Result<ClipboardBackup, String> {
-    unsafe {
-        OpenClipboard(None).map_err(|err| format!("打开剪贴板失败: {}", err))?;
-        let result = (|| {
-            let format_count = CountClipboardFormats();
-            if format_count == 0 {
-                return Ok(ClipboardBackup::Empty);
-            }
-            let mut formats = Vec::new();
-            let mut skipped_formats = 0;
-            let mut total_bytes = 0usize;
-            let max_bytes =
-                usize::try_from(typing.clipboard_snapshot_max_bytes).unwrap_or(usize::MAX);
-            let mut format = 0;
-            loop {
-                format = EnumClipboardFormats(format);
-                if format == 0 {
-                    break;
-                }
-                if is_known_non_memory_clipboard_format(format) {
-                    skipped_formats += 1;
-                    continue;
-                }
-                let Some(size) = clipboard_format_size(format) else {
-                    skipped_formats += 1;
-                    continue;
-                };
-                match clipboard_format_snapshot_action(total_bytes, size, max_bytes) {
-                    ClipboardFormatSnapshotAction::TakeFormat => {
-                        match read_clipboard_format_bytes(format) {
-                            Some(bytes) => {
-                                total_bytes += bytes.len();
-                                formats.push(ClipboardFormatBackup { format, bytes });
-                            }
-                            None => skipped_formats += 1,
-                        }
+    let _clipboard = ClipboardGuard::open()?;
+    let format_count = unsafe { CountClipboardFormats() };
+    if format_count == 0 {
+        return Ok(ClipboardBackup::Empty);
+    }
+    let mut formats = Vec::new();
+    let mut skipped_formats = 0;
+    let mut total_bytes = 0usize;
+    let max_bytes = usize::try_from(typing.clipboard_snapshot_max_bytes).unwrap_or(usize::MAX);
+    let mut format = 0;
+    loop {
+        format = unsafe { EnumClipboardFormats(format) };
+        if format == 0 {
+            break;
+        }
+        if is_known_non_memory_clipboard_format(format) {
+            skipped_formats += 1;
+            continue;
+        }
+        let Some(size) = clipboard_format_size(format) else {
+            skipped_formats += 1;
+            continue;
+        };
+        match clipboard_format_snapshot_action(total_bytes, size, max_bytes) {
+            ClipboardFormatSnapshotAction::TakeFormat => {
+                match read_clipboard_format_bytes(format) {
+                    Some(bytes) => {
+                        total_bytes += bytes.len();
+                        formats.push(ClipboardFormatBackup { format, bytes });
                     }
-                    ClipboardFormatSnapshotAction::SkipFormat => skipped_formats += 1,
-                    ClipboardFormatSnapshotAction::StopSnapshot => {
-                        skipped_formats += 1;
-                        break;
-                    }
+                    None => skipped_formats += 1,
                 }
             }
+            ClipboardFormatSnapshotAction::SkipFormat => skipped_formats += 1,
+            ClipboardFormatSnapshotAction::StopSnapshot => {
+                skipped_formats += 1;
+                break;
+            }
+        }
+    }
 
-            if formats.is_empty() {
-                Ok(ClipboardBackup::NonRestorable)
-            } else {
-                Ok(ClipboardBackup::Snapshot(ClipboardSnapshot {
-                    formats,
-                    skipped_formats,
-                    total_bytes,
-                }))
-            }
-        })();
-        let _ = CloseClipboard();
-        result
+    if formats.is_empty() {
+        Ok(ClipboardBackup::NonRestorable)
+    } else {
+        Ok(ClipboardBackup::Snapshot(ClipboardSnapshot {
+            formats,
+            skipped_formats,
+            total_bytes,
+        }))
     }
 }
 
 fn read_clipboard_text() -> Result<String, String> {
+    let _clipboard = ClipboardGuard::open()?;
     unsafe {
-        OpenClipboard(None).map_err(|err| format!("打开剪贴板失败: {}", err))?;
-        let result = (|| {
-            if IsClipboardFormatAvailable(CF_UNICODETEXT).is_err() {
-                return Ok(String::new());
-            }
-            let handle = GetClipboardData(CF_UNICODETEXT)
-                .map_err(|err| format!("读取剪贴板失败: {}", err))?;
-            read_clipboard_text_from_handle(handle)
-        })();
-        let _ = CloseClipboard();
-        result
+        if IsClipboardFormatAvailable(CF_UNICODETEXT).is_err() {
+            return Ok(String::new());
+        }
+        let handle =
+            GetClipboardData(CF_UNICODETEXT).map_err(|err| format!("读取剪贴板失败: {}", err))?;
+        read_clipboard_text_from_handle(handle)
     }
 }
 
-unsafe fn read_clipboard_format_bytes(format: u32) -> Option<Vec<u8>> {
+fn read_clipboard_format_bytes(format: u32) -> Option<Vec<u8>> {
     let handle = unsafe { GetClipboardData(format) }.ok()?;
     if handle.is_invalid() {
         return None;
@@ -340,12 +417,8 @@ unsafe fn read_clipboard_format_bytes(format: u32) -> Option<Vec<u8>> {
     if size == 0 {
         return None;
     }
-    let locked = unsafe { GlobalLock(memory) } as *const u8;
-    if locked.is_null() {
-        return None;
-    }
-    let bytes = unsafe { std::slice::from_raw_parts(locked, size) }.to_vec();
-    let _ = unsafe { GlobalUnlock(memory) };
+    let locked = unsafe { LockedMemory::<u8>::lock(memory) }.ok()?;
+    let bytes = unsafe { std::slice::from_raw_parts(locked.as_ptr(), size) }.to_vec();
     Some(bytes)
 }
 
@@ -384,16 +457,11 @@ fn read_clipboard_text_from_handle(handle: HANDLE) -> Result<String, String> {
     unsafe {
         let memory = HGLOBAL(handle.0);
         let size = GlobalSize(memory);
-        let locked = GlobalLock(memory) as *const u16;
-        if locked.is_null() {
-            return Err("锁定剪贴板内存失败".to_string());
-        }
+        let locked = LockedMemory::<u16>::lock(memory)?;
         let units = size / size_of::<u16>();
-        let slice = std::slice::from_raw_parts(locked, units);
+        let slice = std::slice::from_raw_parts(locked.as_ptr(), units);
         let len = slice.iter().position(|value| *value == 0).unwrap_or(units);
-        let text = String::from_utf16_lossy(&slice[..len]);
-        let _ = GlobalUnlock(memory);
-        Ok(text)
+        Ok(String::from_utf16_lossy(&slice[..len]))
     }
 }
 
@@ -416,35 +484,18 @@ fn write_clipboard_text(text: &str) -> Result<(), String> {
     utf16.push(0);
     let byte_len = utf16.len() * size_of::<u16>();
     unsafe {
-        let memory = GlobalAlloc(GMEM_MOVEABLE, byte_len)
-            .map_err(|err| format!("分配剪贴板内存失败: {}", err))?;
-        let locked = GlobalLock(memory) as *mut u16;
-        if locked.is_null() {
-            let _ = GlobalFree(Some(memory));
-            return Err("锁定剪贴板内存失败".to_string());
+        let memory = OwnedGlobalMemory::alloc(byte_len)?;
+        {
+            let locked = LockedMemory::<u16>::lock(memory.handle())?;
+            std::ptr::copy_nonoverlapping(utf16.as_ptr(), locked.as_mut_ptr(), utf16.len());
         }
-        std::ptr::copy_nonoverlapping(utf16.as_ptr(), locked, utf16.len());
-        let _ = GlobalUnlock(memory);
 
-        let mut clipboard_owns_memory = false;
-        let result = match OpenClipboard(None) {
-            Ok(()) => {
-                let result = (|| {
-                    EmptyClipboard().map_err(|err| format!("清空剪贴板失败: {}", err))?;
-                    SetClipboardData(CF_UNICODETEXT, Some(HANDLE(memory.0)))
-                        .map_err(|err| format!("写入剪贴板失败: {}", err))?;
-                    clipboard_owns_memory = true;
-                    Ok(())
-                })();
-                let _ = CloseClipboard();
-                result
-            }
-            Err(err) => Err(format!("打开剪贴板失败: {}", err)),
-        };
-        if result.is_err() && !clipboard_owns_memory {
-            let _ = GlobalFree(Some(memory));
-        }
-        result
+        let _clipboard = ClipboardGuard::open()?;
+        EmptyClipboard().map_err(|err| format!("清空剪贴板失败: {}", err))?;
+        SetClipboardData(CF_UNICODETEXT, Some(memory.clipboard_handle()))
+            .map_err(|err| format!("写入剪贴板失败: {}", err))?;
+        memory.transfer_to_clipboard();
+        Ok(())
     }
 }
 
@@ -453,16 +504,12 @@ fn write_clipboard_snapshot(snapshot: &ClipboardSnapshot) -> Result<(), String> 
         return Err("没有可恢复的剪贴板格式".to_string());
     }
     unsafe {
-        OpenClipboard(None).map_err(|err| format!("打开剪贴板失败: {}", err))?;
-        let result = (|| {
-            EmptyClipboard().map_err(|err| format!("清空剪贴板失败: {}", err))?;
-            for item in &snapshot.formats {
-                set_clipboard_memory(item.format, &item.bytes)?;
-            }
-            Ok(())
-        })();
-        let _ = CloseClipboard();
-        result
+        let _clipboard = ClipboardGuard::open()?;
+        EmptyClipboard().map_err(|err| format!("清空剪贴板失败: {}", err))?;
+        for item in &snapshot.formats {
+            set_clipboard_memory(item.format, &item.bytes)?;
+        }
+        Ok(())
     }
 }
 
@@ -501,22 +548,16 @@ fn set_clipboard_memory(format: u32, bytes: &[u8]) -> Result<(), String> {
         return Err("剪贴板格式内容为空，无法恢复".to_string());
     }
     unsafe {
-        let memory = GlobalAlloc(GMEM_MOVEABLE, bytes.len())
-            .map_err(|err| format!("分配剪贴板内存失败: {}", err))?;
-        let locked = GlobalLock(memory) as *mut u8;
-        if locked.is_null() {
-            let _ = GlobalFree(Some(memory));
-            return Err("锁定剪贴板内存失败".to_string());
+        let memory = OwnedGlobalMemory::alloc(bytes.len())?;
+        {
+            let locked = LockedMemory::<u8>::lock(memory.handle())?;
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), locked.as_mut_ptr(), bytes.len());
         }
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), locked, bytes.len());
-        let _ = GlobalUnlock(memory);
 
-        let result = SetClipboardData(format, Some(HANDLE(memory.0)))
-            .map_err(|err| format!("恢复剪贴板格式失败: {}", err));
-        if result.is_err() {
-            let _ = GlobalFree(Some(memory));
-        }
-        result.map(|_| ())
+        SetClipboardData(format, Some(memory.clipboard_handle()))
+            .map_err(|err| format!("恢复剪贴板格式失败: {}", err))?;
+        memory.transfer_to_clipboard();
+        Ok(())
     }
 }
 
@@ -560,11 +601,13 @@ mod tests {
         clipboard_format_snapshot_action, clipboard_restore_delay, clipboard_text_ready_for_paste,
         clipboard_write_readback_verdict, effective_clipboard_restore_delay_ms,
         is_known_non_memory_clipboard_format, is_quiet_output_warning_code, output_text,
-        ClipboardFormatSnapshotAction, MIN_RESTORE_DELAY_AFTER_PASTE_MS,
-        WARNING_CLIPBOARD_NON_RESTORABLE, WARNING_CLIPBOARD_PARTIAL_RESTORE,
+        ClipboardFormatSnapshotAction, LockedMemory, OwnedGlobalMemory,
+        MIN_RESTORE_DELAY_AFTER_PASTE_MS, WARNING_CLIPBOARD_NON_RESTORABLE,
+        WARNING_CLIPBOARD_PARTIAL_RESTORE,
     };
     use crate::config::TypingConfig;
     use std::time::Duration;
+    use windows::Win32::Foundation::GlobalFree;
 
     #[test]
     fn restore_delay_uses_independent_clipboard_restore_setting() {
@@ -598,6 +641,25 @@ mod tests {
             effective_clipboard_restore_delay_ms(&typing),
             MIN_RESTORE_DELAY_AFTER_PASTE_MS
         );
+    }
+
+    #[test]
+    fn owned_global_memory_can_transfer_ownership_after_locking() {
+        unsafe {
+            let memory = OwnedGlobalMemory::alloc(2).expect("allocate global memory");
+            {
+                let locked = LockedMemory::<u16>::lock(memory.handle()).expect("lock memory");
+                std::ptr::write(locked.as_mut_ptr(), 42);
+            }
+
+            let handle = memory.handle();
+            memory.transfer_to_clipboard();
+            {
+                let locked = LockedMemory::<u16>::lock(handle).expect("lock transferred memory");
+                assert_eq!(*locked.as_ptr(), 42);
+            }
+            let _ = GlobalFree(Some(handle));
+        }
     }
 
     #[test]
