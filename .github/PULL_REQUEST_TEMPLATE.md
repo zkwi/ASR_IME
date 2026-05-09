@@ -14,6 +14,9 @@
 ## Checks
 
 - [ ] `npm run scan:secrets:staged`
+- [ ] `npm run check:governance`
+- [ ] `npm run test:governance`
+- [ ] `npm run test:stats`
 - [ ] `npm run ai:check`
 - [ ] Manual UI verification, if UI changed
 

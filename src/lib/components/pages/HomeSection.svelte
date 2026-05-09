@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { AppConfig, LastSessionOutcome, StatsSnapshot, UserErrorAction } from "$lib/types/app";
+  import type { AppConfig, LastSessionOutcome, StatsSnapshot, UsageStats, UserErrorAction } from "$lib/types/app";
   import type { CopyKey, UserErrorDetail } from "$lib/i18n";
+  import { savedHoursForUsage } from "$lib/utils/stats";
   import {
     CalendarDays,
     ChevronRight,
@@ -132,6 +133,10 @@
     } finally {
       copyingLastOutcome = false;
     }
+  }
+
+  function savedHoursText(usage: UsageStats) {
+    return formatHours(savedHoursForUsage(usage, chineseTypingCharsPerMinute)).replace(" h", "");
   }
 </script>
 
@@ -272,13 +277,13 @@
       <span class="stat-icon"><PenLine size={uiCompact ? 16 : 20} /></span>
       <p>{t("todayInput")}</p>
       <strong>{formatNumber(stats.recent_24h.total_chars)} {t("chars")}</strong>
-      <small>{t("savedToday", { hours: formatHours(stats.recent_24h.total_chars / chineseTypingCharsPerMinute / 60).replace(" h", "") })}</small>
+      <small>{t("savedToday", { hours: savedHoursText(stats.recent_24h) })}</small>
     </article>
     <article class="stat-card purple">
       <span class="stat-icon"><CalendarDays size={uiCompact ? 16 : 20} /></span>
       <p>{t("recent7d")}</p>
       <strong>{formatNumber(stats.recent_7d.total_chars)} {t("chars")}</strong>
-      <small>{t("savedToday", { hours: formatHours(stats.recent_7d.total_chars / chineseTypingCharsPerMinute / 60).replace(" h", "") })}</small>
+      <small>{t("savedToday", { hours: savedHoursText(stats.recent_7d) })}</small>
     </article>
     <article class="stat-card green">
       <span class="stat-icon"><Zap size={uiCompact ? 16 : 20} /></span>

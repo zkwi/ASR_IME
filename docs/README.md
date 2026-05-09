@@ -34,3 +34,25 @@
 - 隐私、安全或日志脱敏变化：同步 SECURITY、README 和相关 Wiki 段落。
 - 截图更新：放在 `screenshots/`，截图中不得出现真实密钥、识别正文、屏幕 OCR 正文、个人热词、prompt、最近上下文或 Windows 用户名路径。
 - 历史审计记录只修正明显错字或敏感信息，不为追求一致性改写当时结论。
+
+## 自动检查
+
+日常本地检查会运行：
+
+```powershell
+npm run ai:check
+```
+
+文档和工程治理检查可单独运行：
+
+```powershell
+npm run check:governance
+```
+
+该检查会验证版本号一致性、本地 Markdown 链接、截图引用、README 中 GitHub Wiki 链接对应的 `docs/wiki/` 草稿是否存在。
+
+治理检查脚本自身的最小回归测试：
+
+```powershell
+npm run test:governance
+```

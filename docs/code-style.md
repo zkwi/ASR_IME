@@ -169,6 +169,18 @@ ASR final result empty.
 npm run ai:check
 ```
 
+文档、版本号和 Wiki 镜像一致性可单独运行：
+
+```powershell
+npm run check:governance
+```
+
+统计展示口径可单独回归：
+
+```powershell
+npm run test:stats
+```
+
 发布前可运行：
 
 ```powershell

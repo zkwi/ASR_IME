@@ -12,6 +12,19 @@
 - 补充英文 Wiki 配置指南仓库镜像，降低 README 英文链接与本地 Wiki 草稿漂移。
 - 新增仓库内文档索引，补齐 Wiki Home、Sidebar、功能指南中英文草稿，并优化贡献、支持、安全和目录规范中的文档同步说明。
 
+### 工程治理
+
+- 新增 `npm run check:governance`，自动检查版本号一致性、Markdown 本地链接、截图引用和 README/Wiki 镜像覆盖情况，并接入 `npm run ai:check` 与 GitHub Actions CI。
+- 新增 `npm run test:governance`，为治理检查脚本覆盖通过、版本不一致和 Wiki 镜像缺失三类回归场景。
+
+### 修复
+
+- 统一最近 24 小时、最近 7 日和按日统计的节省时间口径，均按“手打等效时间 - 实际语音时长”展示，避免把 24 小时输入误显示为手打等效时间。
+
+### 测试
+
+- 新增 `npm run test:stats`，覆盖 24 小时、7 日和按日统计的节省时间净值口径，并接入 `npm run ai:check` 与 GitHub Actions CI。
+
 ## [0.1.64] - 2026-05-09
 
 ### 改进

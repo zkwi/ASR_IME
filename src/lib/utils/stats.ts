@@ -48,6 +48,7 @@ export function localDateKey(date: Date) {
 }
 
 export function historySummaryCards(stats: StatsSnapshot, t: Translate, language: Language, charsPerMinute: number): HistorySummaryCard[] {
+  const recent24hSaved = savedHoursForUsage(stats.recent_24h, charsPerMinute);
   const weeklySaved = weeklySavedHours(stats, charsPerMinute);
   const numberText = (value: number) => formatNumber(value, language);
   return [
@@ -55,9 +56,7 @@ export function historySummaryCards(stats: StatsSnapshot, t: Translate, language
       tone: "blue",
       label: t("todayInput"),
       value: `${numberText(stats.recent_24h.total_chars)} ${t("chars")}`,
-      hint: t("savedToday", {
-        hours: formatHours(stats.recent_24h.total_chars / charsPerMinute / 60).replace(" h", ""),
-      }),
+      hint: t("savedToday", { hours: formatHours(recent24hSaved).replace(" h", "") }),
     },
     {
       tone: "purple",

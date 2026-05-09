@@ -193,6 +193,8 @@ Stats record:
 - Average speed
 - Saved time estimate
 
+Saved time is estimated as manual typing time for the same character count minus actual voice duration. The default manual typing baseline is about 50 Chinese characters per minute.
+
 Stats do not store recognized text.
 
 ## 13. Tray, Startup, and Updates

@@ -39,11 +39,20 @@ jobs:
       - name: Frontend build
         run: npm run build
 
+      - name: Stats utility regression tests
+        run: npm run test:stats
+
       - name: Secret scan
         run: npm run scan:secrets
 
       - name: Secret scan self-test
         run: npm run test:secrets
+
+      - name: Governance checks
+        run: npm run check:governance
+
+      - name: Governance check self-test
+        run: npm run test:governance
 
       - name: NPM dependency audit
         run: npm run audit:npm
