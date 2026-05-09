@@ -155,6 +155,7 @@ Privacy behavior:
 - Stores only VoxType final voice input text.
 - Does not record keyboard input.
 - Does not read clipboard history.
+- Local history can be cleared from Hotwords & prompts or Privacy & local data.
 - Calls the configured LLM only when you manually generate candidates.
 - Candidates must be confirmed before joining hotwords.
 
@@ -169,7 +170,7 @@ Privacy and stability:
 - On by default, but captures only the current foreground window, not the full screen.
 - OCR text is used only for the current request and is not written to logs, stats, config, or cache.
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
-- Disable it in Options when the current foreground window contains sensitive content.
+- Disable it in Options or Privacy & local data when the current foreground window contains sensitive content.
 
 ## 11. Floating Captions
 

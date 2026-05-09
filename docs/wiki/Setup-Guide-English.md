@@ -32,6 +32,7 @@ VoxType has five main pages:
 | Hotwords & prompts | Manage hotwords, scene notes, polishing prompts, and automatic hotword candidates |
 | API Config | Configure required Doubao ASR credentials and optional LLM API |
 | Options | Configure shortcuts, paste method, microphone, floating captions, startup, and close behavior |
+| Privacy & local data | Review storage/upload boundaries and clear local context, hotword history, and stats |
 | Analytics | View recent 24-hour, recent 7-day, and daily usage stats |
 
 The Home voice card shows idle/recording state plus the primary shortcut, middle mouse, and right Alt in compact chips. Recent input and input performance stay below it.
@@ -45,6 +46,8 @@ After a successful input, Home shows "Input completed". This means VoxType copie
 API Config starts with setup health: ASR keys, microphone, paste method, trigger method, and privacy status are shown separately. Only issues that block recording, recognition, or paste should be prominent warnings. Optional settings such as right Alt, middle mouse, recent context, and automatic hotwords should remain softer reminders. Public screenshots should blur real App Keys, Access Keys, and other secrets.
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130827_317.png" alt="VoxType API Config and setup health check" width="820">
+
+Privacy & local data centralizes the storage/upload boundaries for recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots. It also clears local context, hotword history, and usage stats.
 
 ## 3. Required: Configure Doubao ASR
 
@@ -129,11 +132,11 @@ Notes:
 
 - Only VoxType recognition snippets are saved; keyboard input is not recorded.
 - Recent context is not written back to `config.toml`.
-- Delete `context/recent_context.jsonl` to clear it.
+- Clear it from Privacy & local data, or delete `context/recent_context.jsonl` manually.
 
 ### Automatic Hotword Candidates
 
-Automatic hotword candidates are off by default. When enabled, VoxType saves final voice-input text locally. Only when the user clicks "Generate candidates" does it send a summary to the configured LLM service.
+Automatic hotword candidates are off by default. When enabled, VoxType saves final voice-input text locally. Only when the user clicks "Generate candidates" does it send a summary to the configured LLM service. Local history can be cleared from Hotwords & prompts or Privacy & local data.
 
 Candidates are not added automatically. The user must review and confirm them. The default local history limit is 5000 characters; old 10000-character defaults are migrated to 5000 on config load.
 
@@ -149,6 +152,8 @@ Options shows common settings and troubleshooting entry points directly:
 | Microphone | Input device |
 | Floating captions | Preview, color presets, opacity presets |
 | Updates and diagnostics | Check for updates, update now, open logs, copy diagnostic report |
+
+Options also includes a Privacy & local data entry card for viewing and clearing local data.
 
 Additional visible low-frequency settings:
 

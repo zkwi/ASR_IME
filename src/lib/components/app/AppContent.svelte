@@ -7,12 +7,14 @@
     type HistorySummaryCard,
   } from "$lib/components/pages/HistorySection.svelte";
   import OptionsSection from "$lib/components/pages/OptionsSection.svelte";
+  import PrivacySection from "$lib/components/pages/PrivacySection.svelte";
   import type { SetupStatusItem, SetupStatusWarning } from "$lib/components/overview/SetupStatusCard.svelte";
   import type { CopyKey, UserErrorDetail } from "$lib/i18n";
   import type {
     AppConfig,
     AudioDeviceInfo,
     LastSessionOutcome,
+    LocalDataStatus,
     ScreenContextTestResult,
     Section,
     SelectableHotwordCandidate,
@@ -96,6 +98,10 @@
     updateMetaText: () => string;
     historySummaryCards: () => HistorySummaryCard[];
     recentSevenDayDisplayRows: () => HistoryDayRow[];
+    privacyStatus: LocalDataStatus | null;
+    privacyClearingRecentContext: boolean;
+    privacyClearingAutoHotwordHistory: boolean;
+    privacyClearingUsageStats: boolean;
     onOpenSettings: () => void;
     onOpenSetupGuide: () => void;
     onUserErrorAction: (action: UserErrorAction) => void;
@@ -132,6 +138,10 @@
     onDownloadLatestUpdate: () => void;
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
+    onRefreshPrivacyStatus: () => void;
+    onClearPrivacyRecentContext: () => void;
+    onClearPrivacyAutoHotwordHistory: () => void;
+    onClearPrivacyUsageStats: () => void;
   };
 
   let {
@@ -206,6 +216,10 @@
     updateMetaText,
     historySummaryCards,
     recentSevenDayDisplayRows,
+    privacyStatus,
+    privacyClearingRecentContext,
+    privacyClearingAutoHotwordHistory,
+    privacyClearingUsageStats,
     onOpenSettings,
     onOpenSetupGuide,
     onUserErrorAction,
@@ -242,6 +256,10 @@
     onDownloadLatestUpdate,
     onOpenLog,
     onCopyDiagnosticReport,
+    onRefreshPrivacyStatus,
+    onClearPrivacyRecentContext,
+    onClearPrivacyAutoHotwordHistory,
+    onClearPrivacyUsageStats,
   }: Props = $props();
 </script>
 
@@ -376,6 +394,20 @@
     onOpenLog={onOpenLog}
     onCopyDiagnosticReport={onCopyDiagnosticReport}
     onTestScreenContext={onTestScreenContext}
+    onOpenPrivacyPage={() => onSelectSection("Privacy")}
+  />
+{:else if selectedSection === "Privacy"}
+  <PrivacySection
+    bind:config
+    {t}
+    status={privacyStatus}
+    clearingRecentContext={privacyClearingRecentContext}
+    clearingAutoHotwordHistory={privacyClearingAutoHotwordHistory}
+    clearingUsageStats={privacyClearingUsageStats}
+    onRefreshStatus={onRefreshPrivacyStatus}
+    onClearRecentContext={onClearPrivacyRecentContext}
+    onClearAutoHotwordHistory={onClearPrivacyAutoHotwordHistory}
+    onClearUsageStats={onClearPrivacyUsageStats}
   />
 {:else if selectedSection === "History"}
   <HistorySection

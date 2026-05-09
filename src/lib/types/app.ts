@@ -1,4 +1,4 @@
-export type Section = "Home" | "Hotwords" | "ApiConfig" | "Options" | "History";
+export type Section = "Home" | "Hotwords" | "ApiConfig" | "Options" | "Privacy" | "History";
 
 export type AppSnapshot = {
   hotkey: string;
@@ -75,6 +75,18 @@ export type AutoHotwordStatus = {
   entry_count: number;
   total_chars: number;
   max_history_chars: number;
+};
+
+export type LocalDataStatus = {
+  recent_context_enabled: boolean;
+  recent_context_count: number;
+  auto_hotwords_enabled: boolean;
+  auto_hotword_entry_count: number;
+  auto_hotword_total_chars: number;
+  stats_event_count: number;
+  screen_context_enabled: boolean;
+  llm_post_edit_enabled: boolean;
+  restore_clipboard_after_paste: boolean;
 };
 
 export type HotwordCandidate = {

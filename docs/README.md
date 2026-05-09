@@ -13,6 +13,7 @@
 ## 维护文档
 
 - AI 和维护规则：[AGENTS.md](../AGENTS.md)
+- 架构概览：[docs/architecture.md](architecture.md)
 - 代码规范：[docs/code-style.md](code-style.md)
 - 目录结构规范：[docs/directory-structure.md](directory-structure.md)
 - 贡献指南：[CONTRIBUTING.md](../CONTRIBUTING.md)

@@ -34,6 +34,8 @@ The Home page centers the current input state, the primary shortcut, middle mous
 
 <img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
 
+The sidebar is organized by task: Home, Hotwords & prompts, API Config, Options, Privacy & local data, and Analytics. The privacy page explains where recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots are stored or sent, and it provides clearing actions for local context, hotword history, and stats.
+
 API Config starts with a setup health check instead of a generic status header. ASR keys, microphone, paste method, trigger method, and privacy status are shown separately, and Doubao ASR plus optional LLM sections include test actions. The screenshot below has credentials blurred; public screenshots and logs should do the same.
 
 <img src="screenshots/ScreenShot_2026-05-09_130827_317.png" alt="VoxType English API Config and setup health check" width="820">
@@ -55,6 +57,7 @@ API Config starts with a setup health check instead of a generic status header. 
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. The tray menu can open config, open logs, check updates, restart the app, or exit.
 - Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
+- Privacy & local data: available from the sidebar and Options. It shows local storage and upload boundaries, and can clear recent context, automatic hotword history, and usage stats.
 - Settings layout: visible settings are shown directly by task page. Hotwords, API Config, and Options no longer repeat a generic status header at the top. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
@@ -191,7 +194,7 @@ VoxType works best in apps that accept clipboard paste, including browser fields
 
 ### Does VoxType store my transcript text?
 
-Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default. Screen OCR context is on by default but is not persisted or cached across recordings; it is only sent temporarily with the current ASR/LLM request and can be disabled in Options.
+Not by default. Usage stats store duration, character count, speed, and time estimates, not transcript text. Recent context and automatic hotword history stay off by default. Screen OCR context is on by default but is not persisted or cached across recordings; it is only sent temporarily with the current ASR/LLM request and can be disabled in Options or Privacy & local data. Local context, hotword history, and usage stats can be cleared from Privacy & local data.
 
 ### Why does VoxType need Doubao ASR keys?
 

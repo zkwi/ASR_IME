@@ -50,6 +50,7 @@
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
     onTestScreenContext: () => void;
+    onOpenPrivacyPage: () => void;
   };
 
   let {
@@ -89,6 +90,7 @@
     onOpenLog,
     onCopyDiagnosticReport,
     onTestScreenContext,
+    onOpenPrivacyPage,
   }: Props = $props();
 
 </script>
@@ -98,6 +100,15 @@
     <div class="settings-group-heading">
       <h3>{t("optionsPageTitle")}</h3>
       <p>{t("optionsPageDescription")}</p>
+    </div>
+    <div id="settings-privacy-entry" class="form-panel privacy-entry-panel">
+      <div class="section-heading">
+        <h3>{t("privacyLocalDataTitle")}</h3>
+        <p>{t("privacyLocalDataEntryDescription")}</p>
+      </div>
+      <button type="button" class="privacy-entry-action" onclick={onOpenPrivacyPage}>
+        <ShieldCheck size={16} />{t("privacyViewAndClear")}
+      </button>
     </div>
     <div id="settings-output" class="form-panel">
       <div class="section-heading"><h3>{t("usageModeTitle")}</h3><p>{t("usageModeDescription")}</p></div>
@@ -116,6 +127,20 @@
           </button>
           <small class="field-hint">{hotkeyValidationMessage || fieldError("hotkey") || t("hotkeyRecordHint")}</small>
         </label>
+      </div>
+      <div class="subsection-heading">
+        <strong>{t("backupTriggers")}</strong>
+        <span>{t("backupTriggersDescription")}</span>
+      </div>
+      <div class="toggle-grid">
+        <label class="check"><input type="checkbox" bind:checked={config.triggers.middle_mouse_enabled} onchange={(event) => onOptionEnabledNotice("middle_mouse_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("middleMouse")}</span><small>{t("tagConflictRisk")}</small></span></label>
+        <label class="check"><input type="checkbox" bind:checked={config.triggers.right_alt_enabled} onchange={(event) => onOptionEnabledNotice("right_alt_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("rightAlt")}</span><small>{t("tagConflictRisk")}</small></span></label>
+      </div>
+      <p class="field-hint">{t("triggerConflictHint")}</p>
+    </div>
+    <div id="settings-window" class="form-panel">
+      <div class="section-heading"><h3>{t("windowBehaviorTitle")}</h3><p>{t("windowBehaviorDescription")}</p></div>
+      <div class="form-grid">
         <label class:field-invalid={Boolean(fieldError("tray.close_behavior"))}>
           <span>{t("closeBehavior")}</span>
           <select bind:value={config.tray.close_behavior}>
@@ -251,14 +276,6 @@
         </label>
       </div>
     </div>
-    <div id="settings-triggers" class="form-panel">
-      <div class="section-heading"><h3>{t("backupTriggers")}</h3><p>{t("backupTriggersDescription")}</p></div>
-      <div class="toggle-grid">
-        <label class="check"><input type="checkbox" bind:checked={config.triggers.middle_mouse_enabled} onchange={(event) => onOptionEnabledNotice("middle_mouse_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("middleMouse")}</span><small>{t("tagConflictRisk")}</small></span></label>
-        <label class="check"><input type="checkbox" bind:checked={config.triggers.right_alt_enabled} onchange={(event) => onOptionEnabledNotice("right_alt_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("rightAlt")}</span><small>{t("tagConflictRisk")}</small></span></label>
-      </div>
-      <p class="field-hint">{t("triggerConflictHint")}</p>
-    </div>
     <div id="settings-recording-troubleshooting" class="form-panel">
       <div class="section-heading"><h3>{t("recordingTroubleshooting")}</h3><p>{t("recordingTroubleshootingDescription")}</p></div>
       <div class="form-grid">
@@ -359,6 +376,29 @@
     border-radius: 18px;
   }
 
+  .privacy-entry-panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .privacy-entry-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    min-width: 132px;
+    padding: 0 12px;
+    color: #ffffff;
+    background: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .form-panel[id^="settings-"] {
     scroll-margin-top: 86px;
   }
@@ -374,6 +414,24 @@
   .section-heading {
     display: grid;
     gap: 4px;
+  }
+
+  .subsection-heading {
+    display: grid;
+    gap: 3px;
+    padding-top: 2px;
+  }
+
+  .subsection-heading strong {
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .subsection-heading span {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.45;
   }
 
   .section-heading h3 {
@@ -776,6 +834,11 @@
 
     .update-actions button {
       flex: 1 1 150px;
+    }
+
+    .privacy-entry-panel {
+      grid-template-columns: 1fr;
+      align-items: stretch;
     }
 
     .form-grid {

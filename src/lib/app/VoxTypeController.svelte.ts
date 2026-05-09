@@ -5,6 +5,7 @@ import { createDiagnosticsController } from "$lib/app/diagnosticsController.svel
 import { createHotkeyCaptureController } from "$lib/app/hotkeyCaptureController.svelte";
 import { createNotificationController } from "$lib/app/notificationController.svelte";
 import { createOverlayController } from "$lib/app/overlayController.svelte";
+import { createPrivacyController } from "$lib/app/privacyController.svelte";
 import { createSettingsNavigationController } from "$lib/app/settingsNavigationController.svelte";
 import { createStatsController } from "$lib/app/statsController.svelte";
 import { createUpdateController } from "$lib/app/updateController.svelte";
@@ -98,6 +99,7 @@ import type {
   ConnectionTestResult,
   LastSessionOutcome,
   LoadedConfig,
+  LocalDataStatus,
   OverlayConfig,
   OverlayText,
   PersistConfigOptions,
@@ -175,6 +177,14 @@ export function createVoxTypeController() {
     showActionNotice: notifications.show,
     safeInvoke,
     canConfirm: () => browser,
+  });
+  const privacy = createPrivacyController({
+    t,
+    safeInvoke,
+    showActionNotice: notifications.show,
+    canConfirm: () => browser,
+    refreshStats,
+    refreshAutoHotwordStatus: autoHotwords.refreshStatus,
   });
   const updates = createUpdateController({
     t,
@@ -494,12 +504,13 @@ export function createVoxTypeController() {
   async function loadAll() {
     logFrontendEvent(`loadAll started mode=${frontendMode()}`);
     if (!isOverlay && !isToast && !setupStatus) setupStatusLoading = true;
-    const [snapshotResult, configResult, statsResult, devicesResult, setupResult] = await Promise.all([
+    const [snapshotResult, configResult, statsResult, devicesResult, setupResult, localDataResult] = await Promise.all([
       safeInvoke<AppSnapshot>("get_app_snapshot"),
       safeInvoke<LoadedConfig>("load_app_config"),
       safeInvoke<StatsSnapshot>("get_usage_stats"),
       safeInvoke<AudioDeviceInfo[]>("list_audio_input_devices"),
       safeInvoke<SetupStatus>("get_setup_status"),
+      safeInvoke<LocalDataStatus>("get_local_data_status"),
     ]);
     await autoHotwords.refreshStatus();
     const loadedAny = Boolean(snapshotResult || configResult || statsResult || devicesResult || setupResult);
@@ -516,6 +527,7 @@ export function createVoxTypeController() {
       }
     }
     if (statsResult) stats.apply(statsResult);
+    if (localDataResult) privacy.apply(localDataResult);
     if (devicesResult) audioDevices = devicesResult;
     if (!configResult && hasTauriApi() && !isOverlay && !isToast) configLoaded = true;
     if (setupResult) {
@@ -578,6 +590,11 @@ export function createVoxTypeController() {
   function sessionPhaseMessage(phase: SessionPhase) {
     const hotkey = formatHotkey(snapshot.hotkey);
     return t(sessionPhaseMessageKey(phase), { hotkey });
+  }
+
+  async function refreshStats() {
+    const result = await safeInvoke<StatsSnapshot>("get_usage_stats", undefined, true);
+    if (result) stats.apply(result);
   }
 
   async function persistConfig(options: PersistConfigOptions = {}) {
@@ -795,6 +812,11 @@ export function createVoxTypeController() {
   }
   function handleSetupAction(action: string) {
     if (action === "audio") void refreshSetupStatus();
+    if (action === "privacy") {
+      settingsNav.selectSection("Privacy");
+      void privacy.refreshStatus();
+      return;
+    }
     const targetId =
       action === "asr_auth"
         ? "settings-auth"
@@ -802,9 +824,7 @@ export function createVoxTypeController() {
           ? "settings-audio"
           : action === "typing"
             ? "settings-output"
-            : action === "privacy"
-              ? "settings-prompt-context"
-              : "settings-output";
+            : "settings-output";
     settingsNav.scrollToSettingsPanel(targetId);
   }
   function pasteMethodLabel(value: string) {
@@ -1103,6 +1123,10 @@ export function createVoxTypeController() {
       updateMetaText: updates.metaText,
       historySummaryCards: stats.historySummaryCards,
       recentSevenDayDisplayRows: stats.recentSevenDayDisplayRows,
+      privacyStatus: privacy.status,
+      privacyClearingRecentContext: privacy.clearingRecentContext,
+      privacyClearingAutoHotwordHistory: privacy.clearingAutoHotwordHistory,
+      privacyClearingUsageStats: privacy.clearingUsageStats,
       onOpenSettings: openSettings,
       onOpenSetupGuide: openSetupGuide,
       onUserErrorAction: handleUserErrorAction,
@@ -1139,6 +1163,10 @@ export function createVoxTypeController() {
       onDownloadLatestUpdate: updates.downloadLatest,
       onOpenLog: diagnostics.openLog,
       onCopyDiagnosticReport: diagnostics.copyReport,
+      onRefreshPrivacyStatus: privacy.refreshStatus,
+      onClearPrivacyRecentContext: privacy.clearRecentContext,
+      onClearPrivacyAutoHotwordHistory: privacy.clearAutoHotwordHistory,
+      onClearPrivacyUsageStats: privacy.clearUsageStats,
     };
   }
   function openSettings() {

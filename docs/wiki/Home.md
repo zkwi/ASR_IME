@@ -58,6 +58,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 - Usage statistics record duration, character count, speed, and time estimates, not recognized text.
 - Recent context and automatic hotword history are disabled by default.
 - Screen OCR context is temporary and not written to logs, stats, config, or cache.
+- The Privacy & local data page shows storage/upload boundaries and can clear recent context, automatic hotword history, and usage stats.
 - Diagnostic reports and logs should not include real API keys, recognized text, hotwords, prompts, recent context, screen OCR text, automatic hotword history, or Windows username paths.
 
 ## Search-Friendly FAQ

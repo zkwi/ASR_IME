@@ -60,6 +60,19 @@ struct ConnectionTestResult {
 }
 
 #[derive(Serialize)]
+struct LocalDataStatus {
+    recent_context_enabled: bool,
+    recent_context_count: usize,
+    auto_hotwords_enabled: bool,
+    auto_hotword_entry_count: usize,
+    auto_hotword_total_chars: usize,
+    stats_event_count: usize,
+    screen_context_enabled: bool,
+    llm_post_edit_enabled: bool,
+    restore_clipboard_after_paste: bool,
+}
+
+#[derive(Serialize)]
 struct ConfigSaveError {
     message: String,
     errors: Vec<config::ConfigValidationError>,
@@ -532,6 +545,32 @@ fn get_usage_stats() -> StatsSnapshot {
 }
 
 #[tauri::command]
+fn get_local_data_status() -> Result<LocalDataStatus, String> {
+    let loaded = config::load_config()?;
+    let auto_hotword_status = hotword_history::status()?;
+    Ok(LocalDataStatus {
+        recent_context_enabled: loaded.data.context.enable_recent_context,
+        recent_context_count: config::recent_context_count(),
+        auto_hotwords_enabled: auto_hotword_status.enabled,
+        auto_hotword_entry_count: auto_hotword_status.entry_count,
+        auto_hotword_total_chars: auto_hotword_status.total_chars,
+        stats_event_count: stats::stats_event_count(),
+        screen_context_enabled: loaded.data.screen_context.enabled,
+        llm_post_edit_enabled: loaded.data.llm_post_edit.enabled,
+        restore_clipboard_after_paste: loaded.data.typing.restore_clipboard_after_paste,
+    })
+}
+
+#[tauri::command]
+fn clear_usage_stats() -> Result<ConnectionTestResult, String> {
+    stats::clear_stats()?;
+    app_log::info("用户清除使用统计数据。");
+    Ok(ConnectionTestResult {
+        message: "使用统计已清除。".to_string(),
+    })
+}
+
+#[tauri::command]
 fn clear_recent_context() -> Result<ConnectionTestResult, String> {
     config::clear_recent_context()?;
     app_log::info(format!(
@@ -687,6 +726,8 @@ pub fn run() {
             log_frontend_error,
             log_frontend_event,
             get_usage_stats,
+            get_local_data_status,
+            clear_usage_stats,
             clear_recent_context,
             get_auto_hotword_status,
             clear_hotword_history,

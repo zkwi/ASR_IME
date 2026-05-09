@@ -167,6 +167,18 @@ pub fn load_stats_snapshot() -> StatsSnapshot {
     }
 }
 
+pub fn stats_event_count() -> usize {
+    read_events(&stats_path()).len()
+}
+
+pub fn clear_stats() -> Result<(), String> {
+    let path = stats_path();
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|err| format!("清空统计数据失败: {}", err))?;
+    }
+    Ok(())
+}
+
 pub fn append_event(text: &str, duration_seconds: f64) -> Result<(), String> {
     let path = stats_path();
     if let Some(parent) = path.parent() {

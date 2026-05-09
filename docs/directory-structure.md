@@ -134,6 +134,7 @@ src-tauri/
 ```text
 docs/
 ├── README.md
+├── architecture.md
 ├── code-style.md
 ├── directory-structure.md
 ├── wiki/

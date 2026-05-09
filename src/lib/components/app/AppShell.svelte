@@ -6,6 +6,7 @@
     BarChart3,
     Download,
     Gauge,
+    LockKeyhole,
     Maximize2,
     Mic,
     Minus,
@@ -73,6 +74,7 @@
     { id: "Hotwords", icon: Sparkles },
     { id: "ApiConfig", icon: ShieldCheck },
     { id: "Options", icon: Settings },
+    { id: "Privacy", icon: LockKeyhole },
     { id: "History", icon: BarChart3 },
   ] as const;
 
@@ -81,6 +83,7 @@
     Hotwords: "navHotwords",
     ApiConfig: "navApiConfig",
     Options: "navOptions",
+    Privacy: "navPrivacy",
     History: "navHistory",
   };
 </script>
