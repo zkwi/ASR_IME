@@ -100,7 +100,7 @@
   <header class="window-titlebar" data-tauri-drag-region>
     <div class="window-title" data-tauri-drag-region>
       <span class="window-title-mark" data-tauri-drag-region>
-        <img src="/app-icon.png" alt="" aria-hidden="true" draggable="false" data-tauri-drag-region />
+        <img src="/app-icon.svg" alt="" aria-hidden="true" draggable="false" data-tauri-drag-region />
       </span>
       <strong data-tauri-drag-region>{t("appTitle")}</strong>
       <span class="window-product-name" data-tauri-drag-region>VoxType</span>
@@ -229,7 +229,7 @@
   .window-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 11px;
     min-width: 0;
     overflow: hidden;
     color: var(--text-main);
@@ -241,7 +241,7 @@
   .window-title strong {
     min-width: 0;
     overflow: hidden;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -313,21 +313,26 @@
 
   .window-title-mark {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     flex: 0 0 auto;
     place-items: center;
     overflow: hidden;
     background: transparent;
-    border: 1px solid rgba(47, 140, 255, 0.12);
-    border-radius: 10px;
-    box-shadow: 0 6px 16px rgba(47, 128, 237, 0.18);
+    border-radius: 9px;
   }
 
   .window-title-mark img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  .ui-compact .window-title-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
   }
 
   .window-controls {

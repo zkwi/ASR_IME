@@ -28,6 +28,8 @@ use session::SessionController;
 use stats::StatsSnapshot;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 
+const APP_WINDOW_ICON: tauri::image::Image<'static> = tauri::include_image!("./icons/128x128.png");
+
 #[derive(Serialize)]
 struct AppSnapshot {
     hotkey: String,
@@ -746,6 +748,11 @@ pub fn run() {
                 "VoxType Tauri client started. version={}",
                 env!("CARGO_PKG_VERSION")
             ));
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(err) = window.set_icon(APP_WINDOW_ICON.clone()) {
+                    app_log::warn(format!("设置主窗口图标失败: {}", err));
+                }
+            }
             app_log::info("startup stage: create overlay begin");
             let _ = overlay::create_overlay_window(app.handle());
             app_log::info("startup stage: create overlay done");

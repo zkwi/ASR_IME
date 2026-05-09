@@ -10,7 +10,7 @@
 <main class="toast-root">
   <section class="toast-card">
     <div class="toast-icon">
-      <img src="/app-icon.png" alt="" aria-hidden="true" draggable="false" />
+      <img src="/app-icon.svg" alt="" aria-hidden="true" draggable="false" />
     </div>
     <div class="toast-copy">
       <strong>{title}</strong>
@@ -33,7 +33,7 @@
 
   .toast-card {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr);
     align-items: center;
     gap: 10px;
     width: 100%;
@@ -50,17 +50,16 @@
 
   .toast-icon {
     display: grid;
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     place-items: center;
     overflow: hidden;
     background: transparent;
-    border: 1px solid rgba(47, 140, 255, 0.12);
-    border-radius: 10px;
-    box-shadow: 0 0 0 4px rgba(47, 140, 255, 0.1);
+    border-radius: 9px;
   }
 
   .toast-icon img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
