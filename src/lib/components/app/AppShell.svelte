@@ -457,19 +457,6 @@
     transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
   }
 
-  nav button::before {
-    position: absolute;
-    left: 4px;
-    width: 3px;
-    height: 18px;
-    content: "";
-    background: currentColor;
-    border-radius: 999px;
-    opacity: 0;
-    transform: scaleY(0.65);
-    transition: opacity 160ms ease, transform 160ms ease;
-  }
-
   .nav-icon {
     display: grid;
     width: 28px;
@@ -530,11 +517,6 @@
     background: linear-gradient(135deg, var(--primary), var(--primary-hover));
     box-shadow: 0 10px 22px rgba(47, 128, 237, 0.22);
     font-weight: 800;
-  }
-
-  nav button.active::before {
-    opacity: 0.9;
-    transform: scaleY(1);
   }
 
   nav button.active .nav-icon {

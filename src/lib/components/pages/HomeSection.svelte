@@ -454,28 +454,12 @@
     display: flex;
     flex-direction: column;
     gap: 7px;
-    padding-left: 18px;
     background: #ffffff;
     border-color: rgba(16, 185, 129, 0.22);
   }
 
-  .last-outcome-card::before {
-    position: absolute;
-    top: 14px;
-    bottom: 14px;
-    left: 0;
-    width: 3px;
-    content: "";
-    background: #10b981;
-    border-radius: 0 999px 999px 0;
-  }
-
   .standby-outcome-card {
     border-color: rgba(47, 128, 237, 0.18);
-  }
-
-  .standby-outcome-card::before {
-    background: var(--primary);
   }
 
   .last-outcome-header {

@@ -116,7 +116,7 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyConfigData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{t("privacyConfigSaved")}</td>
-            <td data-label={t("privacyLocationColumn")}><code>config.toml</code></td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}><span class="location-value">config.toml</span></td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadConfig")}</td>
             <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
           </tr>
@@ -124,7 +124,12 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyLogsDiagnosticsData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{t("privacyLogsDiagnosticsSaved")}</td>
-            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationLogsDiagnostics")}</td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}>
+              <span class="location-stack">
+                <span class="location-value">voice_input.log</span>
+                <span>{t("privacyLocationLogsDiagnostics")}</span>
+              </span>
+            </td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadLogsDiagnostics")}</td>
             <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
           </tr>
@@ -138,7 +143,7 @@
               {config.context.enable_recent_context ? t("privacySavedWhenEnabled") : t("privacyDisabledNoSave")}
               <small>{entriesCount(status?.recent_context_count)}</small>
             </td>
-            <td data-label={t("privacyLocationColumn")}><code>context/recent_context.jsonl</code></td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}><span class="location-value">context/recent_context.jsonl</span></td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadRecentContext")}</td>
             <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
@@ -168,7 +173,7 @@
               {config.auto_hotwords.enabled ? t("privacySavedWhenEnabled") : t("privacyDisabledNoSave")}
               <small>{entriesCharsCount(status?.auto_hotword_entry_count, status?.auto_hotword_total_chars)}</small>
             </td>
-            <td data-label={t("privacyLocationColumn")}><code>context/hotword_history.jsonl</code></td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}><span class="location-value">context/hotword_history.jsonl</span></td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadAutoHotwords")}</td>
             <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
@@ -194,7 +199,7 @@
               {t("privacyStatsSaved")}
               <small>{statsCount(status?.stats_event_count)}</small>
             </td>
-            <td data-label={t("privacyLocationColumn")}><code>voice_input_stats.jsonl</code></td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}><span class="location-value">voice_input_stats.jsonl</span></td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadNever")}</td>
             <td data-label={t("privacyActionColumn")}>
               <button
@@ -214,7 +219,7 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyAsrAudioData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{t("privacyAsrAudioSaved")}</td>
-            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadAsrAudio")}</td>
             <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
           </tr>
@@ -222,7 +227,7 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyScreenOcrData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{config.screen_context.enabled ? t("privacyRuntimeOnly") : t("privacyDisabledNoSave")}</td>
-            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadScreenOcr")}</td>
             <td data-label={t("privacyActionColumn")}>
               <label class="inline-check">
@@ -235,7 +240,7 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyLlmTextData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{config.llm_post_edit.enabled ? t("privacyRuntimeOnly") : t("privacyDisabledNoSave")}</td>
-            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadLlmText")}</td>
             <td data-label={t("privacyActionColumn")}>
               {#if !config.llm_post_edit.enabled && !hasLlmApiConfig}
@@ -255,7 +260,7 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyClipboardData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{config.typing.restore_clipboard_after_paste ? t("privacyMemoryOnly") : t("privacyClipboardNoRestore")}</td>
-            <td data-label={t("privacyLocationColumn")}>{t("privacyLocationMemory")}</td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}>{t("privacyLocationMemory")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadNever")}</td>
             <td data-label={t("privacyActionColumn")}>
               <label class="inline-check">
@@ -433,11 +438,27 @@
     font-size: 12px;
   }
 
-  code {
-    color: var(--text-main);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 11px;
+  .location-cell {
+    color: var(--text-secondary);
+    font-weight: 500;
     overflow-wrap: anywhere;
+  }
+
+  .location-value {
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 700;
+    line-height: inherit;
+    overflow-wrap: anywhere;
+  }
+
+  .location-stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    min-width: 0;
   }
 
   .action-cell {

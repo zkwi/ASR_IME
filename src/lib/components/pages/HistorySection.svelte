@@ -67,11 +67,11 @@
       </div>
       {#each dayRows as day}
         <article>
-          <span>{day.day}</span>
-          <strong class="metric-cell">{day.chars}</strong>
-          <span class="duration-cell">{day.duration}</span>
-          <span class="metric-cell muted">{day.speed}</span>
-          <strong class="metric-cell">{day.saved}</strong>
+          <span data-label={dateColumnLabel}>{day.day}</span>
+          <strong class="metric-cell" data-label={inputCharsLabel}>{day.chars}</strong>
+          <span class="duration-cell" data-label={voiceDurationLabel}>{day.duration}</span>
+          <span class="metric-cell muted" data-label={averageSpeedLabel}>{day.speed}</span>
+          <strong class="metric-cell" data-label={savedTimeLabel}>{day.saved}</strong>
         </article>
       {/each}
     </div>
@@ -253,6 +253,62 @@
     .day-list article {
       grid-template-columns: minmax(104px, 1fr) minmax(94px, 0.8fr) minmax(82px, 0.62fr) minmax(112px, 0.86fr) minmax(86px, 0.72fr);
       column-gap: 8px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .daily-panel {
+      padding: 14px;
+    }
+
+    .day-list {
+      gap: 10px;
+    }
+
+    .day-list-head {
+      display: none;
+    }
+
+    .day-list article,
+    .day-list article:last-child {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      min-height: 0;
+      padding: 12px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .day-list article > * {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 12px;
+      align-items: baseline;
+      min-width: 0;
+      text-align: left;
+    }
+
+    .day-list article > *::before {
+      content: attr(data-label);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .metric-cell,
+    .duration-cell {
+      justify-self: stretch;
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .day-list article > * {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
     }
   }
 </style>
