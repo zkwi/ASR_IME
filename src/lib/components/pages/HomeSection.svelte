@@ -168,7 +168,7 @@
       {/if}
     </div>
   {/if}
-  <div class:listening={recording} class:error={inputStatus === "error"} class:locked={requiresAsrAuth} class="voice-hero">
+  <div class:listening={recording || sessionBusy} class:error={inputStatus === "error"} class:locked={requiresAsrAuth} class="voice-hero">
     <button class:listening={recording || sessionBusy} class="mic-orb" aria-label={requiresAsrAuth ? t("authGateTitle") : recording ? t("clickStop") : t("clickStart")} onclick={onToggleRecording} disabled={sessionBusy || requiresAsrAuth}>
       <span class="mic-ring"><Mic size={uiCompact ? 34 : 42} strokeWidth={2.15} /></span>
     </button>
@@ -212,7 +212,7 @@
   </div>
 </section>
 {#if lastSessionOutcome?.kind === "success"}
-  <section class="last-outcome-card">
+  <section class="last-outcome-card success-outcome-card">
     <div class="last-outcome-header">
       <div class="last-outcome-copy">
         <strong>{t("lastOutcomeSuccessTitle")}</strong>
@@ -242,6 +242,25 @@
         {/if}
       </div>
     {/if}
+  </section>
+{:else}
+  <section class="last-outcome-card standby-outcome-card">
+    <div class="last-outcome-header">
+      <div class="last-outcome-copy">
+        <strong>{requiresAsrAuth ? t("setupRequired") : inputStatus === "idle" ? t("setupHealthReadyTitle") : inputStatusLabel}</strong>
+      </div>
+      {#if requiresAsrAuth || inputStatus === "idle"}
+        <div class="last-outcome-actions">
+          <button type="button" class="link-action compact" onclick={requiresAsrAuth ? onOpenSettings : () => onSelectSection("Options")}>
+            {requiresAsrAuth ? t("setupCta") : t("shortcutSettings")}
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      {/if}
+    </div>
+    <p class="last-outcome-description">
+      {requiresAsrAuth ? setupRequiredMessage : inputStatus === "idle" ? t("setupHealthReadyDescription", { hotkey: formatHotkey(snapshotHotkey) }) : inputStatusDesc}
+    </p>
   </section>
 {/if}
 <section class="performance-card">
@@ -281,8 +300,20 @@
   .voice-card,
   .last-outcome-card,
   .performance-card {
+    width: 100%;
+    margin-inline: 0;
     min-width: 0;
-    padding: 14px;
+  }
+
+  .voice-card {
+    display: grid;
+    gap: 12px;
+    overflow: visible;
+  }
+
+  .last-outcome-card,
+  .performance-card {
+    padding: 16px;
     overflow: hidden;
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -327,12 +358,11 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 16px;
-    padding: 14px 16px;
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
-    border-radius: 14px;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
   }
 
   .setup-alert strong {
@@ -349,15 +379,15 @@
     display: flex;
     flex: 0 0 auto;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
   }
 
   .setup-actions button {
-    min-height: 36px;
+    min-height: 34px;
     padding: 0 12px;
     color: #ffffff;
     background: var(--primary);
-    border-radius: 10px;
+    border-radius: 9px;
     font-weight: 600;
   }
 
@@ -369,12 +399,11 @@
   .error-help-card {
     display: grid;
     gap: 6px;
-    margin-bottom: 16px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     color: #991b1b;
     background: #fff5f5;
     border: 1px solid rgba(239, 68, 68, 0.24);
-    border-radius: 14px;
+    border-radius: 12px;
   }
 
   .error-help-card strong {
@@ -405,7 +434,7 @@
     padding: 0 10px;
     color: #ffffff;
     background: var(--danger);
-    border-radius: 10px;
+    border-radius: 9px;
     font-size: 12px;
     font-weight: 700;
   }
@@ -416,17 +445,38 @@
   }
 
   .last-outcome-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    background: #f7fffb;
-    border-color: rgba(16, 185, 129, 0.24);
+    gap: 7px;
+    padding-left: 18px;
+    background: #ffffff;
+    border-color: rgba(16, 185, 129, 0.22);
+  }
+
+  .last-outcome-card::before {
+    position: absolute;
+    top: 14px;
+    bottom: 14px;
+    left: 0;
+    width: 3px;
+    content: "";
+    background: #10b981;
+    border-radius: 0 999px 999px 0;
+  }
+
+  .standby-outcome-card {
+    border-color: rgba(47, 128, 237, 0.18);
+  }
+
+  .standby-outcome-card::before {
+    background: var(--primary);
   }
 
   .last-outcome-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
+    align-items: center;
     gap: 10px;
     min-width: 0;
   }
@@ -447,7 +497,7 @@
 
   .last-outcome-copy strong {
     color: var(--text-main);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
   }
 
@@ -522,24 +572,40 @@
   .voice-hero {
     position: relative;
     display: grid;
-    grid-template-columns: 94px minmax(0, 1fr);
+    grid-template-columns: 82px minmax(0, 1fr);
     align-items: center;
-    gap: 22px;
-    min-height: 156px;
+    gap: 18px;
+    min-height: 136px;
     height: auto;
-    padding: 20px 28px;
+    padding: 18px 24px;
     overflow: hidden;
     color: #ffffff;
-    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+    background: linear-gradient(135deg, #2f80ed 0%, #6d4eea 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 16px;
-    box-shadow: 0 16px 34px rgba(47, 128, 237, 0.2);
+    box-shadow: 0 18px 34px rgba(47, 128, 237, 0.18);
+  }
+
+  .voice-hero.listening {
+    background: linear-gradient(135deg, #256fe0 0%, #5b5ff0 100%);
+    box-shadow: 0 18px 34px rgba(47, 128, 237, 0.2);
+  }
+
+  .voice-hero.error {
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    box-shadow: 0 18px 34px rgba(239, 68, 68, 0.16);
+  }
+
+  .voice-hero.locked {
+    background: linear-gradient(135deg, #475569 0%, #6d4eea 100%);
+    box-shadow: 0 18px 34px rgba(71, 85, 105, 0.16);
   }
 
   .voice-hero::after {
     position: absolute;
     inset: 0;
     content: "";
-    background: linear-gradient(118deg, transparent 0%, transparent 62%, rgba(255, 255, 255, 0.12) 62%, rgba(255, 255, 255, 0.06) 74%, transparent 74%);
+    background: linear-gradient(118deg, transparent 0%, transparent 62%, rgba(255, 255, 255, 0.12) 62%, rgba(255, 255, 255, 0.05) 74%, transparent 74%);
     pointer-events: none;
   }
 
@@ -547,13 +613,13 @@
     position: relative;
     z-index: 1;
     display: grid;
-    width: 92px;
-    height: 92px;
+    width: 78px;
+    height: 78px;
     place-items: center;
     color: var(--primary);
     background: rgba(255, 255, 255, 0.18);
     border-radius: 999px;
-    transition: all 160ms ease;
+    transition: transform 160ms ease, opacity 160ms ease;
   }
 
   .mic-orb:hover {
@@ -568,8 +634,8 @@
 
   .mic-ring {
     display: grid;
-    width: 72px;
-    height: 72px;
+    width: 60px;
+    height: 60px;
     place-items: center;
     background: #ffffff;
     border-radius: 999px;
@@ -595,8 +661,8 @@
     align-items: center;
     gap: 8px;
     max-width: 100%;
-    margin-bottom: 5px;
-    font-size: 24px;
+    margin-bottom: 4px;
+    font-size: 22px;
     font-weight: 800;
     line-height: 1.16;
   }
@@ -626,7 +692,7 @@
   .voice-copy h4 {
     margin: 0 0 5px;
     max-width: 100%;
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.35;
     overflow-wrap: anywhere;
   }
@@ -635,7 +701,7 @@
     max-width: 100%;
     margin: 0;
     color: rgba(255, 255, 255, 0.88);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.34;
     overflow-wrap: anywhere;
   }
@@ -651,7 +717,7 @@
     padding: 0 10px;
     color: var(--primary);
     background: var(--primary-light);
-    border-radius: 999px;
+    border-radius: 10px;
     font-size: 12px;
     font-weight: 700;
     line-height: 1.2;
@@ -665,7 +731,7 @@
 
   .stats-row {
     display: grid;
-    gap: 8px;
+    gap: 10px;
   }
 
   .stats-row {
@@ -676,10 +742,10 @@
     position: relative;
     display: grid;
     min-width: 0;
-    min-height: 74px;
-    background: #f8fbff;
+    min-height: 92px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
   }
 
   .hero-launch {
@@ -688,7 +754,7 @@
     align-items: center;
     gap: 8px;
     max-width: 100%;
-    margin-top: 11px;
+    margin-top: 12px;
   }
 
   .hero-launch-label {
@@ -703,12 +769,12 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    min-height: 26px;
-    padding: 0 9px;
+    min-height: 30px;
+    padding: 0 10px;
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.14);
     border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
+    border-radius: 10px;
     font-size: 12px;
     font-weight: 800;
     line-height: 1.2;
@@ -718,7 +784,7 @@
   .hero-trigger-row {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 7px;
+    gap: 6px;
     min-width: 0;
   }
 
@@ -728,12 +794,12 @@
     align-items: center;
     gap: 6px;
     min-width: 0;
-    min-height: 32px;
+    min-height: 34px;
     padding: 4px 8px;
     color: rgba(255, 255, 255, 0.74);
     background: rgba(15, 23, 42, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
+    border-radius: 11px;
   }
 
   .hero-trigger.enabled {
@@ -780,23 +846,35 @@
   .stat-card {
     gap: 2px;
     align-content: start;
-    min-height: 82px;
-    padding: 9px;
+    min-height: 94px;
+    padding: 12px;
   }
 
   .stat-icon {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     place-items: center;
     color: #ffffff;
     border-radius: 10px;
   }
 
-  .stat-card.blue .stat-icon { background: #2f80ed; }
-  .stat-card.purple .stat-icon { background: #7c3aed; }
-  .stat-card.green .stat-icon { background: #14c38e; }
-  .stat-card.orange .stat-icon { background: #f59e0b; }
+  .stat-card.blue .stat-icon {
+    color: #2563eb;
+    background: #eff6ff;
+  }
+  .stat-card.purple .stat-icon {
+    color: #7c3aed;
+    background: #f5f3ff;
+  }
+  .stat-card.green .stat-icon {
+    color: #059669;
+    background: #ecfdf5;
+  }
+  .stat-card.orange .stat-icon {
+    color: #d97706;
+    background: #fff7ed;
+  }
 
   .stat-card p {
     margin: 2px 0 0;
@@ -808,7 +886,7 @@
     display: block;
     margin: 0;
     color: var(--text-main);
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 800;
     line-height: 1.18;
     overflow-wrap: normal;
@@ -829,8 +907,10 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
-    margin: 8px 0 0;
+    margin: 12px 0 0;
+    padding-top: 10px;
     color: var(--text-secondary);
+    border-top: 1px solid var(--border);
     font-size: 12px;
     line-height: 1.35;
     overflow-wrap: anywhere;
@@ -850,10 +930,13 @@
     50% { opacity: 0.46; }
   }
 
-  :global(.ui-compact) .voice-card,
   :global(.ui-compact) .last-outcome-card,
   :global(.ui-compact) .performance-card {
-    padding: 12px;
+    padding: 14px;
+  }
+
+  :global(.ui-compact) .last-outcome-card {
+    padding-left: 18px;
   }
 
   :global(.ui-compact) .section-title-row h3 {
@@ -861,20 +944,20 @@
   }
 
   :global(.ui-compact) .voice-hero {
-    grid-template-columns: 80px minmax(0, 1fr);
-    gap: 16px;
-    min-height: 140px;
-    padding: 16px 22px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 124px;
+    padding: 16px 20px;
   }
 
   :global(.ui-compact) .mic-orb {
-    width: 76px;
-    height: 76px;
+    width: 68px;
+    height: 68px;
   }
 
   :global(.ui-compact) .mic-ring {
-    width: 60px;
-    height: 60px;
+    width: 52px;
+    height: 52px;
   }
 
   :global(.ui-compact) .stats-row {
@@ -887,8 +970,8 @@
   }
 
   :global(.ui-compact) .stat-card {
-    min-height: 78px;
-    padding: 9px;
+    min-height: 88px;
+    padding: 10px;
   }
 
   :global(.ui-compact) .stat-icon {
@@ -921,18 +1004,18 @@
     }
 
     .voice-hero {
-      grid-template-columns: 86px minmax(0, 1fr);
+      grid-template-columns: 74px minmax(0, 1fr);
       padding: 18px 22px;
     }
 
     .mic-orb {
-      width: 80px;
-      height: 80px;
+      width: 70px;
+      height: 70px;
     }
 
     .mic-ring {
-      width: 64px;
-      height: 64px;
+      width: 54px;
+      height: 54px;
     }
 
     .hero-status {
@@ -947,6 +1030,11 @@
   @media (max-width: 640px) {
     .stats-row {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .voice-hero {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: start;
     }
 
     .hero-launch {
