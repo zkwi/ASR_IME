@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { Mic } from "lucide-svelte";
-
   type Props = {
     title: string;
     hint: string;
@@ -11,7 +9,9 @@
 
 <main class="toast-root">
   <section class="toast-card">
-    <div class="toast-icon"><Mic size={18} /></div>
+    <div class="toast-icon">
+      <img src="/app-icon.png" alt="" aria-hidden="true" draggable="false" />
+    </div>
     <div class="toast-copy">
       <strong>{title}</strong>
       <span>{hint}</span>
@@ -53,10 +53,17 @@
     width: 30px;
     height: 30px;
     place-items: center;
-    color: #ffffff;
-    background: var(--blue-500);
-    border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(47, 140, 255, 0.12);
+    overflow: hidden;
+    background: transparent;
+    border: 1px solid rgba(47, 140, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 0 0 4px rgba(47, 140, 255, 0.1);
+  }
+
+  .toast-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .toast-copy {

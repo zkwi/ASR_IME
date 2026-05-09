@@ -1,15 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="brand" x1="128" y1="128" x2="896" y2="896" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2F80ED"/>
-      <stop offset="1" stop-color="#7C3AED"/>
-    </linearGradient>
-  </defs>
-  <rect x="72" y="72" width="880" height="880" rx="220" fill="url(#brand)"/>
-  <g fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="407" y="238" width="210" height="352" rx="105"/>
-    <path d="M318 464v70c0 107 87 194 194 194s194-87 194-194v-70"/>
-    <path d="M512 728v118"/>
-    <path d="M426 846h172"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="VoxType">
+  <rect width="1024" height="1024" rx="188" fill="#0A8BFF"/>
+  <path fill="#FFFFFF" d="M292 286h440c44 0 82 31 91 74l86 396c13 61-34 118-96 118H211c-62 0-109-57-96-118l86-396c9-43 47-74 91-74Z"/>
+  <path fill="#D9EBFF" d="M117 765c18 39 55 65 101 65h588c46 0 83-26 101-65l2 10c13 61-34 118-96 118H211c-62 0-109-57-96-118l2-10Z"/>
+  <path fill="#0A8BFF" d="M512 353c58 0 105 47 105 105v145c0 58-47 105-105 105s-105-47-105-105V458c0-58 47-105 105-105Zm-170 232c0-22 18-40 40-40s40 18 40 40c0 50 40 90 90 90s90-40 90-90c0-22 18-40 40-40s40 18 40 40c0 81-56 149-130 168v56h83c22 0 40 18 40 40s-18 40-40 40H389c-22 0-40-18-40-40s18-40 40-40h83v-56c-74-19-130-87-130-168Z"/>
+  <g fill="#EAF5FF">
+    <rect x="489" y="96" width="46" height="102" rx="23"/>
+    <rect x="326" y="132" width="46" height="96" rx="23" transform="rotate(-32 349 180)"/>
+    <rect x="652" y="132" width="46" height="96" rx="23" transform="rotate(32 675 180)"/>
   </g>
 </svg>

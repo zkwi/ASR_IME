@@ -9,7 +9,6 @@
     KeyRound,
     LockKeyhole,
     Maximize2,
-    Mic,
     Minus,
     Settings,
     Sparkles,
@@ -100,7 +99,9 @@
 <div class:ui-compact={uiCompact} class="app-frame">
   <header class="window-titlebar" data-tauri-drag-region>
     <div class="window-title" data-tauri-drag-region>
-      <span class="window-title-mark"><Mic size={12} strokeWidth={2.6} /></span>
+      <span class="window-title-mark" data-tauri-drag-region>
+        <img src="/app-icon.png" alt="" aria-hidden="true" draggable="false" data-tauri-drag-region />
+      </span>
       <strong data-tauri-drag-region>{t("appTitle")}</strong>
       <span class="window-product-name" data-tauri-drag-region>VoxType</span>
       {#if configSaveState !== "idle"}
@@ -316,11 +317,17 @@
     height: 28px;
     flex: 0 0 auto;
     place-items: center;
-    color: #ffffff;
-    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-    border: 0;
+    overflow: hidden;
+    background: transparent;
+    border: 1px solid rgba(47, 140, 255, 0.12);
     border-radius: 10px;
-    box-shadow: 0 6px 16px rgba(47, 128, 237, 0.24);
+    box-shadow: 0 6px 16px rgba(47, 128, 237, 0.18);
+  }
+
+  .window-title-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .window-controls {
