@@ -1,5 +1,4 @@
 <script lang="ts">
-  import AdvancedPanel from "$lib/components/common/AdvancedPanel.svelte";
   import SettingsToolbar from "$lib/components/settings/SettingsToolbar.svelte";
   import type {
     AppConfig,
@@ -20,7 +19,6 @@
     saving: boolean;
     settingsDirty: boolean;
     toolbarMessage: string;
-    advancedOpen: boolean;
     hotkeyCaptureState: HotkeyCaptureState;
     hotkeyValidationMessage: string;
     overlayColorPresets: OverlayColorPreset[];
@@ -36,7 +34,6 @@
     overlayBackgroundRgb: () => string;
     overlayOpacity: () => number;
     overlayTextColor: () => string;
-    overlayBackgroundColor: () => string;
     overlayPresetActive: (background: string, text: string) => boolean;
     overlayOpacityPresetActive: (opacity: number) => boolean;
     overlayOpacityLabel: (opacity: number) => string;
@@ -44,7 +41,6 @@
     updatePanelDescription: () => string;
     updateMetaText: () => string;
     onReload: () => void;
-    onToggleAdvanced: () => void;
     onHotkeyKeydown: (event: KeyboardEvent) => void;
     onBeginHotkeyCapture: () => void;
     onOptionEnabledNotice: (key: SoftConfigNoticeKey, enabled: boolean) => void;
@@ -63,7 +59,6 @@
     saving,
     settingsDirty,
     toolbarMessage,
-    advancedOpen,
     hotkeyCaptureState,
     hotkeyValidationMessage,
     overlayColorPresets,
@@ -79,7 +74,6 @@
     overlayBackgroundRgb,
     overlayOpacity,
     overlayTextColor,
-    overlayBackgroundColor,
     overlayPresetActive,
     overlayOpacityPresetActive,
     overlayOpacityLabel,
@@ -87,7 +81,6 @@
     updatePanelDescription,
     updateMetaText,
     onReload,
-    onToggleAdvanced,
     onHotkeyKeydown,
     onBeginHotkeyCapture,
     onOptionEnabledNotice,
@@ -111,14 +104,6 @@
     {saving}
     dirty={settingsDirty}
     onReload={onReload}
-  />
-  <AdvancedPanel
-    title={advancedOpen ? t("advancedSettings") : t("basicSettings")}
-    description={advancedOpen ? t("advancedSettingsHint") : t("optionsBasicHint")}
-    open={advancedOpen}
-    showLabel={t("showAdvancedSettings")}
-    hideLabel={t("hideAdvancedSettings")}
-    onToggle={onToggleAdvanced}
   />
   <section class="settings-group">
     <div class="settings-group-heading">
@@ -223,34 +208,6 @@
         </div>
       </div>
     </div>
-    {#if advancedOpen}
-      <div id="settings-caption-fine-tune" class="form-panel">
-        <div class="section-heading"><h3>{t("captionFineTune")}</h3><p>{t("captionFineTuneDescription")}</p></div>
-        <div class="form-grid color-grid">
-          <label class="color-field" class:field-invalid={Boolean(fieldError("ui.background_color"))}>
-            <span>{t("captionBackgroundColor")}</span>
-            <input type="color" value={overlayBackgroundColor()} oninput={(event) => (config.ui.background_color = event.currentTarget.value)} />
-            {#if fieldError("ui.background_color")}<small class="field-error">{fieldError("ui.background_color")}</small>{/if}
-          </label>
-          <label class="color-field" class:field-invalid={Boolean(fieldError("ui.text_color"))}>
-            <span>{t("captionTextColor")}</span>
-            <input type="color" value={overlayTextColor()} oninput={(event) => (config.ui.text_color = event.currentTarget.value)} />
-            {#if fieldError("ui.text_color")}<small class="field-error">{fieldError("ui.text_color")}</small>{/if}
-          </label>
-          <label class:field-invalid={Boolean(fieldError("ui.width"))}>
-            <span>{t("width")}</span>
-            <input type="number" bind:value={config.ui.width} />
-            {#if fieldError("ui.width")}<small class="field-error">{fieldError("ui.width")}</small>{/if}
-          </label>
-          <label class:field-invalid={Boolean(fieldError("ui.height"))}>
-            <span>{t("height")}</span>
-            <input type="number" bind:value={config.ui.height} />
-            {#if fieldError("ui.height")}<small class="field-error">{fieldError("ui.height")}</small>{/if}
-          </label>
-          <label><span>{t("marginBottom")}</span><input type="number" bind:value={config.ui.margin_bottom} /></label>
-        </div>
-      </div>
-    {/if}
     <div id="settings-audio" class="form-panel">
       <div class="section-heading"><h3>{t("microphoneTitle")}</h3><p>{t("microphoneDescription")}</p></div>
       <div class="form-grid">
@@ -268,34 +225,25 @@
         </label>
       </div>
     </div>
-    {#if advancedOpen}
-      <div id="settings-triggers" class="form-panel">
-        <div class="section-heading"><h3>{t("backupTriggers")}</h3><p>{t("backupTriggersDescription")}</p></div>
-        <div class="toggle-grid">
-          <label class="check"><input type="checkbox" bind:checked={config.triggers.hotkey_enabled} />{t("mainHotkey")}</label>
-          <label class="check"><input type="checkbox" bind:checked={config.triggers.middle_mouse_enabled} onchange={(event) => onOptionEnabledNotice("middle_mouse_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("middleMouse")}</span><small>{t("tagConflictRisk")}</small></span></label>
-          <label class="check"><input type="checkbox" bind:checked={config.triggers.right_alt_enabled} onchange={(event) => onOptionEnabledNotice("right_alt_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("rightAlt")}</span><small>{t("tagConflictRisk")}</small></span></label>
-        </div>
-        <p class="field-hint">{t("triggerConflictHint")}</p>
+    <div id="settings-triggers" class="form-panel">
+      <div class="section-heading"><h3>{t("backupTriggers")}</h3><p>{t("backupTriggersDescription")}</p></div>
+      <div class="toggle-grid">
+        <label class="check"><input type="checkbox" bind:checked={config.triggers.middle_mouse_enabled} onchange={(event) => onOptionEnabledNotice("middle_mouse_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("middleMouse")}</span><small>{t("tagConflictRisk")}</small></span></label>
+        <label class="check"><input type="checkbox" bind:checked={config.triggers.right_alt_enabled} onchange={(event) => onOptionEnabledNotice("right_alt_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("rightAlt")}</span><small>{t("tagConflictRisk")}</small></span></label>
       </div>
-    {/if}
-    {#if advancedOpen}
-      <div id="settings-recording-troubleshooting" class="form-panel">
-        <div class="section-heading"><h3>{t("recordingTroubleshooting")}</h3><p>{t("recordingTroubleshootingDescription")}</p></div>
-        <div class="form-grid">
-          <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
-            <span>{t("silenceAutoStopSeconds")}</span>
-            <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
-            {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
-          </label>
-        </div>
-        <div class="toggle-grid">
-          <label class="check"><input type="checkbox" bind:checked={config.audio.mute_system_volume_while_recording} onchange={(event) => onOptionEnabledNotice("mute_system_volume_while_recording", event.currentTarget.checked)} /><span class="check-copy"><span>{t("muteSystemAudio")}</span><small>{t("tagAdvanced")}</small></span></label>
-        </div>
-        <p class="field-hint">{t("silenceAutoStopHint")}</p>
-        <p class="field-hint">{t("muteSystemAudioHint")}</p>
+      <p class="field-hint">{t("triggerConflictHint")}</p>
+    </div>
+    <div id="settings-recording-troubleshooting" class="form-panel">
+      <div class="section-heading"><h3>{t("recordingTroubleshooting")}</h3><p>{t("recordingTroubleshootingDescription")}</p></div>
+      <div class="form-grid">
+        <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
+          <span>{t("silenceAutoStopSeconds")}</span>
+          <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
+          {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
+        </label>
       </div>
-    {/if}
+      <p class="field-hint">{t("silenceAutoStopHint")}</p>
+    </div>
     <div id="settings-update" class="form-panel update-panel">
       <div class="section-heading"><h3>{t("updatesAndDiagnostics")}</h3><p>{t("updatesAndDiagnosticsDescription")}</p></div>
       <div class:available={updateStatus?.update_available} class="update-card">
@@ -423,10 +371,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 10px 18px;
-  }
-
-  .color-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .check {
@@ -681,12 +625,6 @@
     padding: 6px 8px;
   }
 
-  .color-field input[type="color"] {
-    height: 38px;
-    padding: 4px;
-    cursor: pointer;
-  }
-
   .update-actions button:disabled {
     cursor: wait;
     opacity: 0.66;
@@ -803,8 +741,7 @@
 
   @media (max-width: 720px) {
     .form-grid,
-    .preset-row,
-    .color-grid {
+    .preset-row {
       grid-template-columns: 1fr;
     }
 

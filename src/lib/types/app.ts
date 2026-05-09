@@ -253,5 +253,4 @@ export type OverlayConfig = { ui: AppConfig["ui"] };
 export type TriggerKey = keyof AppConfig["triggers"];
 export type SoftConfigNoticeKey =
   | TriggerKey
-  | "mute_system_volume_while_recording"
   | "enable_recent_context";

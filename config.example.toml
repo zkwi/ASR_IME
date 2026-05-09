@@ -120,6 +120,7 @@ api_key = ""
 # 使用的润色模型
 model = "qwen3.5-plus"
 timeout_seconds = 30
+# LLM 超时、thinking 和 System Prompt 属于低频参数，应用设置页不再展示
 # 是否开启 thinking；通常关闭更快
 enable_thinking = false
 system_prompt = """
@@ -161,6 +162,7 @@ user_prompt_template = """
 """
 
 [ui]
+# 悬浮窗尺寸、位置和自定义颜色属于低频参数；应用设置页只展示预设配色和透明度
 # 悬浮窗宽高
 width = 350
 height = 64

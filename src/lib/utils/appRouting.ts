@@ -44,7 +44,7 @@ export function sectionForSettingsPanel(targetId: string): Section {
   if (targetId === "settings-context" || targetId === "settings-prompt-context" || targetId === "settings-llm-prompt" || targetId === "settings-auto-hotwords") {
     return "Hotwords";
   }
-  if (targetId === "settings-auth" || targetId === "settings-request" || targetId === "settings-llm-api") {
+  if (targetId === "settings-auth" || targetId === "settings-asr-language" || targetId === "settings-llm-api") {
     return "ApiConfig";
   }
   return "Options";

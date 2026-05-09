@@ -1,5 +1,4 @@
 <script lang="ts">
-  import AdvancedPanel from "$lib/components/common/AdvancedPanel.svelte";
   import SettingTags from "$lib/components/common/SettingTags.svelte";
   import SetupStatusCard, {
     type SetupStatusItem,
@@ -48,7 +47,6 @@
     saving: boolean;
     settingsDirty: boolean;
     toolbarMessage: string;
-    advancedOpen: boolean;
     configExists: boolean;
     setupChecking: boolean;
     setupStatusReady: boolean;
@@ -66,7 +64,6 @@
     setupActionText: (action: string) => string;
     formatHotkey: (value: string) => string;
     onReload: () => void;
-    onToggleAdvanced: () => void;
     onScrollToSettingsPanel: (id: string) => void;
     onOpenSetupGuide: () => void;
     onRefreshSetupStatus: () => void;
@@ -82,7 +79,6 @@
     saving,
     settingsDirty,
     toolbarMessage,
-    advancedOpen,
     configExists,
     setupChecking,
     setupStatusReady,
@@ -100,7 +96,6 @@
     setupActionText,
     formatHotkey,
     onReload,
-    onToggleAdvanced,
     onScrollToSettingsPanel,
     onOpenSetupGuide,
     onRefreshSetupStatus,
@@ -152,14 +147,6 @@
     onAction={onSetupAction}
     onRefresh={onRefreshSetupStatus}
   />
-  <AdvancedPanel
-    title={advancedOpen ? t("advancedSettings") : t("basicSettings")}
-    description={advancedOpen ? t("advancedSettingsHint") : t("apiConfigBasicHint")}
-    open={advancedOpen}
-    showLabel={t("showAdvancedSettings")}
-    hideLabel={t("hideAdvancedSettings")}
-    onToggle={onToggleAdvanced}
-  />
   <section class="settings-group">
     <div class="settings-group-heading">
       <h3>{t("apiConfigPageTitle")}</h3>
@@ -183,7 +170,6 @@
         </div>
       </div>
       <div class="form-grid">
-        <label><span>{t("resourceId")}</span><input bind:value={config.auth.resource_id} /></label>
         <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
           <span>{t("appKey")}</span>
           <input autocomplete="off" bind:value={config.auth.app_key} />
@@ -217,25 +203,6 @@
         </label>
       </div>
     </div>
-    {#if advancedOpen}
-      <div id="settings-request" class="form-panel">
-        <div class="section-heading">
-          <div class="section-heading-copy">
-            <h3>{t("asrConnectionParams")}</h3>
-            <p>{t("asrConnectionParamsDescription")}</p>
-            <SettingTags tags={[t("tagAdvanced")]} />
-          </div>
-        </div>
-        <div class="form-grid">
-          <label class:field-invalid={Boolean(fieldError("request.final_result_timeout_seconds"))}>
-            <span>{t("finalTimeout")}</span>
-            <input type="number" bind:value={config.request.final_result_timeout_seconds} />
-            {#if fieldError("request.final_result_timeout_seconds")}<small class="field-error">{fieldError("request.final_result_timeout_seconds")}</small>{/if}
-            <small class="field-hint">{t("finalTimeoutHint")}</small>
-          </label>
-        </div>
-      </div>
-    {/if}
   </section>
   <section class="settings-group">
     <div class="settings-group-heading">
@@ -302,23 +269,6 @@
         <button class="test-button" type="button" onclick={onTestLlmConfig} disabled={testingLlm}>
           <ShieldCheck size={16} />{testingLlm ? t("testingConnection") : t("testConnection")}
         </button>
-        {#if advancedOpen}
-          <div class="advanced-subpanel">
-            <div class="section-heading">
-              <div class="section-heading-copy">
-                <h3>{t("llmAdvancedParams")}</h3>
-                <p>{t("llmAdvancedParamsDescription")}</p>
-              </div>
-            </div>
-            <div class="form-grid">
-              <label class:field-invalid={Boolean(fieldError("llm_post_edit.timeout_seconds"))}>
-                <span>{t("timeout")}</span>
-                <input type="number" bind:value={config.llm_post_edit.timeout_seconds} />
-                {#if fieldError("llm_post_edit.timeout_seconds")}<small class="field-error">{fieldError("llm_post_edit.timeout_seconds")}</small>{/if}
-              </label>
-            </div>
-          </div>
-        {/if}
       </div>
     </div>
   </section>
@@ -579,15 +529,6 @@
 
   .llm-api-config-fields[hidden] {
     display: none;
-  }
-
-  .advanced-subpanel {
-    display: grid;
-    gap: 12px;
-    padding: 14px;
-    background: #fbfdff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
   }
 
   .setup-note {

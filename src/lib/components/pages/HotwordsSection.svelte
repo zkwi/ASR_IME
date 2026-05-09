@@ -1,5 +1,4 @@
 <script lang="ts">
-  import AdvancedPanel from "$lib/components/common/AdvancedPanel.svelte";
   import SettingTags from "$lib/components/common/SettingTags.svelte";
   import SettingsToolbar from "$lib/components/settings/SettingsToolbar.svelte";
   import type { AppConfig, SelectableHotwordCandidate } from "$lib/types/app";
@@ -15,7 +14,6 @@
     saving: boolean;
     settingsDirty: boolean;
     toolbarMessage: string;
-    advancedOpen: boolean;
     generatingAutoHotwords: boolean;
     clearingAutoHotwordHistory: boolean;
     autoHotwordError: string;
@@ -28,7 +26,6 @@
     fieldError: (field: string) => string;
     candidateConfidenceLabel: (confidence: number) => string;
     onReload: () => void;
-    onToggleAdvanced: () => void;
     onUpdateHotwords: (value: string) => void;
     onTidyHotwords: () => void;
     onClearHotwords: () => void;
@@ -53,7 +50,6 @@
     saving,
     settingsDirty,
     toolbarMessage,
-    advancedOpen,
     generatingAutoHotwords,
     clearingAutoHotwordHistory,
     autoHotwordError,
@@ -66,7 +62,6 @@
     fieldError,
     candidateConfidenceLabel,
     onReload,
-    onToggleAdvanced,
     onUpdateHotwords,
     onTidyHotwords,
     onClearHotwords,
@@ -96,14 +91,6 @@
     {saving}
     dirty={settingsDirty}
     onReload={onReload}
-  />
-  <AdvancedPanel
-    title={advancedOpen ? t("advancedSettings") : t("basicSettings")}
-    description={advancedOpen ? t("advancedSettingsHint") : t("hotwordsBasicHint")}
-    open={advancedOpen}
-    showLabel={t("showAdvancedSettings")}
-    hideLabel={t("hideAdvancedSettings")}
-    onToggle={onToggleAdvanced}
   />
   <section class="settings-group">
     <div class="settings-group-heading">
@@ -154,36 +141,25 @@
           <span>{t("promptEditorCollapsedHint")}</span>
         </div>
       {/if}
-      {#if advancedOpen}
-        <div class="advanced-subpanel">
-          <div class="section-heading">
-            <div class="section-heading-copy">
-              <h3>{t("advancedPromptTitle")}</h3>
-              <p>{t("advancedPromptDescription")}</p>
-            </div>
-          </div>
-          <div class="form-grid">
-            <label><span>{t("minChars")}</span><input type="number" bind:value={config.llm_post_edit.min_chars} /></label>
-          </div>
-        </div>
-      {/if}
-    </div>
-    {#if advancedOpen}
-      <div id="settings-prompt-context" class="form-panel">
-        <div class="section-heading">
-          <div class="section-heading-copy">
-            <h3>{t("sceneContext")}</h3>
-            <p>{t("sceneContextDescription")}</p>
-            <SettingTags tags={[t("tagLocalOnly"), t("tagPrivacySensitive")]} />
-          </div>
-        </div>
-        <label><span>{t("promptContext")}</span><textarea value={config.context.prompt_context.map((item) => item.text).join("\n")} oninput={(event) => onUpdatePromptContext(event.currentTarget.value)}></textarea></label>
-        <div class="toggle-grid">
-          <label class="check"><input type="checkbox" bind:checked={config.context.enable_recent_context} onchange={(event) => onOptionEnabledNotice("enable_recent_context", event.currentTarget.checked)} />{t("useRecentContext")}</label>
-        </div>
-        <p class="field-hint">{t("recentContextHint")}</p>
+      <div class="form-grid">
+        <label><span>{t("minChars")}</span><input type="number" bind:value={config.llm_post_edit.min_chars} /></label>
       </div>
-      <div id="settings-auto-hotwords" class="form-panel auto-hotwords-panel">
+    </div>
+    <div id="settings-prompt-context" class="form-panel">
+      <div class="section-heading">
+        <div class="section-heading-copy">
+          <h3>{t("sceneContext")}</h3>
+          <p>{t("sceneContextDescription")}</p>
+          <SettingTags tags={[t("tagLocalOnly"), t("tagPrivacySensitive")]} />
+        </div>
+      </div>
+      <label><span>{t("promptContext")}</span><textarea value={config.context.prompt_context.map((item) => item.text).join("\n")} oninput={(event) => onUpdatePromptContext(event.currentTarget.value)}></textarea></label>
+      <div class="toggle-grid">
+        <label class="check"><input type="checkbox" bind:checked={config.context.enable_recent_context} onchange={(event) => onOptionEnabledNotice("enable_recent_context", event.currentTarget.checked)} />{t("useRecentContext")}</label>
+      </div>
+      <p class="field-hint">{t("recentContextHint")}</p>
+    </div>
+    <div id="settings-auto-hotwords" class="form-panel auto-hotwords-panel">
         <div class="section-heading with-actions">
           <div class="section-heading-copy">
             <h3>{t("autoHotwordsTitle")}</h3>
@@ -259,8 +235,7 @@
             </div>
           {/if}
         {/if}
-      </div>
-    {/if}
+    </div>
   </section>
 </section>
 
@@ -490,8 +465,7 @@
     flex: 0 0 auto;
   }
 
-  .prompt-summary,
-  .advanced-subpanel {
+  .prompt-summary {
     display: grid;
     gap: 12px;
     padding: 14px;

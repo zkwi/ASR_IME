@@ -259,6 +259,20 @@ fn unchanged_hidden_config_field(
             previous_config.audio.silence_level_threshold
                 == next_config.audio.silence_level_threshold
         }
+        "request.final_result_timeout_seconds" => {
+            previous_config.request.final_result_timeout_seconds
+                == next_config.request.final_result_timeout_seconds
+        }
+        "llm_post_edit.timeout_seconds" => {
+            previous_config.llm_post_edit.timeout_seconds
+                == next_config.llm_post_edit.timeout_seconds
+        }
+        "ui.width" => previous_config.ui.width == next_config.ui.width,
+        "ui.height" => previous_config.ui.height == next_config.ui.height,
+        "ui.background_color" => {
+            previous_config.ui.background_color == next_config.ui.background_color
+        }
+        "ui.text_color" => previous_config.ui.text_color == next_config.ui.text_color,
         "typing.paste_delay_ms" => {
             previous_config.typing.paste_delay_ms == next_config.typing.paste_delay_ms
         }

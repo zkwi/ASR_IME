@@ -42,6 +42,7 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. The tray menu can open config, open logs, check updates, restart the app, or exit.
 - Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
+- Settings layout: visible settings are shown directly by task page. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
 ## Main Workflow Guarantees
@@ -147,7 +148,7 @@ mute_system_volume_while_recording = false
 
 1. Install and start VoxType.
 2. Open API Config.
-3. Fill in Doubao ASR App Key, Access Key, and Resource ID.
+3. Fill in Doubao ASR App Key and Access Key. Resource ID uses the default value and can be changed in `config.toml` only when needed.
 4. Click the ASR test button.
 5. Return to Home.
 6. Put the cursor in a target input field.

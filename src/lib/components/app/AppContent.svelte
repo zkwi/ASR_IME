@@ -74,9 +74,6 @@
     selectedAutoHotwordCount: number;
     autoHotwordStatusText: string;
     llmApiStatusText: string;
-    advancedHotwordsOpen: boolean;
-    advancedApiConfigOpen: boolean;
-    advancedOptionsOpen: boolean;
     fieldError: (field: string) => string;
     candidateConfidenceLabel: (confidence: number) => string;
     formatHotkey: (value: string) => string;
@@ -90,7 +87,6 @@
     overlayBackgroundRgb: () => string;
     overlayOpacity: () => number;
     overlayTextColor: () => string;
-    overlayBackgroundColor: () => string;
     overlayPresetActive: (background: string, text: string) => boolean;
     overlayOpacityPresetActive: (value: number) => boolean;
     overlayOpacityLabel: (value: number) => string;
@@ -106,7 +102,6 @@
     onToggleRecording: () => void;
     onSelectSection: (section: Section) => void;
     onReload: () => void;
-    onToggleAdvanced: (section: "Hotwords" | "ApiConfig" | "Options") => void;
     onUpdateHotwords: (value: string) => void;
     onTidyHotwords: () => void;
     onClearHotwords: () => void;
@@ -189,9 +184,6 @@
     selectedAutoHotwordCount,
     autoHotwordStatusText,
     llmApiStatusText,
-    advancedHotwordsOpen,
-    advancedApiConfigOpen,
-    advancedOptionsOpen,
     fieldError,
     candidateConfidenceLabel,
     formatHotkey,
@@ -205,7 +197,6 @@
     overlayBackgroundRgb,
     overlayOpacity,
     overlayTextColor,
-    overlayBackgroundColor,
     overlayPresetActive,
     overlayOpacityPresetActive,
     overlayOpacityLabel,
@@ -221,7 +212,6 @@
     onToggleRecording,
     onSelectSection,
     onReload,
-    onToggleAdvanced,
     onUpdateHotwords,
     onTidyHotwords,
     onClearHotwords,
@@ -295,7 +285,6 @@
     {saving}
     {settingsDirty}
     {toolbarMessage}
-    advancedOpen={advancedHotwordsOpen}
     {generatingAutoHotwords}
     {clearingAutoHotwordHistory}
     {autoHotwordError}
@@ -308,7 +297,6 @@
     {fieldError}
     {candidateConfidenceLabel}
     onReload={onReload}
-    onToggleAdvanced={() => onToggleAdvanced("Hotwords")}
     onUpdateHotwords={onUpdateHotwords}
     onTidyHotwords={onTidyHotwords}
     onClearHotwords={onClearHotwords}
@@ -333,7 +321,6 @@
     {saving}
     {settingsDirty}
     {toolbarMessage}
-    advancedOpen={advancedApiConfigOpen}
     {configExists}
     {setupChecking}
     {setupStatusReady}
@@ -351,7 +338,6 @@
     {setupActionText}
     {formatHotkey}
     onReload={onReload}
-    onToggleAdvanced={() => onToggleAdvanced("ApiConfig")}
     onScrollToSettingsPanel={onScrollToSettingsPanel}
     onOpenSetupGuide={onOpenSetupGuide}
     onRefreshSetupStatus={onRefreshSetupStatus}
@@ -366,7 +352,6 @@
     {saving}
     {settingsDirty}
     {toolbarMessage}
-    advancedOpen={advancedOptionsOpen}
     {hotkeyCaptureState}
     {hotkeyValidationMessage}
     {overlayColorPresets}
@@ -382,7 +367,6 @@
     {overlayBackgroundRgb}
     {overlayOpacity}
     {overlayTextColor}
-    {overlayBackgroundColor}
     {overlayPresetActive}
     {overlayOpacityPresetActive}
     {overlayOpacityLabel}
@@ -390,7 +374,6 @@
     {updatePanelDescription}
     {updateMetaText}
     onReload={onReload}
-    onToggleAdvanced={() => onToggleAdvanced("Options")}
     onHotkeyKeydown={onHotkeyKeydown}
     onBeginHotkeyCapture={onBeginHotkeyCapture}
     onOptionEnabledNotice={onOptionEnabledNotice}

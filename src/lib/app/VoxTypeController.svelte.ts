@@ -748,7 +748,6 @@ export function createVoxTypeController() {
   function optionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     if (!enabled) return "";
     if (key === "middle_mouse_enabled" || key === "right_alt_enabled") return t("extraTriggerEnabledNotice");
-    if (key === "mute_system_volume_while_recording") return t("systemAudioMuteEnabledNotice");
     if (key === "enable_recent_context") return t("recentContextEnabledNotice");
     return "";
   }
@@ -816,7 +815,6 @@ export function createVoxTypeController() {
   }
   function handleSetupAction(action: string) {
     if (action === "audio") void refreshSetupStatus();
-    if (action === "privacy") settingsNav.showAdvanced("Hotwords");
     const targetId =
       action === "asr_auth"
         ? "settings-auth"
@@ -1128,9 +1126,6 @@ export function createVoxTypeController() {
       selectedAutoHotwordCount: autoHotwords.selectedCount(),
       autoHotwordStatusText: autoHotwords.statusText(),
       llmApiStatusText: llmApiStatusText(),
-      advancedHotwordsOpen: settingsNav.isAdvancedVisible("Hotwords"),
-      advancedApiConfigOpen: settingsNav.isAdvancedVisible("ApiConfig"),
-      advancedOptionsOpen: settingsNav.isAdvancedVisible("Options"),
       fieldError,
       candidateConfidenceLabel,
       formatHotkey,
@@ -1144,7 +1139,6 @@ export function createVoxTypeController() {
       overlayBackgroundRgb: overlay.backgroundRgb,
       overlayOpacity: overlay.opacity,
       overlayTextColor: overlay.textColor,
-      overlayBackgroundColor: overlay.backgroundColor,
       overlayPresetActive: overlay.presetActive,
       overlayOpacityPresetActive: overlay.opacityPresetActive,
       overlayOpacityLabel,
@@ -1160,7 +1154,6 @@ export function createVoxTypeController() {
       onToggleRecording: toggleRecordingFromUi,
       onSelectSection: settingsNav.selectSection,
       onReload: reloadConfigFromUi,
-      onToggleAdvanced: settingsNav.toggleAdvanced,
       onUpdateHotwords: updateHotwords,
       onTidyHotwords: tidyHotwords,
       onClearHotwords: clearHotwords,
