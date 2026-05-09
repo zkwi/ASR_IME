@@ -113,7 +113,7 @@ resource_id = "volc.seedasr.sauc.duration"
 
 API Config also includes the Doubao ASR input language. The default is `zh-CN` for Chinese speech. For multilingual use, switch to a supported language code such as `en-US`, `ja-JP`, or `yue-CN`, or choose Auto/service default to omit the parameter. Doubao documents this option as supported only by some streaming modes, so if the ASR test fails, switch back to Auto/service default or confirm the current API mode.
 
-Without `app_key` and `access_key`, recording, recognition, and paste actions are locked.
+Without `app_key` and `access_key`, recording, recognition, and paste actions are locked. API Config shows a three-step first-use guide: fill keys, test the connection, then return Home to start dictating.
 
 Settings edited in the UI auto-save. The title bar briefly shows pending, saving, and saved states so you can tell when a change has taken effect.
 

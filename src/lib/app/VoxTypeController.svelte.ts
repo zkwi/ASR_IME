@@ -539,7 +539,7 @@ export function createVoxTypeController() {
       if (setupMessage) {
         statusMessage = setupMessage;
         if (!isOverlay && !isToast && requiresAsrAuth(configResult.data, configResult.exists)) {
-          settingsNav.focusAsrAuthSettings();
+          settingsNav.showApiConfigIntro();
         }
       }
     }

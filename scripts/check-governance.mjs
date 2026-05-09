@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import ts from "typescript";
 
 const EXCLUDE_DIRS = new Set([
   ".codex",
@@ -26,6 +27,12 @@ const REQUIRED_WIKI_PAGES = [
   "Feature-Guide-English",
   "Troubleshooting",
   "Troubleshooting-English",
+];
+
+const I18N_EXPORTS = [
+  { locale: "zh-CN", file: "src/lib/i18n/zh-CN.ts", exportName: "zhCN" },
+  { locale: "zh-TW", file: "src/lib/i18n/zh-TW.ts", exportName: "zhTW" },
+  { locale: "en", file: "src/lib/i18n/en.ts", exportName: "en" },
 ];
 
 function runGit(args, cwd) {
@@ -215,11 +222,110 @@ function checkVersionConsistency(root, failures) {
   }
 }
 
+function propertyNameText(name) {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) return name.text;
+  return null;
+}
+
+function unwrapObjectLiteralExpression(expression) {
+  if (ts.isObjectLiteralExpression(expression)) return expression;
+  if (ts.isSatisfiesExpression(expression) || ts.isAsExpression(expression)) {
+    return unwrapObjectLiteralExpression(expression.expression);
+  }
+  return null;
+}
+
+function findExportedObjectLiteral(filePath, exportName) {
+  const sourceText = fs.readFileSync(filePath, "utf8");
+  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let objectLiteral = null;
+
+  function visit(node) {
+    if (objectLiteral) return;
+    if (ts.isVariableStatement(node)) {
+      const isExported = node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+      if (isExported) {
+        for (const declaration of node.declarationList.declarations) {
+          if (
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === exportName &&
+            declaration.initializer
+          ) {
+            objectLiteral = unwrapObjectLiteralExpression(declaration.initializer);
+            return;
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return objectLiteral;
+}
+
+function collectObjectKeyPaths(objectLiteral, prefix = []) {
+  const paths = [];
+  for (const property of objectLiteral.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const name = propertyNameText(property.name);
+    if (!name) continue;
+
+    const keyPath = [...prefix, name];
+    paths.push(keyPath.join("."));
+    if (ts.isObjectLiteralExpression(property.initializer)) {
+      paths.push(...collectObjectKeyPaths(property.initializer, keyPath));
+    }
+  }
+  return paths;
+}
+
+function formatKeyList(keys) {
+  const visible = keys.slice(0, 12).join(", ");
+  return keys.length > 12 ? `${visible}, ... +${keys.length - 12}` : visible;
+}
+
+function checkI18nKeyParity(root, failures) {
+  const keySets = new Map();
+  for (const entry of I18N_EXPORTS) {
+    const filePath = path.join(root, entry.file);
+    if (!fs.existsSync(filePath)) {
+      failures.push(`${entry.file}: missing i18n file`);
+      continue;
+    }
+
+    const objectLiteral = findExportedObjectLiteral(filePath, entry.exportName);
+    if (!objectLiteral) {
+      failures.push(`${entry.file}: missing exported object ${entry.exportName}`);
+      continue;
+    }
+    keySets.set(entry, new Set(collectObjectKeyPaths(objectLiteral)));
+  }
+
+  const baseEntry = I18N_EXPORTS[0];
+  const baseKeys = keySets.get(baseEntry);
+  if (!baseKeys) return;
+
+  for (const entry of I18N_EXPORTS.slice(1)) {
+    const keys = keySets.get(entry);
+    if (!keys) continue;
+    const missing = [...baseKeys].filter((key) => !keys.has(key)).sort();
+    const extra = [...keys].filter((key) => !baseKeys.has(key)).sort();
+    if (missing.length) {
+      failures.push(`${entry.file}: i18n keys missing compared with ${baseEntry.file}: ${formatKeyList(missing)}`);
+    }
+    if (extra.length) {
+      failures.push(`${entry.file}: i18n keys extra compared with ${baseEntry.file}: ${formatKeyList(extra)}`);
+    }
+  }
+}
+
 function main() {
   const root = repoRoot();
   const failures = [];
 
   checkVersionConsistency(root, failures);
+  checkI18nKeyParity(root, failures);
   checkLocalMarkdownLinks(root, failures);
   checkImageReferences(root, failures);
   checkWikiMirrors(root, failures);

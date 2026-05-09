@@ -48,7 +48,7 @@ VoxType 保留六个主页面：
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130744_793.png" alt="声写 VoxType 首页：语音输入状态、启动方式和输入表现" width="820">
 
-API配置页顶部是配置健康检查：ASR 密钥、麦克风、粘贴方式、触发方式和隐私设置分开展示。只有真正阻断录音、识别或粘贴主流程的问题才应作为明显警告；右 Alt、鼠标中键、最近上下文和自动热词这类可选项只作为弱提醒。公开截图时请像下图一样隐藏真实 App Key、Access Key 和其他密钥。
+API配置页在 ASR 密钥缺失时会先显示三步首次配置引导：填写密钥、测试连接、回首页开始输入。其下方是配置健康检查：ASR 密钥、麦克风、粘贴方式、触发方式和隐私设置分开展示。只有真正阻断录音、识别或粘贴主流程的问题才应作为明显警告；右 Alt、鼠标中键、最近上下文和自动热词这类可选项只作为弱提醒。公开截图时请像下图一样隐藏真实 App Key、Access Key 和其他密钥。
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130838_673.png" alt="声写 VoxType API 配置与健康检查" width="820">
 

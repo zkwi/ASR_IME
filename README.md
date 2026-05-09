@@ -101,7 +101,7 @@ $env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
 
 首次使用可以参考配置指南：[Setup Guide](https://github.com/zkwi/VoxType/wiki/Setup-Guide)。如果安装版启动时找不到 `config.toml`，程序会自动打开该指南；主窗口首页也会显示配置健康检查，提示还缺少哪些配置。
 
-豆包 ASR 的 App Key 和 Access Key 是主流程必填项。未填写时，主窗口会优先引导到 API配置页，录音、识别、粘贴等后续入口会被锁定，填写后会自动保存并生效。
+豆包 ASR 的 App Key 和 Access Key 是主流程必填项。未填写时，主窗口会优先引导到 API配置页，录音、识别、粘贴等后续入口会被锁定。API配置页会显示“填写密钥、测试连接、回首页开始输入”的三步引导；填写后会自动保存并生效。
 
 复制配置模板：
 

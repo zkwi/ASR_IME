@@ -22,6 +22,13 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
     }, 50);
   }
 
+  function scrollContentTop() {
+    if (!options.isBrowser()) return;
+    window.setTimeout(() => {
+      document.querySelector<HTMLElement>(".content")?.scrollTo({ top: 0, behavior: "smooth" });
+    }, 50);
+  }
+
   function focusFirstValidationError(errors: ConfigValidationError[]) {
     const field = firstValidationField(errors);
     if (!field) return;
@@ -33,6 +40,11 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
     scrollToSettingsPanel("settings-auth");
   }
 
+  function showApiConfigIntro() {
+    selectedSection = "ApiConfig";
+    scrollContentTop();
+  }
+
   function openLlmApiSettings() {
     llmApiConfigVisible = true;
     scrollToSettingsPanel("settings-llm-api");
@@ -40,7 +52,7 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
 
   function selectSection(section: Section) {
     selectedSection = section;
-    if (section === "ApiConfig" && options.requiresAsrAuth()) scrollToSettingsPanel("settings-auth");
+    if (section === "ApiConfig" && options.requiresAsrAuth()) scrollContentTop();
   }
 
   return {
@@ -51,6 +63,7 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
     scrollToSettingsPanel,
     focusFirstValidationError,
     focusAsrAuthSettings,
+    showApiConfigIntro,
     openLlmApiSettings,
     selectSection,
   };

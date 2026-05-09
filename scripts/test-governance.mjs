@@ -59,6 +59,7 @@ function createValidProject(dir) {
     path.join(dir, "src-tauri", "tauri.conf.json"),
     JSON.stringify({ version: "1.2.3" }, null, 2),
   );
+  writeI18nFiles(dir);
 
   writeFile(
     path.join(dir, "README.md"),
@@ -84,6 +85,18 @@ function createValidProject(dir) {
     "Troubleshooting-English",
   ]) {
     writeFile(path.join(dir, "docs", "wiki", `${page}.md`), `# ${page}\n`);
+  }
+}
+
+function writeI18nFiles(dir, overrides = {}) {
+  const files = {
+    "zh-CN.ts": 'export const zhCN = {\n  "appName": "声写",\n  "setup": {\n    "title": "配置",\n    "description": "说明"\n  }\n};\n',
+    "zh-TW.ts": 'export const zhTW = {\n  "appName": "聲寫",\n  "setup": {\n    "title": "配置",\n    "description": "說明"\n  }\n};\n',
+    "en.ts": 'export const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup",\n    "description": "Description"\n  }\n};\n',
+    ...overrides,
+  };
+  for (const [filename, content] of Object.entries(files)) {
+    writeFile(path.join(dir, "src", "lib", "i18n", filename), content);
   }
 }
 
@@ -115,6 +128,16 @@ withProject((dir) => {
   assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /missing required Wiki mirror Setup-Guide\.md/);
   assert.match(result.stdout, /Wiki link lacks local mirror: Setup-Guide/);
+});
+
+withProject((dir) => {
+  writeI18nFiles(dir, {
+    "en.ts": 'export const en = {\n  "appName": "VoxType",\n  "setup": {\n    "title": "Setup"\n  }\n};\n',
+  });
+  const result = runGovernance(dir);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /i18n keys missing/);
+  assert.match(result.stdout, /setup\.description/);
 });
 
 console.log("[test-governance] all checks passed");

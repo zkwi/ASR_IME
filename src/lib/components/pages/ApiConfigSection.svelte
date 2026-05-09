@@ -99,12 +99,35 @@
 <section class="settings-stack">
   {#if requiresAsrAuth}
     <section class="auth-gate-card" aria-live="polite">
-      <div>
-        <strong>{t("authGateTitle")}</strong>
-        <p>{!configExists ? t("setupMissingFile") : t("authGateDescription")}</p>
+      <div class="auth-gate-copy">
+        <strong>{t("apiOnboardingTitle")}</strong>
+        <p>{!configExists ? t("setupMissingFile") : t("apiOnboardingDescription")}</p>
+        <ol class="starter-steps" aria-label={t("apiOnboardingStepsLabel")}>
+          <li>
+            <span>1</span>
+            <div>
+              <strong>{t("apiOnboardingStepKeysTitle")}</strong>
+              <small>{t("apiOnboardingStepKeysDescription")}</small>
+            </div>
+          </li>
+          <li>
+            <span>2</span>
+            <div>
+              <strong>{t("apiOnboardingStepTestTitle")}</strong>
+              <small>{t("apiOnboardingStepTestDescription")}</small>
+            </div>
+          </li>
+          <li>
+            <span>3</span>
+            <div>
+              <strong>{t("apiOnboardingStepStartTitle")}</strong>
+              <small>{t("apiOnboardingStepStartDescription", { hotkey: formatHotkey(snapshotHotkey) })}</small>
+            </div>
+          </li>
+        </ol>
       </div>
       <div class="setup-actions">
-        <button type="button" onclick={() => onScrollToSettingsPanel("settings-auth")}>{t("setupCta")}</button>
+        <button type="button" onclick={() => onScrollToSettingsPanel("settings-auth")}>{t("apiOnboardingPrimaryCta")}</button>
         <button type="button" class="secondary" onclick={onOpenSetupGuide}>{t("setupGuideCta")}</button>
       </div>
     </section>
@@ -521,15 +544,20 @@
   }
 
   .auth-gate-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     gap: 16px;
-    padding: 14px 16px;
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
+    padding: 16px;
+    background: linear-gradient(180deg, #fffaf3 0%, #fffefd 100%);
+    border: 1px solid #f7cf96;
     border-radius: 14px;
+  }
+
+  .auth-gate-copy {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
   }
 
   .auth-gate-card strong {
@@ -540,6 +568,62 @@
     margin: 4px 0 0;
     color: var(--text-secondary);
     font-size: 14px;
+  }
+
+  .starter-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .starter-steps li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(247, 207, 150, 0.72);
+    border-radius: 12px;
+  }
+
+  .starter-steps li > span {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    color: #8a4b00;
+    background: #ffedd5;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .starter-steps li div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .starter-steps li strong,
+  .starter-steps li small {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .starter-steps li strong {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .starter-steps li small {
+    color: #715536;
+    font-size: 12px;
+    line-height: 1.35;
   }
 
   .setup-actions {
@@ -576,12 +660,28 @@
       width: 100%;
     }
 
+    .auth-gate-card {
+      grid-template-columns: 1fr;
+    }
+
+    .setup-actions {
+      justify-content: stretch;
+    }
+
+    .setup-actions button {
+      flex: 1 1 150px;
+    }
+
     .form-grid {
       grid-template-columns: 1fr;
     }
   }
 
   @media (max-width: 720px) {
+    .starter-steps {
+      grid-template-columns: 1fr;
+    }
+
     .check {
       width: 100%;
     }
