@@ -78,6 +78,20 @@ impl UsageStats {
 }
 
 pub fn stats_path() -> PathBuf {
+    let candidates = stats_path_candidates();
+    for candidate in &candidates {
+        if candidate.exists() {
+            return dunce::simplified(candidate).to_path_buf();
+        }
+    }
+    let fallback = candidates
+        .first()
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("voice_input_stats.jsonl"));
+    dunce::simplified(&fallback).to_path_buf()
+}
+
+fn stats_path_candidates() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     if let Ok(cwd) = std::env::current_dir() {
         candidates.push(cwd.join("voice_input_stats.jsonl"));
@@ -102,17 +116,7 @@ pub fn stats_path() -> PathBuf {
             );
         }
     }
-
-    for candidate in &candidates {
-        if candidate.exists() {
-            return dunce::simplified(candidate).to_path_buf();
-        }
-    }
-    let fallback = candidates
-        .first()
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("voice_input_stats.jsonl"));
-    dunce::simplified(&fallback).to_path_buf()
+    candidates
 }
 
 pub fn load_stats_snapshot() -> StatsSnapshot {
@@ -172,9 +176,23 @@ pub fn stats_event_count() -> usize {
 }
 
 pub fn clear_stats() -> Result<(), String> {
-    let path = stats_path();
-    if path.exists() {
-        std::fs::remove_file(&path).map_err(|err| format!("清空统计数据失败: {}", err))?;
+    clear_stats_paths(&stats_path_candidates())
+}
+
+fn clear_stats_paths(paths: &[PathBuf]) -> Result<(), String> {
+    let mut cleared = Vec::new();
+    for path in paths {
+        let path = dunce::simplified(path).to_path_buf();
+        if cleared
+            .iter()
+            .any(|cleared_path: &PathBuf| cleared_path == &path)
+        {
+            continue;
+        }
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|err| format!("清空统计数据失败: {}", err))?;
+        }
+        cleared.push(path);
     }
     Ok(())
 }
@@ -220,4 +238,55 @@ fn read_events(path: &PathBuf) -> Vec<ParsedEvent> {
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::clear_stats_paths;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TempStatsDir {
+        dir: PathBuf,
+    }
+
+    impl TempStatsDir {
+        fn new() -> Self {
+            let suffix = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let dir = std::env::temp_dir().join(format!(
+                "voxtype_stats_clear_{}_{}",
+                std::process::id(),
+                suffix
+            ));
+            std::fs::create_dir_all(&dir).unwrap();
+            Self { dir }
+        }
+
+        fn path(&self, name: &str) -> PathBuf {
+            self.dir.join(name)
+        }
+    }
+
+    impl Drop for TempStatsDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    #[test]
+    fn clear_stats_removes_all_existing_candidate_files() {
+        let fixture = TempStatsDir::new();
+        let primary = fixture.path("primary.jsonl");
+        let fallback = fixture.path("fallback.jsonl");
+        std::fs::write(&primary, "{}\n").unwrap();
+        std::fs::write(&fallback, "{}\n").unwrap();
+
+        clear_stats_paths(&[primary.clone(), fallback.clone(), primary.clone()]).unwrap();
+
+        assert!(!primary.exists());
+        assert!(!fallback.exists());
+    }
 }
