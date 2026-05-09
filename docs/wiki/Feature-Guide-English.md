@@ -203,6 +203,7 @@ Stats do not store recognized text.
 Tray:
 
 - Closing the main window hides it to the tray by default.
+- Single-click the tray icon to open the main window.
 - Tray menu can open the main window, open config, open logs, report an issue, check updates, restart the app, and exit.
 
 Startup:

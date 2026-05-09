@@ -62,14 +62,16 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
             EXIT_ID => exit_app(app),
             _ => {}
         })
-        .on_tray_icon_event(move |_tray, event| {
-            if let TrayIconEvent::DoubleClick {
+        .on_tray_icon_event(move |_tray, event| match event {
+            TrayIconEvent::Click {
                 button: MouseButton::Left,
                 ..
-            } = event
-            {
-                show_main_window(&app_for_event);
             }
+            | TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } => show_main_window(&app_for_event),
+            _ => {}
         });
     let icon = normal_tray_icon();
     builder = builder.icon(icon);
