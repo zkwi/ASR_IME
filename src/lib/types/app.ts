@@ -218,6 +218,7 @@ export type AppConfig = {
   };
   screen_context: {
     enabled: boolean;
+    capture_scope: string;
     max_chars: number;
     timeout_ms: number;
   };

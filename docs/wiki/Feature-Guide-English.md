@@ -76,7 +76,7 @@ Quality and latency factors:
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
 | Hotwords | Important for proper nouns and product names |
 | Recent context | Useful for continuous writing, but disabled by default for privacy |
-| Screen OCR context | On by default, current foreground window only, useful for UI terms, filenames, and code identifiers |
+| Screen OCR context | On by default, current display by default, useful for UI terms, filenames, and code identifiers |
 
 ## 6. Auto Paste and Clipboard Restore
 
@@ -163,14 +163,14 @@ Enable it when you frequently dictate recurring business terms, product names, o
 
 ## 10. Screen OCR Context
 
-Screen OCR context reads text from the current foreground window when recording starts. It helps ASR and the optional LLM understand UI terms, filenames, names, and code identifiers.
+Screen OCR context reads text from the current display or current window when recording starts. It helps ASR and the optional LLM understand UI terms, filenames, names, and code identifiers.
 
 Privacy and stability:
 
-- On by default, but captures only the current foreground window, not the full screen.
+- On by default, with the current display as the capture range. You can switch to current-window-only in Options.
 - OCR text is used only for the current request and is not written to logs, stats, config, or cache.
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
-- Disable it in Options or Privacy & local data when the current foreground window contains sensitive content.
+- Switch to current-window-only or disable it in Options or Privacy & local data when the screen contains sensitive content.
 
 ## 11. Privacy & Local Data
 

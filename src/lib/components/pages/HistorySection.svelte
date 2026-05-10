@@ -81,8 +81,8 @@
 <style>
   .history-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
   }
 
   .history-card {
@@ -95,8 +95,8 @@
   }
 
   .history-card {
-    min-height: 110px;
-    padding: 18px;
+    min-height: 100px;
+    padding: 16px;
   }
 
   .history-card:hover {
@@ -115,12 +115,13 @@
 
   .history-card strong {
     display: block;
-    margin-top: 10px;
+    margin-top: 8px;
     color: var(--text-main);
-    font-size: 21px;
+    font-size: clamp(18px, 1.9vw, 21px);
     font-weight: 800;
     line-height: 1.2;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    white-space: nowrap;
   }
 
   .history-card span {
@@ -163,9 +164,9 @@
     display: grid;
     grid-template-columns: minmax(104px, 1.05fr) minmax(92px, 0.9fr) minmax(72px, 0.62fr) minmax(104px, 0.9fr) minmax(84px, 0.76fr);
     align-items: center;
-    column-gap: 16px;
-    min-height: 46px;
-    padding: 9px 0;
+    column-gap: 12px;
+    min-height: 44px;
+    padding: 8px 0;
     border-bottom: 1px solid var(--border);
   }
 
@@ -196,14 +197,14 @@
   .day-list span {
     min-width: 0;
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 13px;
     overflow-wrap: anywhere;
   }
 
   .day-list strong {
     min-width: 0;
     color: var(--text-main);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     overflow-wrap: anywhere;
   }

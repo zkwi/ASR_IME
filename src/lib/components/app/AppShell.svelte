@@ -184,6 +184,7 @@
         <header class="topbar">
           <div>
             <h2>{t(navLabelKeys[selectedSection])}</h2>
+            <p>{t("historyPageDescription")}</p>
           </div>
         </header>
       {/if}
@@ -742,6 +743,14 @@
     font-weight: 800;
     line-height: 1.2;
     letter-spacing: 0;
+  }
+
+  .topbar p {
+    max-width: 680px;
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.45;
   }
 
   .ui-compact .topbar {

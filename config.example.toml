@@ -62,8 +62,10 @@ recent_context_rounds = 5
 hotwords = []
 
 [screen_context]
-# 开始录音时截取当前前台窗口并用 Windows OCR 识别文字，结果作为临时上下文发送给 ASR 和大模型；默认开启
+# 开始录音时用 Windows OCR 识别文字，结果作为临时上下文发送给 ASR 和大模型；默认开启
 enabled = true
+# 识别范围：screen = 当前显示器（默认），window = 仅当前前台窗口
+capture_scope = "screen"
 # OCR 文本只保留本轮请求，不写入日志、统计或配置；超时/失败会自动跳过，不影响录音
 max_chars = 1200
 timeout_ms = 700

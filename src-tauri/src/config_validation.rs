@@ -166,6 +166,16 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         3_000,
         "屏幕 OCR 等待时间需在 100 到 3000 毫秒之间。",
     );
+    if !matches!(
+        config.screen_context.capture_scope.as_str(),
+        "screen" | "window"
+    ) {
+        push_validation_error(
+            &mut errors,
+            "screen_context.capture_scope",
+            "屏幕 OCR 识别范围只能是 screen 或 window。",
+        );
+    }
     validate_f64_range(
         &mut errors,
         "request.final_result_timeout_seconds",

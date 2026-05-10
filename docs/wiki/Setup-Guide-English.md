@@ -148,7 +148,7 @@ Options shows common settings and troubleshooting entry points directly:
 | --- | --- |
 | Usage | Primary shortcut, startup, close-window behavior |
 | Output | `Ctrl+V`, `Shift+Insert`, clipboard-only, remove trailing period, restore clipboard after paste |
-| Screen OCR context | Capture current foreground window text at recording start, test Windows OCR |
+| Screen OCR context | Capture current display or current window text at recording start, test Windows OCR |
 | Microphone | Input device |
 | Floating captions | Preview, color presets, opacity presets |
 | Updates and diagnostics | Check for updates, update now, open logs, copy diagnostic report |
@@ -160,7 +160,7 @@ Additional visible low-frequency settings:
 - Alternative triggers: middle mouse and right Alt.
 - Recording fallback: low-volume auto-stop.
 
-Screen OCR context is on by default. It captures only the current foreground window, not the full screen. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. Disable it in Options when the current window contains sensitive content.
+Screen OCR context is on by default. It captures the current display by default, which helps when you reference one document while typing into another window. You can switch it to the current window only in Options. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. Switch to current-window-only or disable it when the screen contains sensitive content.
 
 Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters.
 
@@ -174,7 +174,7 @@ Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, mode
 | Paste method | Automatic paste | Works for most text fields |
 | Clipboard restore | On | Tries to restore previous clipboard after paste |
 | Low-volume auto-stop | 30 seconds, threshold `0.03` | Less likely to cut off long or quiet dictation |
-| Screen OCR context | On | Improves names, UI terms, filenames, and code identifiers; disable on sensitive windows |
+| Screen OCR context | On, current display | Improves names, UI terms, filenames, and code identifiers; switch to current-window-only or disable in sensitive scenarios |
 | Recent context | Off | More conservative by default |
 | Automatic hotword candidates | Off | Does not save transcript history by default |
 | Mute system volume while recording | Off | Avoids interrupting meetings, videos, and alerts |
@@ -239,6 +239,7 @@ Screen OCR context:
 ```toml
 [screen_context]
 enabled = true
+capture_scope = "screen"  # screen = current display, window = current window only
 max_chars = 1200
 timeout_ms = 700
 ```
@@ -285,4 +286,4 @@ Names, product names, project names, abbreviations, and technical terms. Do not 
 
 They save voice-input text history locally. VoxType keeps them off by default to reduce privacy risk.
 
-Screen OCR context is on by default, but it does not save transcript history. It reads only the current foreground window at recording start, lightly normalizes OCR text, and attaches it temporarily to the current ASR/LLM request. It does not cache recent OCR screenshots or text.
+Screen OCR context is on by default, but it does not save transcript history. It reads the current display at recording start by default, lightly normalizes OCR text, and attaches it temporarily to the current ASR/LLM request. It does not cache recent OCR screenshots or text. Use current-window-only or turn it off when the screen contains sensitive content.

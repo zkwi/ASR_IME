@@ -134,6 +134,8 @@ pub struct TextContext {
 pub struct ScreenContextConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
+    #[serde(default = "default_screen_context_capture_scope")]
+    pub capture_scope: String,
     #[serde(default = "default_screen_context_max_chars")]
     pub max_chars: usize,
     #[serde(default = "default_screen_context_timeout_ms")]
@@ -354,6 +356,7 @@ impl Default for ScreenContextConfig {
     fn default() -> Self {
         Self {
             enabled: true,
+            capture_scope: default_screen_context_capture_scope(),
             max_chars: default_screen_context_max_chars(),
             timeout_ms: default_screen_context_timeout_ms(),
         }
@@ -782,6 +785,9 @@ fn default_final_timeout() -> f64 {
 fn default_recent_context_rounds() -> usize {
     5
 }
+fn default_screen_context_capture_scope() -> String {
+    "screen".to_string()
+}
 fn default_screen_context_max_chars() -> usize {
     1_200
 }
@@ -914,6 +920,8 @@ mod tests {
         assert_eq!(config.request.end_window_size, Some(800));
         assert_eq!(config.request.language, "zh-CN");
         assert!(!config.context.enable_recent_context);
+        assert!(config.screen_context.enabled);
+        assert_eq!(config.screen_context.capture_scope, "screen");
         assert!(!config.auto_hotwords.enabled);
         assert!(config.auto_hotwords.accepted_hotwords.is_empty());
         assert_eq!(config.auto_hotwords.max_history_chars, 5_000);
@@ -997,6 +1005,7 @@ mod tests {
         config.update.github_repo = "broken".to_string();
         config.auto_hotwords.max_history_chars = 999;
         config.auto_hotwords.max_candidates = 101;
+        config.screen_context.capture_scope = "all_screens".to_string();
 
         let errors = validate_config(&config).expect_err("invalid config should fail");
         let fields = errors
@@ -1021,6 +1030,7 @@ mod tests {
         assert!(fields.contains(&"update.github_repo"));
         assert!(fields.contains(&"auto_hotwords.max_history_chars"));
         assert!(fields.contains(&"auto_hotwords.max_candidates"));
+        assert!(fields.contains(&"screen_context.capture_scope"));
     }
 
     #[test]

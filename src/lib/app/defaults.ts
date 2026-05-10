@@ -85,6 +85,7 @@ export const fallbackConfig: AppConfig = {
   },
   screen_context: {
     enabled: true,
+    capture_scope: "screen",
     max_chars: 1200,
     timeout_ms: 700,
   },

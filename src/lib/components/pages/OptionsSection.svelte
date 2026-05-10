@@ -187,6 +187,15 @@
           </span>
         </label>
       </div>
+      <div class="form-grid">
+        <label>
+          <span>{t("screenContextScope")}</span>
+          <select bind:value={config.screen_context.capture_scope} disabled={!config.screen_context.enabled}>
+            <option value="screen">{t("screenContextScopeScreen")}</option>
+            <option value="window">{t("screenContextScopeWindow")}</option>
+          </select>
+        </label>
+      </div>
       <p class="field-hint">{t("screenContextPrivacyHint")}</p>
       <div class="update-card">
         <div>

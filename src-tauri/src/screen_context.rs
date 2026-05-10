@@ -17,8 +17,9 @@ use windows::{
         Foundation::{RECT, RPC_E_CHANGED_MODE},
         Graphics::Gdi::{
             BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
-            GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CAPTUREBLT,
-            DIB_RGB_COLORS, HBITMAP, HDC, HGDIOBJ, SRCCOPY,
+            GetDIBits, GetMonitorInfoW, MonitorFromWindow, ReleaseDC, SelectObject, BITMAPINFO,
+            BITMAPINFOHEADER, BI_RGB, CAPTUREBLT, DIB_RGB_COLORS, HBITMAP, HDC, HGDIOBJ,
+            MONITORINFO, MONITOR_DEFAULTTONEAREST, SRCCOPY,
         },
         System::WinRT::{RoInitialize, RoUninitialize, RO_INIT_MULTITHREADED},
         UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect},
@@ -60,7 +61,7 @@ pub fn spawn_capture(config: &ScreenContextConfig) -> Option<ScreenContextReceiv
         return None;
     }
     let started_at = Instant::now();
-    let image = match capture_foreground_window_bitmap() {
+    let image = match capture_context_bitmap(config) {
         Ok(image) => image,
         Err(err) => {
             app_log::warn(format!("屏幕 OCR 截图失败，已跳过: {}", err));
@@ -119,11 +120,9 @@ pub fn wait_for_context(
     }
 }
 
-pub fn test_current_window(
-    config: &ScreenContextConfig,
-) -> Result<ScreenContextTestResult, String> {
+pub fn test_capture(config: &ScreenContextConfig) -> Result<ScreenContextTestResult, String> {
     let started_at = Instant::now();
-    let image = capture_foreground_window_bitmap()?;
+    let image = capture_context_bitmap(config)?;
     let recognized = recognize_image_context(image, config, started_at)?;
     let text_chars = recognized.text.chars().count();
     Ok(ScreenContextTestResult {
@@ -131,7 +130,7 @@ pub fn test_current_window(
         selected_language: Some(recognized.selected_language),
         elapsed_ms: recognized.elapsed_ms,
         warning: if recognized.text.trim().is_empty() {
-            Some("当前窗口未识别到可用文字。".to_string())
+            Some("未识别到可用文字。".to_string())
         } else {
             None
         },
@@ -142,11 +141,11 @@ pub fn test_current_window(
     })
 }
 
-pub fn test_current_window_on_worker(
+pub fn test_capture_on_worker(
     config: &ScreenContextConfig,
 ) -> Result<ScreenContextTestResult, String> {
     let config = config.clone();
-    thread::spawn(move || test_current_window(&config))
+    thread::spawn(move || test_capture(&config))
         .join()
         .map_err(|_| "屏幕 OCR 测试线程异常结束。".to_string())?
 }
@@ -329,6 +328,35 @@ fn is_cjk_character(ch: char) -> bool {
     )
 }
 
+fn capture_context_bitmap(config: &ScreenContextConfig) -> Result<CapturedImage, String> {
+    if config.capture_scope == "window" {
+        capture_foreground_window_bitmap()
+    } else {
+        capture_current_monitor_bitmap()
+    }
+}
+
+fn capture_current_monitor_bitmap() -> Result<CapturedImage, String> {
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_invalid() {
+            return Err("未找到当前前台窗口，无法定位当前显示器。".to_string());
+        }
+        let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if monitor.is_invalid() {
+            return Err("未找到当前显示器。".to_string());
+        }
+        let mut info = MONITORINFO {
+            cbSize: mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        if !GetMonitorInfoW(monitor, &mut info).as_bool() {
+            return Err("读取当前显示器区域失败。".to_string());
+        }
+        capture_rect_bitmap(info.rcMonitor, "当前显示器")
+    }
+}
+
 fn capture_foreground_window_bitmap() -> Result<CapturedImage, String> {
     unsafe {
         let hwnd = GetForegroundWindow();
@@ -343,6 +371,17 @@ fn capture_foreground_window_bitmap() -> Result<CapturedImage, String> {
             return Err("当前窗口区域无效。".to_string());
         }
 
+        capture_rect_bitmap(rect, "当前窗口")
+    }
+}
+
+fn capture_rect_bitmap(rect: RECT, area_label: &str) -> Result<CapturedImage, String> {
+    unsafe {
+        let width = rect.right - rect.left;
+        let height = rect.bottom - rect.top;
+        if width <= 0 || height <= 0 {
+            return Err(format!("{}区域无效。", area_label));
+        }
         let screen_dc = ScreenDc::new()?;
         let memory_dc = MemoryDc::new(screen_dc.0)?;
         let bitmap = Bitmap::new(screen_dc.0, width, height)?;
@@ -359,7 +398,7 @@ fn capture_foreground_window_bitmap() -> Result<CapturedImage, String> {
             rect.top,
             SRCCOPY | CAPTUREBLT,
         )
-        .map_err(|err| windows_error("复制当前窗口截图失败", err))?;
+        .map_err(|err| windows_error(&format!("复制{}截图失败", area_label), err))?;
 
         let mut info = BITMAPINFO::default();
         info.bmiHeader.biSize = mem::size_of::<BITMAPINFOHEADER>() as u32;
@@ -380,7 +419,7 @@ fn capture_foreground_window_bitmap() -> Result<CapturedImage, String> {
             DIB_RGB_COLORS,
         );
         if copied == 0 {
-            return Err("读取当前窗口截图像素失败。".to_string());
+            return Err(format!("读取{}截图像素失败。", area_label));
         }
         Ok(CapturedImage {
             pixels,

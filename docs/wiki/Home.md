@@ -47,7 +47,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 - Main trigger: `Ctrl + Q`.
 - Right Alt and middle mouse triggers: off by default.
 - Recent context and automatic hotword candidates: off by default.
-- Screen OCR context: on by default, current foreground window only, no persisted OCR text.
+- Screen OCR context: on by default, current display by default, no persisted OCR text.
 - Local silence fallback: continuous low volume stops recording after 30 seconds by default, with a `0.03` threshold.
 - Doubao server endpointing example value: `end_window_size = 800`.
 - Update prompts provide an "Update now" action when a new installer is available.
