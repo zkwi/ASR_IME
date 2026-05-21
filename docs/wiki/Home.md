@@ -1,10 +1,10 @@
-# VoxType Wiki - Windows Voice Typing and Speech-to-Text
+# VoxType Wiki - Rust/Tauri Windows AI Voice Typing App
 
 本页面是 GitHub Wiki `Home` 的仓库内草稿镜像，用于避免线上 Wiki 与仓库文档长期漂移。
 
-VoxType is a lightweight Windows desktop voice typing, dictation, and speech-to-text tool. Put the cursor in any input box, press the global shortcut, speak, and VoxType will transcribe your voice with Doubao streaming ASR, optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active field, and restore the previous clipboard when possible.
+VoxType is a lightweight Rust/Tauri Windows desktop AI voice typing, dictation, and speech-to-text app. Put the cursor in any input box, press the global shortcut, speak, and VoxType will transcribe your voice with Doubao streaming ASR, optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active field, and restore the previous clipboard when possible.
 
-声写 VoxType 是一个 Windows 桌面语音输入、语音转文字和听写工具。把光标放到任意输入框后，按全局快捷键开始说话，VoxType 会完成录音、豆包流式 ASR、可选大模型润色、写入剪贴板、自动粘贴和剪贴板恢复。
+声写 VoxType 是一个基于 Rust/Tauri 的 Windows 桌面 AI 语音输入、语音转文字和听写工具。把光标放到任意输入框后，按全局快捷键开始说话，VoxType 会完成录音、豆包流式 ASR、可选大模型润色、写入剪贴板、自动粘贴和剪贴板恢复。
 
 ## Use Cases / 适合场景
 
