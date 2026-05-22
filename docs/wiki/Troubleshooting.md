@@ -87,6 +87,19 @@ Start-Process -Wait -Verb RunAs "C:\Temp\MicrosoftEdgeWebView2RuntimeInstallerX6
 - 默认连续低音量 30 秒会按手动停止流程结束本次录音，避免服务端判停未触发时一直录到最长录音上限。
 - 如果确实需要长时间停顿，可在 `config.toml` 中调整或关闭本地静音兜底。
 
+## 豆包 ASR 测试失败
+
+先确认服务配置页里的 App Key、Access Key 和 Resource ID 都属于同一个豆包语音识别服务。VoxType 当前发送的是 `X-Api-App-Key`、`X-Api-Access-Key` 和 `X-Api-Resource-Id`；不要把大模型 API Key、GitHub Token 或火山引擎 IAM Secret 填到 ASR 认证里。
+
+常见处理：
+
+1. 认证或权限失败：重新复制 App Key、Access Key，确认账号已开通豆包流式语音识别，Resource ID 和计费资源匹配。
+2. 连接失败或超时：检查代理、防火墙和网络是否能访问 `openspeech.bytedance.com`。
+3. 修改识别语言后失败：先改回“自动 / 服务默认”再测试。
+4. 测试通过但录音没字：检查 Windows 麦克风权限、输入设备和音量。
+
+公开提问时只贴脱敏诊断报告中的错误码和状态，不要贴真实密钥、完整日志或识别正文。
+
 ## 识别成功但没有粘贴
 
 先按 `Ctrl + V` 手动粘贴。如果文字能粘贴，说明识别和剪贴板写入成功，问题通常在目标软件拦截模拟粘贴。
@@ -125,7 +138,15 @@ VoxType 会尽量恢复常见剪贴板格式，但图片、位图句柄、文件
 1. 在 API配置页开启大模型润色。
 2. 填写 Base URL、API Key 和模型。
 3. 点击 LLM 测试。
-4. 短文本不需要润色时，保持默认即可。
+4. 确认 Base URL、API Key 和模型来自同一个大模型平台/地域。
+5. 短文本不需要润色时，保持默认即可。
+
+说明：
+
+- 默认 DashScope / 阿里云百炼北京地域 Base URL 是 `https://dashscope.aliyuncs.com/compatible-mode/v1`。
+- Base URL 常见问题是少写 `/compatible-mode/v1`，或 Key 来自另一个地域。
+- 模型名称必须是账号可调用的模型名；模型不存在或无权限都会导致测试失败。
+- 大模型润色失败不会清空 ASR 文本，VoxType 会继续使用原始识别文本。
 
 ## 大模型润色太慢
 

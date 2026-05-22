@@ -144,6 +144,7 @@ Prompt editing:
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
 - Final prompt preview is available.
+- In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates
 

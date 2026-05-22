@@ -24,7 +24,7 @@ Windows Settings -> Privacy & security -> Microphone -> Let desktop apps access 
 
 ## 2. Main Pages
 
-VoxType has five main pages:
+VoxType has six main pages:
 
 | Page | Purpose |
 | --- | --- |
@@ -53,18 +53,33 @@ Privacy & local data centralizes the storage/upload boundaries for recent contex
 
 The core workflow depends on Doubao streaming ASR. Without ASR credentials, recording, recognition, and paste stay locked.
 
+Minimum setup rule: once the Doubao ASR test passes, you can return Home and start dictating. LLM polishing, hotwords, and screen OCR are optional quality improvements.
+
 Open **API Config -> Doubao credentials** and fill in:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| App Key | Yes | From the Volcano Engine console |
-| Access Key | Yes | From the Volcano Engine console |
+| App Key | Yes | App Key/App ID for the Doubao speech service in the Volcano Engine console |
+| Access Key | Yes | Access Key for the same Doubao speech service |
 
 The default Resource ID is `volc.seedasr.sauc.duration`. Most users do not need to edit it in the UI; special cases can edit `config.toml`.
+
+VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id` as documented by Doubao streaming ASR. If the console shows multiple keys, confirm that they belong to the same Doubao speech recognition service and billing resource. Do not paste a Bailian/DashScope LLM key, GitHub token, or unrelated cloud secret into ASR credentials.
 
 Click **Test** after filling credentials. When the test passes, return to Home and start voice input.
 
 API Config also includes **Recognition language**. The default is `zh-CN`. For English, Japanese, Cantonese, or other languages supported by Doubao docs, switch the language here. Choose Auto/service default to omit the language parameter. If ASR testing fails after changing the language, switch back to Auto/service default or confirm the current API mode.
+
+### If Doubao ASR Test Fails
+
+| Symptom | Check first |
+| --- | --- |
+| Authentication or permission failure | App Key, Access Key, and Resource ID belong to the same Doubao speech service and account |
+| Connection failure or timeout | Network, proxy, or firewall access to `openspeech.bytedance.com` |
+| Failure after changing language | Switch Recognition language back to Auto/service default and test again |
+| Test passes but recording returns no text | Windows microphone permission, selected input device, mic volume, and actual speech |
+
+If it still fails, open **Options -> Updates and diagnostics -> Copy diagnostic report** and include the redacted error code/status in an Issue. Do not paste real keys, full logs, or transcript text.
 
 Doubao official docs:
 
@@ -86,16 +101,29 @@ Open **API Config -> LLM API**:
 | --- | --- |
 | Enable polishing | When off, VoxType uses ASR only |
 | Base URL | OpenAI-compatible endpoint, for example `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| API Key | Provider API key |
-| Model | For example `qwen3.5-plus` |
+| API Key | Provider API key from the same platform/region as the Base URL |
+| Model | For example `qwen3.5-plus`; must be available to the current account |
 
 Click **Test** after configuration. If you only need speech recognition, LLM polishing is not required.
+
+The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field.
 
 Recommendations:
 
 - Thinking is off by default because voice polishing is usually latency-sensitive.
 - Text shorter than `min_chars = 40` is not polished by default.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
+
+### If LLM Test Fails
+
+| Symptom | Check first |
+| --- | --- |
+| API Key or permission failure | API Key belongs to the configured Base URL provider and region |
+| Model not found or forbidden | Model name spelling and account permission |
+| Connection failure | Base URL ends with `/compatible-mode/v1`, network/proxy is usable |
+| Test passes but polishing does not run | Polishing is enabled and text length reaches `min_chars` |
+
+If LLM polishing fails during input, VoxType keeps the original ASR text and still tries to copy/paste it.
 
 ## 5. Hotwords and Prompts
 
@@ -113,7 +141,7 @@ Do not add passwords, ID numbers, phone numbers, customer data, or other sensiti
 
 ### Polishing Prompt
 
-VoxType includes a default voice-input polishing prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it.
+VoxType includes a default voice-input polishing prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
 
 The Hotwords page lets you:
 

@@ -87,6 +87,19 @@ Notes:
 - Continuous low volume follows the manual-stop flow after 30 seconds by default, so a server endpointing miss does not record until the maximum duration.
 - If you need long pauses, adjust or disable the local silence fallback in `config.toml`.
 
+## Doubao ASR Test Fails
+
+First confirm that App Key, Access Key, and Resource ID all belong to the same Doubao speech recognition service. VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`; do not paste an LLM API key, GitHub token, or unrelated cloud secret into ASR credentials.
+
+Common fixes:
+
+1. Authentication or permission failure: copy App Key and Access Key again, confirm Doubao streaming ASR is enabled, and confirm Resource ID matches the billing resource.
+2. Connection failure or timeout: check proxy, firewall, and network access to `openspeech.bytedance.com`.
+3. Failure after changing recognition language: switch back to Auto/service default and test again.
+4. Test passes but recording returns no text: check Windows microphone permission, input device, and mic volume.
+
+When asking publicly, include only redacted diagnostic error codes and statuses. Do not paste real keys, full logs, or transcript text.
+
 ## Recognition Works but Text Is Not Pasted
 
 Press `Ctrl + V` manually first. If the text appears, recognition and clipboard writing succeeded, and the target app probably blocked simulated paste.
@@ -125,7 +138,15 @@ Fix:
 1. Enable LLM polishing in API Config.
 2. Fill in Base URL, API Key, and model.
 3. Run the LLM test.
-4. Leave it off if short text does not need polishing.
+4. Confirm Base URL, API Key, and model come from the same LLM platform/region.
+5. Leave it off if short text does not need polishing.
+
+Notes:
+
+- The default DashScope / Alibaba Cloud Bailian Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`.
+- A common Base URL mistake is missing `/compatible-mode/v1`, or using a key from another region.
+- The model name must be available to the account; missing model access fails the test.
+- If LLM polishing fails during input, VoxType keeps using the original ASR text.
 
 ## LLM Polishing Is Slow
 
