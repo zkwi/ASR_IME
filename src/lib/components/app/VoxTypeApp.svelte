@@ -49,7 +49,6 @@
     <AppContent
       bind:config={app.config}
       bind:autoHotwordCandidates={app.autoHotwordCandidates}
-      bind:llmApiConfigVisible={app.llmApiConfigVisible}
       {...app.appContentProps()}
     />
   </AppShell>

@@ -31,7 +31,6 @@
     config: AppConfig;
     stats: StatsSnapshot;
     autoHotwordCandidates: SelectableHotwordCandidate[];
-    llmApiConfigVisible: boolean;
     t: Translate;
     uiCompact: boolean;
     recording: boolean;
@@ -150,7 +149,6 @@
     config = $bindable<AppConfig>(),
     stats,
     autoHotwordCandidates = $bindable<SelectableHotwordCandidate[]>(),
-    llmApiConfigVisible = $bindable(false),
     t,
     uiCompact,
     recording,
@@ -333,7 +331,6 @@
 {:else if selectedSection === "ApiConfig"}
   <ApiConfigSection
     bind:config
-    bind:llmApiConfigVisible
     {t}
     {configExists}
     {setupChecking}

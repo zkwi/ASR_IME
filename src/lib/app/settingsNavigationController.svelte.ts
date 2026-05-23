@@ -11,12 +11,10 @@ type SettingsNavigationControllerOptions = {
 
 export function createSettingsNavigationController(options: SettingsNavigationControllerOptions) {
   let selectedSection = $state<Section>("Home");
-  let llmApiConfigVisible = $state(false);
 
   function scrollToSettingsPanel(targetId: string) {
     if (!options.isBrowser()) return;
     selectedSection = getSectionForSettingsPanel(targetId);
-    if (targetId === "settings-llm-api") llmApiConfigVisible = true;
     window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({ block: "start", behavior: "smooth" });
     }, 50);
@@ -32,7 +30,6 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
   function focusFirstValidationError(errors: ConfigValidationError[]) {
     const field = firstValidationField(errors);
     if (!field) return;
-    if (field.startsWith("llm_post_edit.")) llmApiConfigVisible = true;
     scrollToSettingsPanel(settingsPanelForField(field));
   }
 
@@ -46,7 +43,6 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
   }
 
   function openLlmApiSettings() {
-    llmApiConfigVisible = true;
     scrollToSettingsPanel("settings-llm-api");
   }
 
@@ -58,8 +54,6 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
   return {
     get selectedSection() { return selectedSection; },
     set selectedSection(value: Section) { selectedSection = value; },
-    get llmApiConfigVisible() { return llmApiConfigVisible; },
-    set llmApiConfigVisible(value: boolean) { llmApiConfigVisible = value; },
     scrollToSettingsPanel,
     focusFirstValidationError,
     focusAsrAuthSettings,

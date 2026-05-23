@@ -6,7 +6,7 @@
   } from "$lib/components/overview/SetupStatusCard.svelte";
   import type { CopyKey } from "$lib/i18n";
   import type { AppConfig } from "$lib/types/app";
-  import { ChevronDown, ChevronUp, ExternalLink, ShieldCheck } from "lucide-svelte";
+  import { ExternalLink, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -41,7 +41,6 @@
 
   type Props = {
     config: AppConfig;
-    llmApiConfigVisible: boolean;
     t: Translate;
     configExists: boolean;
     setupChecking: boolean;
@@ -70,7 +69,6 @@
 
   let {
     config = $bindable<AppConfig>(),
-    llmApiConfigVisible = $bindable<boolean>(),
     t,
     configExists,
     setupChecking,
@@ -230,19 +228,6 @@
           <p>{t("llmApiOptionalDescription")}</p>
           <SettingTags tags={[t("tagOptional"), t("tagSentToService")]} />
         </div>
-        <button
-          class="test-button config-toggle-button"
-          type="button"
-          aria-controls="llm-api-config-fields"
-          aria-expanded={llmApiConfigVisible}
-          onclick={() => (llmApiConfigVisible = !llmApiConfigVisible)}
-        >
-          {#if llmApiConfigVisible}
-            <ChevronUp size={16} />{t("hideLlmConfig")}
-          {:else}
-            <ChevronDown size={16} />{t("expandLlmConfig")}
-          {/if}
-        </button>
       </div>
       <div class="optional-config-summary">
         <span>{llmApiStatusText}</span>
@@ -254,7 +239,6 @@
           checked={config.llm_post_edit.enabled}
           onchange={(event) => {
             config.llm_post_edit.enabled = event.currentTarget.checked;
-            if (event.currentTarget.checked) llmApiConfigVisible = true;
           }}
         />
         <span class="check-copy">
@@ -262,22 +246,25 @@
           {#if !hasLlmApiConfig}<small>{t("llmApiRequiredForPolishing")}</small>{/if}
         </span>
       </label>
-      <div id="llm-api-config-fields" class="llm-api-config-fields" hidden={!llmApiConfigVisible}>
+      <div id="llm-api-config-fields" class="llm-api-config-fields">
         <div class="form-grid">
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.base_url"))}>
             <span>Base URL</span>
             <input bind:value={config.llm_post_edit.base_url} />
             {#if fieldError("llm_post_edit.base_url")}<small class="field-error">{fieldError("llm_post_edit.base_url")}</small>{/if}
+            <small class="field-hint">{t("llmApiBaseUrlHint")}</small>
           </label>
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.api_key"))}>
             <span>API Key</span>
             <input type="password" autocomplete="off" bind:value={config.llm_post_edit.api_key} />
             {#if fieldError("llm_post_edit.api_key")}<small class="field-error">{fieldError("llm_post_edit.api_key")}</small>{/if}
+            <small class="field-hint">{t("llmApiKeyHint")}</small>
           </label>
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.model"))}>
             <span>{t("model")}</span>
             <input bind:value={config.llm_post_edit.model} />
             {#if fieldError("llm_post_edit.model")}<small class="field-error">{fieldError("llm_post_edit.model")}</small>{/if}
+            <small class="field-hint">{t("llmApiModelHint")}</small>
           </label>
         </div>
         <button class="test-button" type="button" onclick={onTestLlmConfig} disabled={testingLlm}>
@@ -289,10 +276,6 @@
 </section>
 
 <style>
-  .config-toggle-button {
-    min-width: 112px;
-  }
-
   .optional-config-summary {
     display: flex;
     flex-wrap: wrap;
@@ -323,10 +306,6 @@
   .llm-api-config-fields {
     display: grid;
     gap: 14px;
-  }
-
-  .llm-api-config-fields[hidden] {
-    display: none;
   }
 
   .setup-note {

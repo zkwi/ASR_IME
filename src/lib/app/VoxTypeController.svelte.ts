@@ -1236,8 +1236,6 @@ export function createVoxTypeController() {
     set config(value: AppConfig) { config = value; },
     get autoHotwordCandidates() { return autoHotwords.candidates; },
     set autoHotwordCandidates(value: SelectableHotwordCandidate[]) { autoHotwords.candidates = value; },
-    get llmApiConfigVisible() { return settingsNav.llmApiConfigVisible; },
-    set llmApiConfigVisible(value: boolean) { settingsNav.llmApiConfigVisible = value; },
     appShellProps,
     appContentProps,
     runActionNoticeAction: notifications.runAction,

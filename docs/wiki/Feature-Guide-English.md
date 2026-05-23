@@ -144,6 +144,7 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
 - Final prompt preview is available.
+- The default prompt corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording.
 - In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates
