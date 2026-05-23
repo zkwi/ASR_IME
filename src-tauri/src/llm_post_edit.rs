@@ -3,13 +3,19 @@ use crate::{
     config::{effective_hotwords, AppConfig},
 };
 use serde_json::{json, Value};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const LLM_CONNECTION_TEST_MAX_TOKENS: u32 = 128;
+const LLM_CONNECTION_TEST_TEXT: &str =
+    "今天下午三点开会，顺便确认 VoxType 的大模型 API 延迟和配置体验。";
 
 pub struct PolishOutcome {
     pub text: String,
     pub warning: Option<String>,
+}
+
+pub struct LlmConnectionTestResult {
+    pub elapsed_ms: u64,
 }
 
 pub fn should_polish(config: &AppConfig, text: &str) -> bool {
@@ -117,7 +123,7 @@ fn build_polish_user_prompt(
     user_prompt
 }
 
-pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
+pub async fn test_connection(config: &AppConfig) -> Result<LlmConnectionTestResult, String> {
     let settings = &config.llm_post_edit;
     let api_key = settings.api_key.trim();
     let base_url = settings.base_url.trim().trim_end_matches('/');
@@ -132,16 +138,12 @@ pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
         .timeout(timeout)
         .build()
         .map_err(|err| format!("创建大模型测试客户端失败: {}", err))?;
+    let body = connection_test_chat_body(config, base_url, model);
+    let started_at = Instant::now();
     let response = client
         .post(format!("{}/chat/completions", base_url))
         .bearer_auth(api_key)
-        .json(&chat_body(
-            model,
-            "你是配置连通性测试助手。只回复 OK。",
-            "请回复 OK",
-            thinking_flag(base_url, settings.enable_thinking),
-            Some(LLM_CONNECTION_TEST_MAX_TOKENS),
-        ))
+        .json(&body)
         .send()
         .await
         .map_err(|err| friendly_llm_test_error(&format!("调用 LLM 失败: {}", err)))?;
@@ -165,8 +167,12 @@ pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
             "大模型已响应，但测试返回空内容；请检查模型名称，或关闭思考模式后再测试。".to_string(),
         );
     }
-    app_log::info("LLM connection test finished");
-    Ok(())
+    let elapsed_ms = elapsed_millis(started_at);
+    app_log::info(format!(
+        "LLM connection test finished: elapsed_ms={}",
+        elapsed_ms
+    ));
+    Ok(LlmConnectionTestResult { elapsed_ms })
 }
 
 fn unchanged(text: &str) -> PolishOutcome {
@@ -257,6 +263,22 @@ fn chat_body(
     body
 }
 
+fn connection_test_chat_body(config: &AppConfig, base_url: &str, model: &str) -> Value {
+    let system_prompt = system_prompt_for_request(config);
+    let user_prompt = build_polish_user_prompt(config, LLM_CONNECTION_TEST_TEXT, None);
+    chat_body(
+        model,
+        &system_prompt,
+        &user_prompt,
+        thinking_flag(base_url, config.llm_post_edit.enable_thinking),
+        Some(LLM_CONNECTION_TEST_MAX_TOKENS),
+    )
+}
+
+fn elapsed_millis(started_at: Instant) -> u64 {
+    started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
+}
+
 fn thinking_flag(base_url: &str, enable_thinking: bool) -> Option<bool> {
     if enable_thinking || base_url.contains("dashscope.aliyuncs.com") {
         Some(enable_thinking)
@@ -341,9 +363,10 @@ fn friendly_llm_test_error(error: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_polish_user_prompt, chat_body, extract_message_content, friendly_llm_error,
-        friendly_llm_test_error, has_connection_test_output, should_polish,
+        build_polish_user_prompt, chat_body, connection_test_chat_body, extract_message_content,
+        friendly_llm_error, friendly_llm_test_error, has_connection_test_output, should_polish,
         system_prompt_for_request, thinking_flag, LLM_CONNECTION_TEST_MAX_TOKENS,
+        LLM_CONNECTION_TEST_TEXT,
     };
     use crate::config::AppConfig;
     use serde_json::json;
@@ -417,6 +440,30 @@ mod tests {
                 .unwrap_or_default()
                 >= 64
         );
+    }
+
+    #[test]
+    fn connection_test_uses_real_polish_prompt_and_sample_text() {
+        let config = AppConfig::default();
+        let body = connection_test_chat_body(&config, "https://api.openai.com/v1", "test-model");
+        let messages = body
+            .get("messages")
+            .and_then(|item| item.as_array())
+            .expect("messages");
+        let system_prompt = messages[0]
+            .get("content")
+            .and_then(|item| item.as_str())
+            .unwrap_or_default();
+        let user_prompt = messages[1]
+            .get("content")
+            .and_then(|item| item.as_str())
+            .unwrap_or_default();
+
+        assert!(system_prompt.contains("文本润色器"));
+        assert!(user_prompt.contains(LLM_CONNECTION_TEST_TEXT));
+        assert!(user_prompt.contains("待润色文本"));
+        assert!(!system_prompt.contains("连通性测试助手"));
+        assert!(!user_prompt.contains("请回复 OK"));
     }
 
     #[test]

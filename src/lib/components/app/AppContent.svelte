@@ -126,6 +126,7 @@
     onScrollToSettingsPanel: (id: string) => void;
     onRefreshSetupStatus: () => void;
     onSetupAction: (action: string) => void;
+    onOpenDoubaoAsrDocs: () => void;
     onTestAsrConfig: () => void;
     onTestLlmConfig: () => void;
     onTestScreenContext: () => void;
@@ -244,6 +245,7 @@
     onScrollToSettingsPanel,
     onRefreshSetupStatus,
     onSetupAction,
+    onOpenDoubaoAsrDocs,
     onTestAsrConfig,
     onTestLlmConfig,
     onTestScreenContext,
@@ -351,6 +353,7 @@
     {formatHotkey}
     onScrollToSettingsPanel={onScrollToSettingsPanel}
     onOpenSetupGuide={onOpenSetupGuide}
+    onOpenDoubaoAsrDocs={onOpenDoubaoAsrDocs}
     onRefreshSetupStatus={onRefreshSetupStatus}
     onSetupAction={onSetupAction}
     onTestAsrConfig={onTestAsrConfig}
@@ -394,7 +397,6 @@
     onOpenLog={onOpenLog}
     onCopyDiagnosticReport={onCopyDiagnosticReport}
     onTestScreenContext={onTestScreenContext}
-    onOpenPrivacyPage={() => onSelectSection("Privacy")}
   />
 {:else if selectedSection === "Privacy"}
   <PrivacySection

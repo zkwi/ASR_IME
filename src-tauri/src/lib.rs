@@ -59,6 +59,24 @@ struct SetupWarning {
 #[derive(Serialize)]
 struct ConnectionTestResult {
     message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    elapsed_ms: Option<u64>,
+}
+
+impl ConnectionTestResult {
+    fn message(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            elapsed_ms: None,
+        }
+    }
+
+    fn with_elapsed_ms(message: impl Into<String>, elapsed_ms: u64) -> Self {
+        Self {
+            message: message.into(),
+            elapsed_ms: Some(elapsed_ms),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -326,9 +344,9 @@ async fn test_asr_config(config: AppConfig) -> Result<ConnectionTestResult, Stri
     match asr_ws::test_connection(&config).await {
         Ok(()) => {
             app_log::info("豆包 ASR 配置测试成功。");
-            Ok(ConnectionTestResult {
-                message: "豆包 ASR 测试成功，当前 Key 可用。".to_string(),
-            })
+            Ok(ConnectionTestResult::message(
+                "豆包 ASR 测试成功，当前 Key 可用。",
+            ))
         }
         Err(err) => {
             app_log::warn(format!("豆包 ASR 配置测试失败: {}", err));
@@ -341,11 +359,15 @@ async fn test_asr_config(config: AppConfig) -> Result<ConnectionTestResult, Stri
 async fn test_llm_config(config: AppConfig) -> Result<ConnectionTestResult, String> {
     app_log::info("用户开始测试大模型配置。");
     match llm_post_edit::test_connection(&config).await {
-        Ok(()) => {
-            app_log::info("大模型配置测试成功。");
-            Ok(ConnectionTestResult {
-                message: "大模型测试成功，当前 API Key 可用。".to_string(),
-            })
+        Ok(result) => {
+            app_log::info(format!(
+                "大模型配置测试成功: elapsed_ms={}",
+                result.elapsed_ms
+            ));
+            Ok(ConnectionTestResult::with_elapsed_ms(
+                "大模型测试成功，当前 API Key 可用。",
+                result.elapsed_ms,
+            ))
         }
         Err(err) => {
             app_log::warn(format!("大模型配置测试失败: {}", err));
@@ -383,6 +405,15 @@ fn open_setup_guide(app: AppHandle) -> Result<(), String> {
     app_log::info("用户打开配置指南。");
     setup_guide::open(&app).map_err(|err| {
         app_log::warn(format!("打开配置指南失败: {}", err));
+        err
+    })
+}
+
+#[tauri::command]
+fn open_doubao_asr_docs(app: AppHandle) -> Result<(), String> {
+    app_log::info("用户打开豆包 ASR 帮助文档。");
+    setup_guide::open_doubao_asr_docs(&app).map_err(|err| {
+        app_log::warn(format!("打开豆包 ASR 帮助文档失败: {}", err));
         err
     })
 }
@@ -572,6 +603,7 @@ fn clear_usage_stats() -> Result<ConnectionTestResult, String> {
     app_log::info("用户清除使用统计数据。");
     Ok(ConnectionTestResult {
         message: "使用统计已清除。".to_string(),
+        elapsed_ms: None,
     })
 }
 
@@ -584,6 +616,7 @@ fn clear_recent_context() -> Result<ConnectionTestResult, String> {
     ));
     Ok(ConnectionTestResult {
         message: "最近上下文已清除。".to_string(),
+        elapsed_ms: None,
     })
 }
 
@@ -602,6 +635,7 @@ fn clear_hotword_history() -> Result<ConnectionTestResult, String> {
     ));
     Ok(ConnectionTestResult {
         message: "自动热词采集文本已清空。".to_string(),
+        elapsed_ms: None,
     })
 }
 
@@ -720,6 +754,7 @@ pub fn run() {
             test_llm_config,
             test_screen_context,
             open_setup_guide,
+            open_doubao_asr_docs,
             open_log_file,
             get_diagnostic_report,
             copy_diagnostic_report_to_clipboard,

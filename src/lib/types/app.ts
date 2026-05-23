@@ -47,7 +47,7 @@ export type InstallUpdateResult = {
   message: string;
 };
 
-export type ConnectionTestResult = { message: string };
+export type ConnectionTestResult = { message: string; elapsed_ms?: number };
 export type DiagnosticReport = { text: string };
 export type ScreenContextTestResult = {
   available_languages: string[];

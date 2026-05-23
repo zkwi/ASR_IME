@@ -6,7 +6,7 @@
   } from "$lib/components/overview/SetupStatusCard.svelte";
   import type { CopyKey } from "$lib/i18n";
   import type { AppConfig } from "$lib/types/app";
-  import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-svelte";
+  import { ChevronDown, ChevronUp, ExternalLink, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -61,6 +61,7 @@
     formatHotkey: (value: string) => string;
     onScrollToSettingsPanel: (id: string) => void;
     onOpenSetupGuide: () => void;
+    onOpenDoubaoAsrDocs: () => void;
     onRefreshSetupStatus: () => void;
     onSetupAction: (action: string) => void;
     onTestAsrConfig: () => void;
@@ -89,6 +90,7 @@
     formatHotkey,
     onScrollToSettingsPanel,
     onOpenSetupGuide,
+    onOpenDoubaoAsrDocs,
     onRefreshSetupStatus,
     onSetupAction,
     onTestAsrConfig,
@@ -132,6 +134,10 @@
       </div>
     </section>
   {/if}
+  <div class="settings-group-heading">
+    <h3>{t("apiConfigPageTitle")}</h3>
+    <p>{t("apiConfigPageDescription")}</p>
+  </div>
   <SetupStatusCard
     ready={setupStatusReady}
     checking={setupChecking}
@@ -154,8 +160,8 @@
   />
   <section class="settings-group">
     <div class="settings-group-heading">
-      <h3>{t("apiConfigPageTitle")}</h3>
-      <p>{t("apiConfigPageDescription")}</p>
+      <h3>{t("speechRecognitionApiTitle")}</h3>
+      <p>{t("speechRecognitionApiDescription")}</p>
     </div>
     <div id="settings-auth" class="form-panel">
       <div class="section-heading with-actions">
@@ -169,6 +175,9 @@
           {/if}
         </div>
         <div class="settings-inline-actions">
+          <button class="link-button" type="button" onclick={onOpenDoubaoAsrDocs}>
+            <ExternalLink size={16} />{t("doubaoDocsCta")}
+          </button>
           <button class="test-button" type="button" onclick={onTestAsrConfig} disabled={testingAsr}>
             <ShieldCheck size={16} />{testingAsr ? t("testingConnection") : t("testConnection")}
           </button>

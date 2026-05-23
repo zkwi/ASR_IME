@@ -731,7 +731,10 @@ export function createVoxTypeController() {
     try {
       const result = await safeInvoke<ConnectionTestResult>("test_llm_config", { config: clonePlain(config) });
       if (result) {
-        statusMessage = t("llmTestSucceeded");
+        statusMessage =
+          typeof result.elapsed_ms === "number"
+            ? t("llmTestSucceededWithLatency", { ms: formatNumber(result.elapsed_ms) })
+            : t("llmTestSucceeded");
         notifications.show(statusMessage, "success");
       } else if (statusMessage) {
         notifications.show(statusMessage, "error");
@@ -1177,6 +1180,7 @@ export function createVoxTypeController() {
       onScrollToSettingsPanel: settingsNav.scrollToSettingsPanel,
       onRefreshSetupStatus: refreshSetupStatus,
       onSetupAction: handleSetupAction,
+      onOpenDoubaoAsrDocs: openDoubaoAsrDocs,
       onTestAsrConfig: testAsrConfig,
       onTestLlmConfig: testLlmConfig,
       onTestScreenContext: testScreenContext,
@@ -1200,6 +1204,9 @@ export function createVoxTypeController() {
   }
   async function openSetupGuide() {
     await safeInvoke<void>("open_setup_guide");
+  }
+  async function openDoubaoAsrDocs() {
+    await safeInvoke<void>("open_doubao_asr_docs");
   }
 
   return {

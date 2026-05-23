@@ -29,7 +29,7 @@ VoxType has six main pages:
 | Page | Purpose |
 | --- | --- |
 | Home | Check current state, start/stop voice input, and see trigger methods |
-| Hotwords & prompts | Manage hotwords, scene notes, polishing prompts, and automatic hotword candidates |
+| Hotwords & prompts | Manage hotwords, scene notes, AI prompts, and automatic hotword candidates |
 | API Config | Configure required Doubao ASR credentials and optional LLM API |
 | Options | Configure shortcuts, paste method, microphone, floating captions, startup, and close behavior |
 | Privacy & local data | Review storage/upload boundaries and clear local context, hotword history, and stats |
@@ -64,7 +64,7 @@ Open **API Config -> Doubao credentials** and fill in:
 
 The default Resource ID is `volc.seedasr.sauc.duration`. Most users do not need to edit it in the UI; special cases can edit `config.toml`.
 
-VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id` as documented by Doubao streaming ASR. If the console shows multiple keys, confirm that they belong to the same Doubao speech recognition service and billing resource. Do not paste a Bailian/DashScope LLM key, GitHub token, or unrelated cloud secret into ASR credentials.
+VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id` as documented by Doubao streaming ASR. If the console shows multiple keys, confirm that they belong to the same Doubao speech recognition service and billing resource. Do not paste a Bailian/DashScope LLM key, GitHub token, or unrelated cloud secret into ASR credentials. The Doubao credentials panel includes an official docs link for checking the field descriptions during first-time setup.
 
 Click **Test** after filling credentials. When the test passes, return to Home and start voice input.
 
@@ -104,7 +104,7 @@ Open **API Config -> LLM API**:
 | API Key | Provider API key from the same platform/region as the Base URL |
 | Model | For example `qwen3.5-plus`; must be available to the current account |
 
-Click **Test** after configuration. If you only need speech recognition, LLM polishing is not required.
+Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds. If you only need speech recognition, LLM polishing is not required.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field.
 
@@ -139,18 +139,9 @@ Use one item per line. Good hotwords include:
 
 Do not add passwords, ID numbers, phone numbers, customer data, or other sensitive information.
 
-### Polishing Prompt
+### Writing Context
 
-VoxType includes a default voice-input polishing prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
-
-The Hotwords page lets you:
-
-- Restore the default prompt.
-- Preview the final prompt.
-- Edit the User Prompt template.
-- Adjust the minimum polishing length.
-
-System Prompt stays in `config.toml` to keep the normal UI concise.
+Use writing context for the current writing scenario, product names, project background, and preferred wording. In daily use, update this first before editing the AI prompt.
 
 ### Recent Context
 
@@ -162,6 +153,19 @@ Notes:
 - Recent context is not written back to `config.toml`.
 - Clear it from Privacy & local data, or delete `context/recent_context.jsonl` manually.
 
+### AI Prompt
+
+VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
+
+The Hotwords page lets you:
+
+- Restore the default prompt.
+- Preview the final prompt.
+- Edit the User Prompt template.
+- Adjust the minimum polishing length.
+
+System Prompt stays in `config.toml` to keep the normal UI concise.
+
 ### Automatic Hotword Candidates
 
 Automatic hotword candidates are off by default. When enabled, VoxType saves final voice-input text locally. Only when the user clicks "Generate candidates" does it send a summary to the configured LLM service. Local history can be cleared from Hotwords & prompts or Privacy & local data.
@@ -170,23 +174,17 @@ Candidates are not added automatically. The user must review and confirm them. T
 
 ## 6. Daily Options
 
-Options shows common settings and troubleshooting entry points directly:
+Options is grouped into Common settings, Enhancements, and Maintenance so daily controls come first and maintenance entries are clearly separated:
 
 | Section | Visible Settings |
 | --- | --- |
-| Usage | Primary shortcut, startup, close-window behavior |
-| Output | `Ctrl+V`, `Shift+Insert`, clipboard-only, remove trailing period, restore clipboard after paste |
-| Screen OCR context | Capture current display or current window text at recording start, test Windows OCR |
-| Microphone | Input device |
-| Floating captions | Preview, color presets, opacity presets |
-| Updates and diagnostics | Check for updates, update now, open logs, copy diagnostic report |
+| Common settings | Primary shortcut, microphone, paste method, remove trailing period, restore clipboard after paste |
+| Enhancements | Screen OCR context, Windows OCR test, caption preview, color presets, opacity presets |
+| Maintenance | Startup, close-window behavior, check updates, update now, open logs, copy diagnostic report |
+| Recording troubleshooting | Low-volume auto-stop |
+| Extra start options | Middle mouse and right Alt |
 
-Options also includes a Privacy & local data entry card for viewing and clearing local data.
-
-Additional visible low-frequency settings:
-
-- Alternative triggers: middle mouse and right Alt.
-- Recording fallback: low-volume auto-stop.
+To review or clear local data, open Privacy & local data from the sidebar.
 
 Screen OCR context is on by default. It captures the current display by default, which helps when you reference one document while typing into another window. You can switch it to the current window only in Options. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. Switch to current-window-only or disable it when the screen contains sensitive content.
 

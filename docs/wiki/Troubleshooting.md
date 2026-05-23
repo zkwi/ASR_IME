@@ -89,7 +89,7 @@ Start-Process -Wait -Verb RunAs "C:\Temp\MicrosoftEdgeWebView2RuntimeInstallerX6
 
 ## 豆包 ASR 测试失败
 
-先确认服务配置页里的 App Key、Access Key 和 Resource ID 都属于同一个豆包语音识别服务。VoxType 当前发送的是 `X-Api-App-Key`、`X-Api-Access-Key` 和 `X-Api-Resource-Id`；不要把大模型 API Key、GitHub Token 或火山引擎 IAM Secret 填到 ASR 认证里。
+先确认 API配置页里的 App Key、Access Key 和 Resource ID 都属于同一个豆包语音识别服务。VoxType 当前发送的是 `X-Api-App-Key`、`X-Api-Access-Key` 和 `X-Api-Resource-Id`；不要把大模型 API Key、GitHub Token 或火山引擎 IAM Secret 填到 ASR 认证里。
 
 常见处理：
 

@@ -34,7 +34,7 @@ The Home page centers the current input state, the primary shortcut, middle mous
 
 <img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
 
-The sidebar is organized by task: Home, Prompts, Services, Options, Privacy, and Analytics. The privacy page explains where the config file, logs, recent context, suggested-term history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots are stored or sent, and it provides clearing actions for local context, suggested-term history, and stats.
+The sidebar is organized by task: Home, Prompts, API Config, Options, Privacy, and Analytics. The privacy page explains where the config file, logs, recent context, suggested-term history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots are stored or sent, and it provides clearing actions for local context, suggested-term history, and stats.
 
 API Config starts with a setup health check instead of a generic status header. ASR keys, microphone, paste method, trigger method, and privacy status are shown separately, and Doubao ASR plus optional LLM sections include test actions. The screenshot below has credentials blurred; public screenshots and logs should do the same.
 
@@ -52,13 +52,13 @@ API Config starts with a setup health check instead of a generic status header. 
 - Home layout: the top voice card shows the current state plus the primary hotkey, middle mouse, and right Alt in compact single-line chips. Recent input and input stats stay below it.
 - Optional LLM polishing: OpenAI-compatible API support for light text cleanup and style control.
 - Screen OCR context: on by default. When recording starts, VoxType captures the current display by default, with an option to switch to the current window only. It runs Windows OCR locally, lightly merges extra spaces between adjacent CJK characters, and sends the temporary text context to Doubao ASR and the optional LLM to improve names, filenames, code identifiers, and UI terms. Timeout or OCR failure is skipped automatically.
-- Prompts and terms: maintain recognition terms, scene notes, and polishing prompts.
+- Prompts and terms: maintain recognition terms, scene notes, and AI prompts.
 - Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count in `config.toml` and retry.
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. Single-click the tray icon to open the main window; the tray menu can open config, open logs, report an issue, check updates, restart the app, or exit.
 - Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
-- Privacy & local data: available from the sidebar and Options. It shows storage and upload boundaries for config and keys, logs and diagnostic reports, recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots; it can clear recent context, automatic hotword history, and usage stats.
-- Settings layout: visible settings are shown directly by task page. Hotwords, API Config, and Options no longer repeat a generic status header at the top. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
+- Privacy & local data: available from the sidebar. It shows storage and upload boundaries for config and keys, logs and diagnostic reports, recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots; it can clear recent context, automatic hotword history, and usage stats.
+- Settings layout: visible settings are shown directly by task page. Options is grouped into common settings, enhancements, and maintenance so daily controls come before maintenance entries. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
 ## Main Workflow Guarantees
@@ -119,7 +119,7 @@ access_key = ""
 resource_id = "volc.seedasr.sauc.duration"
 ```
 
-VoxType currently follows the Doubao streaming ASR WebSocket header shape with `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`. The default `resource_id` is `volc.seedasr.sauc.duration`, the hourly billing resource for the speech recognition big model 2.0. Change it only if your Volcano Engine account uses a concurrent resource or an older model resource. Do not paste an LLM API key, GitHub token, or unrelated cloud secret into the ASR fields.
+VoxType currently follows the Doubao streaming ASR WebSocket header shape with `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`. The default `resource_id` is `volc.seedasr.sauc.duration`, the hourly billing resource for the speech recognition big model 2.0. Change it only if your Volcano Engine account uses a concurrent resource or an older model resource. Do not paste an LLM API key, GitHub token, or unrelated cloud secret into the ASR fields. The Doubao credentials panel includes a docs link so first-time setup can be checked against the official field descriptions.
 
 API Config also includes the Doubao ASR input language. The default is `zh-CN` for Chinese speech. For multilingual use, switch to a supported language code such as `en-US`, `ja-JP`, or `yue-CN`, or choose Auto/service default to omit the parameter. Doubao documents this option as supported only by some streaming modes, so if the ASR test fails, switch back to Auto/service default or confirm the current API mode.
 
@@ -146,7 +146,7 @@ min_chars = 40
 enable_thinking = false
 ```
 
-LLM polishing uses an OpenAI-compatible API. The default example uses Alibaba Cloud Bailian/DashScope Beijing at `https://dashscope.aliyuncs.com/compatible-mode/v1`. The `api_key` must come from the same provider and region as the Base URL, and `model` must be available to that account. If you only need speech recognition, leave LLM polishing disabled. When enabled, text shorter than `min_chars` skips polishing by default to reduce latency.
+LLM polishing uses an OpenAI-compatible API. The default example uses Alibaba Cloud Bailian/DashScope Beijing at `https://dashscope.aliyuncs.com/compatible-mode/v1`. The `api_key` must come from the same provider and region as the Base URL, and `model` must be available to that account. If you only need speech recognition, leave LLM polishing disabled. When enabled, text shorter than `min_chars` skips polishing by default to reduce latency. The LLM test sends a sample text with the real AI prompt and shows the measured latency when it succeeds.
 
 Common LLM test failures:
 
@@ -157,7 +157,7 @@ Common LLM test failures:
 | Connection failure | Base URL ends with `/compatible-mode/v1`, network/proxy is usable |
 | Test passes but polishing does not run | Polishing is enabled and text length reaches `min_chars` |
 
-VoxType includes a default polishing prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms, such as `100万`, `1%`, and `10%`, without calculating returns or answering the question. The Hotwords page shows the User Prompt template, reset, preview, and minimum polishing length. System Prompt remains in `config.toml` to keep the app settings concise.
+VoxType includes a default AI prompt for voice input. It treats recognized text as source material, not instructions to follow, so questions or prompt-like content are polished instead of answered or analyzed. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms, such as `100万`, `1%`, and `10%`, without calculating returns or answering the question. The Hotwords page now puts recognition terms and writing context before the AI prompt template, reset, preview, and minimum polishing length. System Prompt remains in `config.toml` to keep the app settings concise.
 
 Screen OCR context is on by default and can be disabled, tested, or limited to the current window in Options. The default range is the current display, which helps when you reference one document while typing into another window. OCR text is kept only for the current request and is not written to logs, stats, or config files; VoxType does not cache the latest 2-3 screenshot OCR results. Before sending the context, VoxType lightly merges extra spaces between adjacent CJK characters, so text such as `屏 幕 OCR 上 下 文` becomes easier for ASR/LLM context matching while English acronyms, shortcuts, and paths keep their spacing. The default wait is 700 ms; timeout or failure does not block recording, ASR, or paste.
 

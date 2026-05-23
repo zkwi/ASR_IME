@@ -50,7 +50,6 @@
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
     onTestScreenContext: () => void;
-    onOpenPrivacyPage: () => void;
   };
 
   let {
@@ -90,7 +89,6 @@
     onOpenLog,
     onCopyDiagnosticReport,
     onTestScreenContext,
-    onOpenPrivacyPage,
   }: Props = $props();
 
 </script>
@@ -101,14 +99,9 @@
       <h3>{t("optionsPageTitle")}</h3>
       <p>{t("optionsPageDescription")}</p>
     </div>
-    <div id="settings-privacy-entry" class="form-panel privacy-entry-panel">
-      <div class="section-heading">
-        <h3>{t("privacyLocalDataTitle")}</h3>
-        <p>{t("privacyLocalDataEntryDescription")}</p>
-      </div>
-      <button type="button" class="privacy-entry-action" onclick={onOpenPrivacyPage}>
-        <ShieldCheck size={16} />{t("privacyViewAndClear")}
-      </button>
+    <div class="settings-cluster-heading">
+      <span>{t("optionsEssentialsTitle")}</span>
+      <small>{t("optionsEssentialsDescription")}</small>
     </div>
     <div id="settings-output" class="form-panel">
       <div class="section-heading"><h3>{t("usageModeTitle")}</h3><p>{t("usageModeDescription")}</p></div>
@@ -138,23 +131,36 @@
       </div>
       <p class="field-hint">{t("triggerConflictHint")}</p>
     </div>
-    <div id="settings-window" class="form-panel">
-      <div class="section-heading"><h3>{t("windowBehaviorTitle")}</h3><p>{t("windowBehaviorDescription")}</p></div>
+    <div id="settings-audio" class="form-panel">
+      <div class="section-heading"><h3>{t("microphoneTitle")}</h3><p>{t("microphoneDescription")}</p></div>
       <div class="form-grid">
-        <label class:field-invalid={Boolean(fieldError("tray.close_behavior"))}>
-          <span>{t("closeBehavior")}</span>
-          <select bind:value={config.tray.close_behavior}>
-            <option value="close_to_tray">{t("closeBehaviorCloseToTray")}</option>
-            <option value="direct_exit">{t("closeBehaviorDirectExit")}</option>
-            <option value="ask_every_time">{t("closeBehaviorAskEveryTime")}</option>
+        <label>
+          <span>{t("inputDevice")}</span>
+          <select value={config.audio.input_device ?? ""} onchange={(event) => onSetInputDevice(event.currentTarget.value)}>
+            <option value="">{t("defaultInputDevice")}</option>
+            {#if audioDevices.length === 0}
+              <option value="" disabled>{t("noAudioDevices")}</option>
+            {/if}
+            {#each audioDevices as device}
+              <option value={device.index}>{device.index}: {device.name}</option>
+            {/each}
           </select>
-          {#if fieldError("tray.close_behavior")}<small class="field-error">{fieldError("tray.close_behavior")}</small>{/if}
         </label>
       </div>
-      <div class="toggle-grid">
-        <label class="check"><input type="checkbox" bind:checked={config.startup.launch_on_startup} />{t("launchOnStartup")}</label>
+      <div id="settings-recording-troubleshooting" class="subsection-panel">
+        <div class="subsection-heading">
+          <strong>{t("recordingTroubleshooting")}</strong>
+          <span>{t("recordingTroubleshootingDescription")}</span>
+        </div>
+        <div class="form-grid">
+          <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
+            <span>{t("silenceAutoStopSeconds")}</span>
+            <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
+            {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
+          </label>
+        </div>
+        <p class="field-hint">{t("silenceAutoStopHint")}</p>
       </div>
-      <p class="field-hint">{t("closeBehaviorHint")}</p>
     </div>
     <div id="settings-basic-output" class="form-panel">
       <div class="section-heading"><h3>{t("inputResultTitle")}</h3><p>{t("inputResultDescription")}</p></div>
@@ -175,6 +181,10 @@
       </div>
       <p class="field-hint">{t("removeTrailingPeriodHint")}</p>
       <p class="field-hint">{t("clipboardTextRestoreHint")}</p>
+    </div>
+    <div class="settings-cluster-heading">
+      <span>{t("optionsEnhancementTitle")}</span>
+      <small>{t("optionsEnhancementDescription")}</small>
     </div>
     <div id="settings-screen-context" class="form-panel">
       <div class="section-heading"><h3>{t("screenContextTitle")}</h3><p>{t("screenContextDescription")}</p></div>
@@ -268,33 +278,27 @@
         </div>
       </div>
     </div>
-    <div id="settings-audio" class="form-panel">
-      <div class="section-heading"><h3>{t("microphoneTitle")}</h3><p>{t("microphoneDescription")}</p></div>
-      <div class="form-grid">
-        <label>
-          <span>{t("inputDevice")}</span>
-          <select value={config.audio.input_device ?? ""} onchange={(event) => onSetInputDevice(event.currentTarget.value)}>
-            <option value="">{t("defaultInputDevice")}</option>
-            {#if audioDevices.length === 0}
-              <option value="" disabled>{t("noAudioDevices")}</option>
-            {/if}
-            {#each audioDevices as device}
-              <option value={device.index}>{device.index}: {device.name}</option>
-            {/each}
-          </select>
-        </label>
-      </div>
+    <div class="settings-cluster-heading">
+      <span>{t("optionsMaintenanceTitle")}</span>
+      <small>{t("optionsMaintenanceDescription")}</small>
     </div>
-    <div id="settings-recording-troubleshooting" class="form-panel">
-      <div class="section-heading"><h3>{t("recordingTroubleshooting")}</h3><p>{t("recordingTroubleshootingDescription")}</p></div>
+    <div id="settings-window" class="form-panel">
+      <div class="section-heading"><h3>{t("windowBehaviorTitle")}</h3><p>{t("windowBehaviorDescription")}</p></div>
       <div class="form-grid">
-        <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
-          <span>{t("silenceAutoStopSeconds")}</span>
-          <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
-          {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
+        <label class:field-invalid={Boolean(fieldError("tray.close_behavior"))}>
+          <span>{t("closeBehavior")}</span>
+          <select bind:value={config.tray.close_behavior}>
+            <option value="close_to_tray">{t("closeBehaviorCloseToTray")}</option>
+            <option value="direct_exit">{t("closeBehaviorDirectExit")}</option>
+            <option value="ask_every_time">{t("closeBehaviorAskEveryTime")}</option>
+          </select>
+          {#if fieldError("tray.close_behavior")}<small class="field-error">{fieldError("tray.close_behavior")}</small>{/if}
         </label>
       </div>
-      <p class="field-hint">{t("silenceAutoStopHint")}</p>
+      <div class="toggle-grid">
+        <label class="check"><input type="checkbox" bind:checked={config.startup.launch_on_startup} />{t("launchOnStartup")}</label>
+      </div>
+      <p class="field-hint">{t("closeBehaviorHint")}</p>
     </div>
     <div id="settings-update" class="form-panel update-panel">
       <div class="section-heading"><h3>{t("updatesAndDiagnostics")}</h3><p>{t("updatesAndDiagnosticsDescription")}</p></div>
@@ -318,21 +322,24 @@
       <div class="toggle-grid">
         <label class="check"><input type="checkbox" bind:checked={config.update.auto_check_on_startup} />{t("autoCheckUpdates")}</label>
       </div>
-    </div>
-    <div id="settings-diagnostics" class="form-panel">
-      <div class="section-heading"><h3>{t("diagnosticsAndLogs")}</h3><p>{t("diagnosticsDescription")}</p></div>
-      <div class="update-card">
-        <div>
-          <strong>{t("logStatusTitle")}</strong>
-          <p>{t("logStatusDescription")}</p>
+      <div id="settings-diagnostics" class="subsection-panel">
+        <div class="subsection-heading">
+          <strong>{t("diagnosticsAndLogs")}</strong>
+          <span>{t("diagnosticsDescription")}</span>
         </div>
-        <div class="update-actions">
-          <button type="button" onclick={onOpenLog} disabled={openingLog}>
-            <FileText size={16} />{openingLog ? t("openingLog") : t("openLog")}
-          </button>
-          <button type="button" onclick={onCopyDiagnosticReport} disabled={copyingDiagnosticReport}>
-            <ClipboardCopy size={16} />{copyingDiagnosticReport ? t("copyingReport") : t("copyDiagnosticReport")}
-          </button>
+        <div class="update-card">
+          <div>
+            <strong>{t("logStatusTitle")}</strong>
+            <p>{t("logStatusDescription")}</p>
+          </div>
+          <div class="update-actions">
+            <button type="button" onclick={onOpenLog} disabled={openingLog}>
+              <FileText size={16} />{openingLog ? t("openingLog") : t("openLog")}
+            </button>
+            <button type="button" onclick={onCopyDiagnosticReport} disabled={copyingDiagnosticReport}>
+              <ClipboardCopy size={16} />{copyingDiagnosticReport ? t("copyingReport") : t("copyDiagnosticReport")}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -340,26 +347,22 @@
 </section>
 
 <style>
-  .privacy-entry-panel {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+  .settings-cluster-heading {
+    display: grid;
+    gap: 4px;
+    padding: 4px 4px 0;
   }
 
-  .privacy-entry-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 36px;
-    min-width: 132px;
-    padding: 0 12px;
-    color: #ffffff;
-    background: var(--primary);
-    border: 1px solid var(--primary);
-    border-radius: 10px;
-    font-weight: 800;
-    line-height: 1.2;
-    white-space: normal;
+  .settings-cluster-heading span {
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .settings-cluster-heading small {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.45;
     overflow-wrap: anywhere;
   }
 
@@ -379,6 +382,14 @@
     color: var(--text-secondary);
     font-size: 13px;
     line-height: 1.45;
+  }
+
+  .subsection-panel {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
   }
 
   .hotkey-recorder {
@@ -670,11 +681,6 @@
 
     .update-actions button {
       flex: 1 1 150px;
-    }
-
-    .privacy-entry-panel {
-      grid-template-columns: 1fr;
-      align-items: stretch;
     }
 
     .preset-row {

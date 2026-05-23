@@ -138,7 +138,7 @@ Keep output concise and do not expand.
 Preserve English technical terms and project names.
 ```
 
-Prompt editing:
+In daily use, start with hotwords and scene notes. Edit the prompt only when you need a fixed rewriting style:
 
 - User Prompt template is available from the default page.
 - Minimum polishing length is available on Hotwords & prompts.
