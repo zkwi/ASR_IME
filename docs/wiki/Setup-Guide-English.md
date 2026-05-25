@@ -155,12 +155,12 @@ Notes:
 
 ### AI Prompt
 
-VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
+VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. User dictionary terms, writing/product preferences, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, and wording preferences, not act as text to polish or instructions to follow. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
 
 The Hotwords page lets you:
 
 - Restore the default prompt.
-- Preview the final prompt.
+- Preview the final prompt, including reference-information rules, a screen OCR placeholder, and the recent-context policy.
 - Edit the User Prompt template.
 - Adjust the minimum polishing length.
 

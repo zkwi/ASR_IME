@@ -34,7 +34,16 @@ export function buildFinalPromptPreview(
   hotwords: string[],
   labels: {
     dictionary: string;
+    dictionaryPurpose: string;
+    dictionaryEnd: string;
     context: string;
+    contextPurpose: string;
+    contextEnd: string;
+    screenOcrContext: string;
+    screenOcrPurpose: string;
+    screenOcrEnd: string;
+    screenOcrPlaceholder: string;
+    referenceRules: string;
     systemPrompt: string;
     userPromptTemplate: string;
     empty: string;
@@ -45,13 +54,20 @@ export function buildFinalPromptPreview(
   },
 ) {
   let userPrompt = config.llm_post_edit.user_prompt_template.replace("{text}", sampleText);
+  const referenceBlocks: string[] = [];
   if (hotwords.length > 0) {
-    userPrompt += `\n\n${labels.dictionary}\n${hotwords.join("\n")}`;
+    referenceBlocks.push(`${labels.dictionary}\n${labels.dictionaryPurpose}\n${hotwords.join("\n")}\n${labels.dictionaryEnd}`);
   }
   const promptContext = config.context.prompt_context.map((item) => item.text.trim()).filter(Boolean);
   const promptContextText = promptContext.length > 0 ? promptContext.map((item) => `- ${item}`).join("\n") : labels.empty;
   if (promptContext.length > 0) {
-    userPrompt += `\n\n${labels.context}\n${promptContextText}`;
+    referenceBlocks.push(`${labels.context}\n${labels.contextPurpose}\n${promptContextText}\n${labels.contextEnd}`);
+  }
+  if (config.screen_context.enabled) {
+    referenceBlocks.push(`${labels.screenOcrContext}\n${labels.screenOcrPurpose}\n${labels.screenOcrPlaceholder}\n${labels.screenOcrEnd}`);
+  }
+  if (referenceBlocks.length > 0) {
+    userPrompt += `\n\n${labels.referenceRules}\n\n${referenceBlocks.join("\n\n")}`;
   }
   const summary = `${labels.summaryTitle}\n${labels.sceneContextSummary}\n${promptContextText}\n\n${labels.recentContextPolicy}`;
   const actualPrompt = `${labels.actualPromptTitle}\n\n${labels.systemPrompt}\n${config.llm_post_edit.system_prompt || labels.empty}\n\n${labels.userPromptTemplate}\n${userPrompt}`;

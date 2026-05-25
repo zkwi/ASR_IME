@@ -928,7 +928,16 @@ export function createVoxTypeController() {
     window.alert(
       buildFinalPromptPreview(config, sampleText, effectiveHotwords(), {
         dictionary: t("promptPreviewUserDictionary"),
+        dictionaryPurpose: t("promptPreviewUserDictionaryPurpose"),
+        dictionaryEnd: t("promptPreviewUserDictionaryEnd"),
         context: t("promptPreviewContextTitle"),
+        contextPurpose: t("promptPreviewContextPurpose"),
+        contextEnd: t("promptPreviewContextEnd"),
+        screenOcrContext: t("promptPreviewScreenOcrTitle"),
+        screenOcrPurpose: t("promptPreviewScreenOcrPurpose"),
+        screenOcrEnd: t("promptPreviewScreenOcrEnd"),
+        screenOcrPlaceholder: t("promptPreviewScreenOcrPlaceholder"),
+        referenceRules: t("promptPreviewReferenceRules"),
         systemPrompt: t("systemPrompt"),
         userPromptTemplate: t("userPromptTemplate"),
         empty: t("promptPreviewEmpty"),

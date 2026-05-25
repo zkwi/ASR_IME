@@ -143,8 +143,9 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - User Prompt template is available from the default page.
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
-- Final prompt preview is available.
+- Final prompt preview shows how recognition terms, writing/product preferences, and screen OCR are appended as reference information.
 - The default prompt corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording.
+- The default prompt labels user dictionary terms, writing preferences, and screen OCR as reference information, not text to polish or instructions to follow.
 - In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates
@@ -171,6 +172,7 @@ Privacy and stability:
 
 - On by default, with the current display as the capture range. You can switch to current-window-only in Options.
 - OCR text is used only for the current request and is not written to logs, stats, config, or cache.
+- When included in LLM polishing, OCR is appended as a separate reference-information block and explicitly marked as not text to polish or user instructions.
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
 - Switch to current-window-only or disable it in Options or Privacy & local data when the screen contains sensitive content.
 
