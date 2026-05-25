@@ -104,7 +104,7 @@ Open **API Config -> LLM API**:
 | API Key | Provider API key from the same platform/region as the Base URL |
 | Model | For example `qwen3.5-plus`; must be available to the current account |
 
-Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds. If you only need speech recognition, LLM polishing is not required.
+Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, and screen OCR are appended as reference information.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field.
 
@@ -155,14 +155,14 @@ Notes:
 
 ### AI Prompt
 
-VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. User dictionary terms, writing/product preferences, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, and wording preferences, not act as text to polish or instructions to follow. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
+VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese into another language or foreign-language text into Chinese. User dictionary terms, writing/product preferences, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, and wording preferences, not act as text to polish or instructions to follow. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
 
 The Hotwords page lets you:
 
 - Restore the default prompt.
-- Preview the final prompt, including reference-information rules, a screen OCR placeholder, and the recent-context policy.
+- Preview the final prompt, including reference-information rules, the current screen OCR policy, and the recent-context policy.
 - Edit the User Prompt template.
-- Adjust the minimum polishing length.
+- Adjust the minimum polishing length from 0 to 10000.
 
 System Prompt stays in `config.toml` to keep the normal UI concise.
 

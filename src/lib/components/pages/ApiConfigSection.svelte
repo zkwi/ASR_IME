@@ -246,6 +246,7 @@
           {#if !hasLlmApiConfig}<small>{t("llmApiRequiredForPolishing")}</small>{/if}
         </span>
       </label>
+      <p class="field-hint">{t("llmPolishingDataHint")}</p>
       <div id="llm-api-config-fields" class="llm-api-config-fields">
         <div class="form-grid">
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.base_url"))}>

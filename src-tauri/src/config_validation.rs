@@ -228,6 +228,14 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         300.0,
         "大模型超时时间需在 1 到 300 秒之间。",
     );
+    validate_usize_range(
+        &mut errors,
+        "llm_post_edit.min_chars",
+        config.llm_post_edit.min_chars,
+        0,
+        10_000,
+        "大模型最少润色字数需在 0 到 10000 之间。",
+    );
     if config.llm_post_edit.enabled {
         if config.llm_post_edit.api_key.trim().is_empty() {
             push_validation_error(

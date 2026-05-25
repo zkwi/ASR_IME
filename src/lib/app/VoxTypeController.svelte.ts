@@ -944,6 +944,8 @@ export function createVoxTypeController() {
         summaryTitle: t("promptPreviewSummaryTitle"),
         sceneContextSummary: t("promptPreviewSceneContextSummary"),
         recentContextPolicy: t("promptPreviewRecentContextPolicy"),
+        screenOcrPolicyEnabled: t("promptPreviewScreenOcrPolicyEnabled"),
+        screenOcrPolicyDisabled: t("promptPreviewScreenOcrPolicyDisabled"),
         actualPromptTitle: t("promptPreviewActualPromptTitle"),
       }),
     );

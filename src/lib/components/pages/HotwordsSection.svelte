@@ -128,7 +128,12 @@
         {#if fieldError("llm_post_edit.user_prompt_template")}<small class="field-error">{fieldError("llm_post_edit.user_prompt_template")}</small>{/if}
       </label>
       <div class="form-grid">
-        <label><span>{t("minChars")}</span><input type="number" bind:value={config.llm_post_edit.min_chars} /></label>
+        <label class:field-invalid={Boolean(fieldError("llm_post_edit.min_chars"))}>
+          <span>{t("minChars")}</span>
+          <input type="number" min="0" max="10000" step="1" bind:value={config.llm_post_edit.min_chars} />
+          {#if fieldError("llm_post_edit.min_chars")}<small class="field-error">{fieldError("llm_post_edit.min_chars")}</small>{/if}
+          <small class="field-hint">{t("minCharsHint")}</small>
+        </label>
       </div>
     </div>
     <div id="settings-auto-hotwords" class="form-panel auto-hotwords-panel">

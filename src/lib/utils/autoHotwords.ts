@@ -50,6 +50,8 @@ export function buildFinalPromptPreview(
     summaryTitle: string;
     sceneContextSummary: string;
     recentContextPolicy: string;
+    screenOcrPolicyEnabled: string;
+    screenOcrPolicyDisabled: string;
     actualPromptTitle: string;
   },
 ) {
@@ -69,7 +71,8 @@ export function buildFinalPromptPreview(
   if (referenceBlocks.length > 0) {
     userPrompt += `\n\n${labels.referenceRules}\n\n${referenceBlocks.join("\n\n")}`;
   }
-  const summary = `${labels.summaryTitle}\n${labels.sceneContextSummary}\n${promptContextText}\n\n${labels.recentContextPolicy}`;
+  const screenOcrPolicy = config.screen_context.enabled ? labels.screenOcrPolicyEnabled : labels.screenOcrPolicyDisabled;
+  const summary = `${labels.summaryTitle}\n${labels.sceneContextSummary}\n${promptContextText}\n\n${labels.recentContextPolicy}\n${screenOcrPolicy}`;
   const actualPrompt = `${labels.actualPromptTitle}\n\n${labels.systemPrompt}\n${config.llm_post_edit.system_prompt || labels.empty}\n\n${labels.userPromptTemplate}\n${userPrompt}`;
   return `${summary}\n\n${actualPrompt}`;
 }
