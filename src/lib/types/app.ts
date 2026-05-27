@@ -249,6 +249,7 @@ export type AppConfig = {
   llm_post_edit: {
     enabled: boolean;
     min_chars: number;
+    use_recent_context: boolean;
     base_url: string;
     api_key: string;
     model: string;

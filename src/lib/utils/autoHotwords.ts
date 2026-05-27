@@ -39,6 +39,10 @@ export function buildFinalPromptPreview(
     context: string;
     contextPurpose: string;
     contextEnd: string;
+    recentContext: string;
+    recentContextPurpose: string;
+    recentContextEnd: string;
+    recentContextPlaceholder: string;
     screenOcrContext: string;
     screenOcrPurpose: string;
     screenOcrEnd: string;
@@ -49,7 +53,9 @@ export function buildFinalPromptPreview(
     empty: string;
     summaryTitle: string;
     sceneContextSummary: string;
-    recentContextPolicy: string;
+    recentContextPolicyDisabled: string;
+    recentContextPolicyEnabled: string;
+    recentContextPolicyNeedsLocal: string;
     screenOcrPolicyEnabled: string;
     screenOcrPolicyDisabled: string;
     actualPromptTitle: string;
@@ -65,14 +71,22 @@ export function buildFinalPromptPreview(
   if (promptContext.length > 0) {
     referenceBlocks.push(`${labels.context}\n${labels.contextPurpose}\n${promptContextText}\n${labels.contextEnd}`);
   }
+  if (config.llm_post_edit.use_recent_context && config.context.enable_recent_context) {
+    referenceBlocks.push(`${labels.recentContext}\n${labels.recentContextPurpose}\n${labels.recentContextPlaceholder}\n${labels.recentContextEnd}`);
+  }
   if (config.screen_context.enabled) {
     referenceBlocks.push(`${labels.screenOcrContext}\n${labels.screenOcrPurpose}\n${labels.screenOcrPlaceholder}\n${labels.screenOcrEnd}`);
   }
   if (referenceBlocks.length > 0) {
     userPrompt += `\n\n${labels.referenceRules}\n\n${referenceBlocks.join("\n\n")}`;
   }
+  const recentContextPolicy = config.llm_post_edit.use_recent_context
+    ? config.context.enable_recent_context
+      ? labels.recentContextPolicyEnabled
+      : labels.recentContextPolicyNeedsLocal
+    : labels.recentContextPolicyDisabled;
   const screenOcrPolicy = config.screen_context.enabled ? labels.screenOcrPolicyEnabled : labels.screenOcrPolicyDisabled;
-  const summary = `${labels.summaryTitle}\n${labels.sceneContextSummary}\n${promptContextText}\n\n${labels.recentContextPolicy}\n${screenOcrPolicy}`;
+  const summary = `${labels.summaryTitle}\n${labels.sceneContextSummary}\n${promptContextText}\n\n${recentContextPolicy}\n${screenOcrPolicy}`;
   const actualPrompt = `${labels.actualPromptTitle}\n\n${labels.systemPrompt}\n${config.llm_post_edit.system_prompt || labels.empty}\n\n${labels.userPromptTemplate}\n${userPrompt}`;
   return `${summary}\n\n${actualPrompt}`;
 }

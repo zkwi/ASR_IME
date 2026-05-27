@@ -111,7 +111,8 @@ Defaults:
 - ASR only unless LLM polishing is enabled.
 - Short text below `min_chars` is not polished.
 - Thinking is disabled to reduce latency.
-- When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, and screen OCR are appended as reference information.
+- When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information.
+- Recent context for AI is off by default. It is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
 
 Tips:
 
@@ -144,10 +145,10 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - User Prompt template is available from the default page.
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
-- Final prompt preview shows how recognition terms, writing/product preferences, and screen OCR are appended as reference information.
+- Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as reference information.
 - The default prompt corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording.
 - The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese or foreign-language text.
-- The default prompt labels user dictionary terms, writing preferences, and screen OCR as reference information, not text to polish or instructions to follow.
+- The default prompt labels user dictionary terms, writing preferences, optional recent context, and screen OCR as reference information, not text to polish or instructions to follow.
 - In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates
@@ -185,8 +186,8 @@ Privacy & local data answers four questions in one place: what VoxType stores, w
 The page separates data into three groups:
 
 - Base local files: the config file and local logs. The config file can contain API keys and basic settings, but recent context text is kept out of `config.toml`. Logs and diagnostic reports are redacted by default and should not contain transcripts, hotwords, prompts, or raw keys.
-- Local clearable data: recent context, automatic hotword history, and usage stats. Recent context and automatic hotword history contain voice-input text history and are off by default. Usage stats contain non-content metrics such as character count, duration, and speed.
-- Runtime and third-party service data: ASR audio, screen OCR, LLM polishing text, and temporary clipboard snapshots. These are normally not written to disk, but ASR audio, OCR context, and LLM polishing text can be sent with the current request depending on enabled features.
+- Local clearable data: recent context, automatic hotword history, and usage stats. Recent context and automatic hotword history contain voice-input text history and are off by default. Usage stats contain non-content metrics such as character count, duration, and speed. Recent context is sent to Doubao ASR by default after local recent context is enabled; it reaches the AI service only after a separate AI opt-in.
+- Runtime and third-party service data: ASR audio, screen OCR, LLM polishing text, and temporary clipboard snapshots. These are normally not written to disk, but ASR audio, OCR context, optional recent context, and LLM polishing text can be sent with the current request depending on enabled features.
 
 Clear actions remove VoxType local files only. They do not mean third-party ASR/LLM providers have deleted data they already received; retention depends on the provider configured by the user.
 

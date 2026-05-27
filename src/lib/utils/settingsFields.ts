@@ -2,7 +2,12 @@ export function settingsPanelForField(field: string) {
   if (field.startsWith("auth.")) return "settings-auth";
   if (field === "request.language") return "settings-asr-language";
   if (field.startsWith("request.")) return "settings-asr-language";
-  if (field === "llm_post_edit.system_prompt" || field === "llm_post_edit.user_prompt_template" || field === "llm_post_edit.min_chars") {
+  if (field === "llm_post_edit.use_recent_context") return "settings-prompt-context";
+  if (
+    field === "llm_post_edit.system_prompt" ||
+    field === "llm_post_edit.user_prompt_template" ||
+    field === "llm_post_edit.min_chars"
+  ) {
     return "settings-llm-prompt";
   }
   if (field.startsWith("llm_post_edit.")) return "settings-llm-api";

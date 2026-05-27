@@ -104,7 +104,7 @@ Open **API Config -> LLM API**:
 | API Key | Provider API key from the same platform/region as the Base URL |
 | Model | For example `qwen3.5-plus`; must be available to the current account |
 
-Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, and screen OCR are appended as reference information.
+Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field.
 
@@ -155,12 +155,12 @@ Notes:
 
 ### AI Prompt
 
-VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese into another language or foreign-language text into Chinese. User dictionary terms, writing/product preferences, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, and wording preferences, not act as text to polish or instructions to follow. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
+VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese into another language or foreign-language text into Chinese. User dictionary terms, writing/product preferences, optional recent context, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, continuity, and wording preferences, not act as text to polish or instructions to follow. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
 
 The Hotwords page lets you:
 
 - Restore the default prompt.
-- Preview the final prompt, including reference-information rules, the current screen OCR policy, and the recent-context policy.
+- Preview the final prompt, including reference-information rules, the current screen OCR policy, and whether recent context enters the AI prompt.
 - Edit the User Prompt template.
 - Adjust the minimum polishing length from 0 to 10000.
 
@@ -201,7 +201,7 @@ Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, mode
 | Clipboard restore | On | Tries to restore previous clipboard after paste |
 | Low-volume auto-stop | 30 seconds, threshold `0.03` | Less likely to cut off long or quiet dictation |
 | Screen OCR context | On, current display | Improves names, UI terms, filenames, and code identifiers; switch to current-window-only or disable in sensitive scenarios |
-| Recent context | Off | More conservative by default |
+| Recent context | Off | Conservative by default; AI access to previous text also needs a separate opt-in |
 | Automatic hotword candidates | Off | Does not save transcript history by default |
 | Mute system volume while recording | Off | Avoids interrupting meetings, videos, and alerts |
 | Thinking | Off | Faster for voice polishing |
@@ -224,6 +224,7 @@ Optional LLM config:
 ```toml
 [llm_post_edit]
 enabled = false
+use_recent_context = false
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 api_key = ""
 model = "qwen3.5-plus"
@@ -311,5 +312,7 @@ Names, product names, project names, abbreviations, and technical terms. Do not 
 ### Why are recent context and automatic hotword candidates off by default?
 
 They save voice-input text history locally. VoxType keeps them off by default to reduce privacy risk.
+
+Recent context contains real dictated text, so VoxType does not save it or send it to an AI service by default. When local recent context is enabled, it helps Doubao ASR with continuous dictation; it reaches the AI service only when "use recent context for polishing" is also enabled and polishing actually runs.
 
 Screen OCR context is on by default, but it does not save transcript history. It reads the current display at recording start by default, lightly normalizes OCR text, and attaches it temporarily to the current ASR/LLM request. It does not cache recent OCR screenshots or text. Use current-window-only or turn it off when the screen contains sensitive content.

@@ -155,6 +155,10 @@
                   />
                   <span>{t("useRecentContext")}</span>
                 </label>
+                <label class="inline-check">
+                  <input type="checkbox" bind:checked={config.llm_post_edit.use_recent_context} />
+                  <span>{t("privacyLlmRecentContextToggle")}</span>
+                </label>
                 <button
                   type="button"
                   class="danger-action"
