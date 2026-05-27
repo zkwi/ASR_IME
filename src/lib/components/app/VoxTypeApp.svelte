@@ -6,6 +6,7 @@
   import AppShell from "$lib/components/app/AppShell.svelte";
   import ActionNotice from "$lib/components/common/ActionNotice.svelte";
   import CloseToTrayDialog from "$lib/components/common/CloseToTrayDialog.svelte";
+  import PromptPreviewDialog from "$lib/components/common/PromptPreviewDialog.svelte";
   import OverlayWindow from "$lib/components/overlay/OverlayWindow.svelte";
   import StartupToast from "$lib/components/overlay/StartupToast.svelte";
 
@@ -71,5 +72,14 @@
     onConfirm={app.confirmClosePrompt}
     onDontShowAgain={app.closeWindowWithoutFuturePrompt}
     onExit={app.exitFromClosePrompt}
+  />
+  <PromptPreviewDialog
+    visible={app.promptPreviewVisible}
+    title={app.promptPreviewTitle}
+    text={app.promptPreviewText}
+    copyLabel={app.promptPreviewCopyLabel}
+    closeLabel={app.promptPreviewCloseLabel}
+    onCopy={app.copyPromptPreview}
+    onClose={app.closePromptPreview}
   />
 {/if}

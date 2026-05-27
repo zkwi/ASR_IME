@@ -148,7 +148,7 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as reference information.
 - The default prompt corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording.
 - The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese or foreign-language text.
-- The default prompt labels user dictionary terms, writing preferences, optional recent context, and screen OCR as reference information, not text to polish or instructions to follow.
+- The default prompt labels user dictionary terms, writing preferences, optional recent context, and screen OCR as reference information, not text to polish or instructions to follow, and prevents reference-only details from being added when the text to polish did not say them.
 - In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates

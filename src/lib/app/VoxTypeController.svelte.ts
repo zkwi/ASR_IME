@@ -127,6 +127,7 @@ export function createVoxTypeController() {
   let lastSessionOutcome = $state<LastSessionOutcome>(null);
   let language = $state<Language>("zh-CN");
   let statusMessage = $state(copy["zh-CN"].bridgeLoading);
+  let promptPreviewText = $state("");
   let saving = $state(false);
   let configSavedRecently = $state(false);
   let configExists = $state(true);
@@ -925,36 +926,49 @@ export function createVoxTypeController() {
 
   function previewFinalPrompt() {
     const sampleText = t("promptPreviewSampleText");
-    window.alert(
-      buildFinalPromptPreview(config, sampleText, effectiveHotwords(), {
-        dictionary: t("promptPreviewUserDictionary"),
-        dictionaryPurpose: t("promptPreviewUserDictionaryPurpose"),
-        dictionaryEnd: t("promptPreviewUserDictionaryEnd"),
-        context: t("promptPreviewContextTitle"),
-        contextPurpose: t("promptPreviewContextPurpose"),
-        contextEnd: t("promptPreviewContextEnd"),
-        recentContext: t("promptPreviewRecentContextTitle"),
-        recentContextPurpose: t("promptPreviewRecentContextPurpose"),
-        recentContextEnd: t("promptPreviewRecentContextEnd"),
-        recentContextPlaceholder: t("promptPreviewRecentContextPlaceholder"),
-        screenOcrContext: t("promptPreviewScreenOcrTitle"),
-        screenOcrPurpose: t("promptPreviewScreenOcrPurpose"),
-        screenOcrEnd: t("promptPreviewScreenOcrEnd"),
-        screenOcrPlaceholder: t("promptPreviewScreenOcrPlaceholder"),
-        referenceRules: t("promptPreviewReferenceRules"),
-        systemPrompt: t("systemPrompt"),
-        userPromptTemplate: t("userPromptTemplate"),
-        empty: t("promptPreviewEmpty"),
-        summaryTitle: t("promptPreviewSummaryTitle"),
-        sceneContextSummary: t("promptPreviewSceneContextSummary"),
-        recentContextPolicyDisabled: t("promptPreviewRecentContextPolicyDisabled"),
-        recentContextPolicyEnabled: t("promptPreviewRecentContextPolicyEnabled"),
-        recentContextPolicyNeedsLocal: t("promptPreviewRecentContextPolicyNeedsLocal"),
-        screenOcrPolicyEnabled: t("promptPreviewScreenOcrPolicyEnabled"),
-        screenOcrPolicyDisabled: t("promptPreviewScreenOcrPolicyDisabled"),
-        actualPromptTitle: t("promptPreviewActualPromptTitle"),
-      }),
-    );
+    promptPreviewText = buildFinalPromptPreview(config, sampleText, effectiveHotwords(), {
+      dictionary: t("promptPreviewUserDictionary"),
+      dictionaryPurpose: t("promptPreviewUserDictionaryPurpose"),
+      dictionaryEnd: t("promptPreviewUserDictionaryEnd"),
+      context: t("promptPreviewContextTitle"),
+      contextPurpose: t("promptPreviewContextPurpose"),
+      contextEnd: t("promptPreviewContextEnd"),
+      recentContext: t("promptPreviewRecentContextTitle"),
+      recentContextPurpose: t("promptPreviewRecentContextPurpose"),
+      recentContextEnd: t("promptPreviewRecentContextEnd"),
+      recentContextPlaceholder: t("promptPreviewRecentContextPlaceholder"),
+      screenOcrContext: t("promptPreviewScreenOcrTitle"),
+      screenOcrPurpose: t("promptPreviewScreenOcrPurpose"),
+      screenOcrEnd: t("promptPreviewScreenOcrEnd"),
+      screenOcrPlaceholder: t("promptPreviewScreenOcrPlaceholder"),
+      referenceRules: t("promptPreviewReferenceRules"),
+      systemPrompt: t("systemPrompt"),
+      userPromptTemplate: t("userPromptTemplate"),
+      empty: t("promptPreviewEmpty"),
+      summaryTitle: t("promptPreviewSummaryTitle"),
+      sceneContextSummary: t("promptPreviewSceneContextSummary"),
+      recentContextPolicyDisabled: t("promptPreviewRecentContextPolicyDisabled"),
+      recentContextPolicyEnabled: t("promptPreviewRecentContextPolicyEnabled"),
+      recentContextPolicyNeedsLocal: t("promptPreviewRecentContextPolicyNeedsLocal"),
+      screenOcrPolicyEnabled: t("promptPreviewScreenOcrPolicyEnabled"),
+      screenOcrPolicyDisabled: t("promptPreviewScreenOcrPolicyDisabled"),
+      actualPromptTitle: t("promptPreviewActualPromptTitle"),
+    });
+  }
+
+  function closePromptPreview() {
+    promptPreviewText = "";
+  }
+
+  async function copyPromptPreview() {
+    if (!browser || !promptPreviewText) return;
+    try {
+      await navigator.clipboard.writeText(promptPreviewText);
+      notifications.show(t("promptPreviewCopied"), "success");
+    } catch (err) {
+      logFrontendError(`copy prompt preview failed: ${formatFrontendError(err)}`);
+      notifications.show(t("operationFailedGeneric"), "error");
+    }
   }
 
   function setInputDevice(value: string | number | null) {
@@ -1249,6 +1263,11 @@ export function createVoxTypeController() {
     get closePromptGotItLabel() { return t("closePromptGotIt"); },
     get closePromptDontShowAgainLabel() { return t("closePromptDontShowAgain"); },
     get closePromptExitLabel() { return t("closePromptExit"); },
+    get promptPreviewVisible() { return Boolean(promptPreviewText); },
+    get promptPreviewTitle() { return t("promptPreviewDialogTitle"); },
+    get promptPreviewText() { return promptPreviewText; },
+    get promptPreviewCopyLabel() { return t("promptPreviewCopy"); },
+    get promptPreviewCloseLabel() { return t("windowClose"); },
     get config() { return config; },
     set config(value: AppConfig) { config = value; },
     get autoHotwordCandidates() { return autoHotwords.candidates; },
@@ -1261,5 +1280,7 @@ export function createVoxTypeController() {
     closeWindowWithoutFuturePrompt: windows.closeWithoutFuturePrompt,
     exitFromClosePrompt: windows.exitFromPrompt,
     confirmClosePrompt: windows.confirmClosePrompt,
+    closePromptPreview,
+    copyPromptPreview,
   };
 }

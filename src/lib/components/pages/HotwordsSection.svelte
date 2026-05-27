@@ -104,13 +104,7 @@
       <label><span>{t("promptContext")}</span><textarea value={config.context.prompt_context.map((item) => item.text).join("\n")} oninput={(event) => onUpdatePromptContext(event.currentTarget.value)}></textarea></label>
       <div class="toggle-grid">
         <label class="check"><input type="checkbox" bind:checked={config.context.enable_recent_context} onchange={(event) => onOptionEnabledNotice("enable_recent_context", event.currentTarget.checked)} />{t("useRecentContext")}</label>
-        <label class="check">
-          <input type="checkbox" bind:checked={config.llm_post_edit.use_recent_context} />
-          <span class="check-copy">
-            <span>{t("useRecentContextForLlm")}</span>
-            <small>{t("tagSentToService")}</small>
-          </span>
-        </label>
+        <label class="check"><input type="checkbox" bind:checked={config.llm_post_edit.use_recent_context} />{t("useRecentContextForLlm")}</label>
       </div>
       <p class="field-hint">{t("recentContextHint")}</p>
       <p class="field-hint">{t("recentContextForLlmHint")}</p>
