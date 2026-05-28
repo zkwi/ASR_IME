@@ -394,6 +394,7 @@
     onOpenLog={onOpenLog}
     onCopyDiagnosticReport={onCopyDiagnosticReport}
     onTestScreenContext={onTestScreenContext}
+    onScrollToSettingsPanel={onScrollToSettingsPanel}
   />
 {:else if selectedSection === "Privacy"}
   <PrivacySection

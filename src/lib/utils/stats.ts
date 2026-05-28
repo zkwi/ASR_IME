@@ -68,13 +68,12 @@ export function historySummaryCards(stats: StatsSnapshot, t: Translate, language
       tone: "green",
       label: t("avgCpm"),
       value: `${stats.recent_7d.avg_chars_per_minute.toFixed(0)} ${t("perMinute")}`,
-      hint: t("weeklySavedHoursHint"),
     },
     {
       tone: "orange",
       label: t("savedTime"),
       value: formatSavedHours(weeklySaved, language),
-      hint: t("weeklySavedShort"),
+      hint: t("weeklySavedHoursHint"),
     },
   ];
 }

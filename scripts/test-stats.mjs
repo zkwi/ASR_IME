@@ -59,6 +59,10 @@ const statsSnapshot = snapshot(recent24h, recent7d);
 const cards = stats.historySummaryCards(statsSnapshot, t, "zh-CN", typingCharsPerMinute);
 assert.equal(cards[0].hint, "saved 2.9");
 assert.equal(cards[1].hint, "saved 10.7");
+assert.equal(cards[2].label, "avgCpm");
+assert.equal(cards[2].hint, undefined);
+assert.equal(cards[3].label, "savedTime");
+assert.equal(cards[3].hint, "weeklySavedHoursHint");
 
 const [todayRow] = stats.recentSevenDayDisplayRows(statsSnapshot, t, "zh-CN", typingCharsPerMinute, () => usage(0, 0));
 assert.equal(todayRow.saved, "2.9 小时");

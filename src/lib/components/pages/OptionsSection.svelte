@@ -12,6 +12,16 @@
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type OverlayColorPreset = { label: CopyKey; background: string; text: string };
+  type OptionJumpTarget = { id: string; label: CopyKey };
+
+  const optionJumpTargets: OptionJumpTarget[] = [
+    { id: "settings-output", label: "usageModeTitle" },
+    { id: "settings-audio", label: "microphoneTitle" },
+    { id: "settings-basic-output", label: "inputResultTitle" },
+    { id: "settings-screen-context", label: "screenContextTitle" },
+    { id: "settings-overlay", label: "floatingCaptionAppearance" },
+    { id: "settings-update", label: "updatesAndDiagnostics" },
+  ];
 
   type Props = {
     config: AppConfig;
@@ -50,6 +60,7 @@
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
     onTestScreenContext: () => void;
+    onScrollToSettingsPanel: (id: string) => void;
   };
 
   let {
@@ -89,6 +100,7 @@
     onOpenLog,
     onCopyDiagnosticReport,
     onTestScreenContext,
+    onScrollToSettingsPanel,
   }: Props = $props();
 
 </script>
@@ -99,6 +111,11 @@
       <h3>{t("optionsPageTitle")}</h3>
       <p>{t("optionsPageDescription")}</p>
     </div>
+    <nav class="settings-jump-nav" aria-label={t("optionsQuickNav")}>
+      {#each optionJumpTargets as target}
+        <button type="button" onclick={() => onScrollToSettingsPanel(target.id)}>{t(target.label)}</button>
+      {/each}
+    </nav>
     <div class="settings-cluster-heading">
       <span>{t("optionsEssentialsTitle")}</span>
       <small>{t("optionsEssentialsDescription")}</small>
@@ -347,6 +364,42 @@
 </section>
 
 <style>
+  .settings-jump-nav {
+    position: sticky;
+    top: -1px;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(156px, 100%), 1fr));
+    gap: 8px;
+    padding: 10px;
+    background: rgba(247, 250, 254, 0.94);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    backdrop-filter: blur(12px);
+  }
+
+  .settings-jump-nav button {
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 10px;
+    color: var(--text-secondary);
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .settings-jump-nav button:hover,
+  .settings-jump-nav button:focus-visible {
+    color: var(--primary);
+    border-color: rgba(47, 128, 237, 0.28);
+    box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.1);
+    outline: 0;
+  }
+
   .settings-cluster-heading {
     display: grid;
     gap: 4px;

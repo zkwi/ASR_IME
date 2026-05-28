@@ -47,8 +47,9 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
   }
 
   function selectSection(section: Section) {
+    const changed = selectedSection !== section;
     selectedSection = section;
-    if (section === "ApiConfig" && options.requiresAsrAuth()) scrollContentTop();
+    if (changed || (section === "ApiConfig" && options.requiresAsrAuth())) scrollContentTop();
   }
 
   return {

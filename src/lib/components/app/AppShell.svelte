@@ -4,12 +4,12 @@
   import type { Section } from "$lib/types/app";
   import {
     BarChart3,
-    Download,
     House,
     KeyRound,
     LockKeyhole,
     Maximize2,
     Minus,
+    PanelBottomClose,
     Settings,
     Sparkles,
     X as XIcon,
@@ -120,7 +120,7 @@
     </div>
     <div class="window-controls">
       <button class="tray-action" aria-label={t("minimizeToTray")} title={t("minimizeToTray")} onclick={onClose}>
-        <Download size={15} />
+        <PanelBottomClose size={15} />
         <span>{t("minimizeToTray")}</span>
       </button>
       <button aria-label={t("windowMinimize")} title={t("windowMinimize")} onclick={onMinimize}><Minus size={13} /></button>

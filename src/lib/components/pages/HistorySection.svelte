@@ -5,7 +5,7 @@
     tone: HistorySummaryTone;
     label: string;
     value: string;
-    hint: string;
+    hint?: string;
   };
 
   export type HistoryDayRow = {
@@ -47,7 +47,9 @@
       <article class={`history-card ${card.tone}`}>
         <p>{card.label}</p>
         <strong>{card.value}</strong>
-        <span>{card.hint}</span>
+        {#if card.hint}
+          <span>{card.hint}</span>
+        {/if}
       </article>
     {/each}
   </section>
@@ -81,22 +83,22 @@
 <style>
   .history-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
   }
 
   .history-card {
     min-width: 0;
+    min-height: 112px;
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 16px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 14px;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
     transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-  }
-
-  .history-card {
-    min-height: 100px;
-    padding: 16px;
   }
 
   .history-card:hover {
@@ -115,7 +117,6 @@
 
   .history-card strong {
     display: block;
-    margin-top: 8px;
     color: var(--text-main);
     font-size: clamp(18px, 1.9vw, 21px);
     font-weight: 800;
@@ -126,7 +127,6 @@
 
   .history-card span {
     display: block;
-    margin-top: 8px;
     color: var(--text-secondary);
     font-size: 13px;
     line-height: 1.35;
@@ -240,6 +240,10 @@
   }
 
   @media (max-width: 1180px) {
+    .history-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .day-list-head,
     .day-list article {
       grid-template-columns: minmax(104px, 1fr) minmax(94px, 0.8fr) minmax(82px, 0.62fr) minmax(112px, 0.86fr) minmax(86px, 0.72fr);
@@ -293,6 +297,10 @@
   }
 
   @media (max-width: 480px) {
+    .history-summary {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
     .day-list article > * {
       grid-template-columns: minmax(0, 1fr);
       gap: 2px;
