@@ -108,6 +108,8 @@ Click **Test** after configuration. The test sends a sample text with the real A
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field.
 
+For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](../audits/2026-05-28-llm-polishing-model-test.md). In that test, the practical choices were `qwen3.7-max` for daily use, `qwen3.6-flash-2026-04-16` for lower latency, and `deepseek-v4-pro` for technical text. Actual availability depends on the current account and region.
+
 Recommendations:
 
 - Thinking is off by default because voice polishing is usually latency-sensitive.

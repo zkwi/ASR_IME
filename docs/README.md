@@ -24,6 +24,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- LLM 润色模型测试：[2026-05-28 LLM 润色模型测试记录](audits/2026-05-28-llm-polishing-model-test.md)
 - 设计和优化计划：[docs/plans/](plans/)
 - 豆包流式 ASR 参考：[docs/豆包流式语音识别参考文档.md](豆包流式语音识别参考文档.md)
 
