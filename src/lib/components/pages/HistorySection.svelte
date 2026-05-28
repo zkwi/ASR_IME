@@ -84,16 +84,16 @@
   .history-summary {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .history-card {
     min-width: 0;
-    min-height: 112px;
+    min-height: 108px;
     display: grid;
     align-content: start;
-    gap: 8px;
-    padding: 16px;
+    gap: 7px;
+    padding: 14px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -110,15 +110,16 @@
   .history-card p {
     margin: 0;
     color: #5f7188;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: none;
+    overflow-wrap: anywhere;
   }
 
   .history-card strong {
     display: block;
     color: var(--text-main);
-    font-size: clamp(18px, 1.9vw, 21px);
+    font-size: clamp(16px, 1.55vw, 21px);
     font-weight: 800;
     line-height: 1.2;
     overflow-wrap: normal;
@@ -128,8 +129,9 @@
   .history-card span {
     display: block;
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 
   .history-card.blue {
@@ -240,14 +242,16 @@
   }
 
   @media (max-width: 1180px) {
-    .history-summary {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .day-list-head,
     .day-list article {
       grid-template-columns: minmax(104px, 1fr) minmax(94px, 0.8fr) minmax(82px, 0.62fr) minmax(112px, 0.86fr) minmax(86px, 0.72fr);
       column-gap: 8px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .history-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

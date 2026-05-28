@@ -548,7 +548,7 @@ export const en = {
   "chars7d": "7d chars",
   "avgCpm": "Avg chars/min",
   "weeklySavedHours": "Weekly saved",
-  "weeklySavedHoursHint": "Estimated time saved at 50 Chinese chars/min.",
+  "weeklySavedHoursHint": "Estimated at 50 Chinese chars/min.",
   "byDay": "By day",
   "lastSevenDays": "Last seven calendar days.",
   "dateColumn": "Date",

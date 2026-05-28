@@ -12,19 +12,42 @@ type SettingsNavigationControllerOptions = {
 export function createSettingsNavigationController(options: SettingsNavigationControllerOptions) {
   let selectedSection = $state<Section>("Home");
 
+  function afterSectionRender(callback: () => void) {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(callback));
+  }
+
+  function contentScroller() {
+    return document.querySelector<HTMLElement>(".content");
+  }
+
+  function settingsStickyOffset(scroller: HTMLElement) {
+    const jumpNav = scroller.querySelector<HTMLElement>(".settings-jump-nav");
+    return jumpNav ? jumpNav.offsetHeight + 18 : 18;
+  }
+
   function scrollToSettingsPanel(targetId: string) {
     if (!options.isBrowser()) return;
     selectedSection = getSectionForSettingsPanel(targetId);
-    window.setTimeout(() => {
-      document.getElementById(targetId)?.scrollIntoView({ block: "start", behavior: "smooth" });
-    }, 50);
+    afterSectionRender(() => {
+      const scroller = contentScroller();
+      const target = document.getElementById(targetId);
+      if (!scroller || !target) return;
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const targetTop = targetRect.top - scrollerRect.top + scroller.scrollTop;
+      scroller.scrollTo({
+        top: Math.max(0, targetTop - settingsStickyOffset(scroller)),
+        behavior: "smooth",
+      });
+    });
   }
 
   function scrollContentTop() {
     if (!options.isBrowser()) return;
-    window.setTimeout(() => {
-      document.querySelector<HTMLElement>(".content")?.scrollTo({ top: 0, behavior: "smooth" });
-    }, 50);
+    afterSectionRender(() => {
+      contentScroller()?.scrollTo({ top: 0, behavior: "smooth" });
+    });
   }
 
   function focusFirstValidationError(errors: ConfigValidationError[]) {

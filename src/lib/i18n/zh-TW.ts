@@ -548,7 +548,7 @@ export const zhTW = {
   "chars7d": "7 日字數",
   "avgCpm": "平均每分鐘字數",
   "weeklySavedHours": "每週節省",
-  "weeklySavedHoursHint": "按中文輸入約每分鐘50字估算節省時間。",
+  "weeklySavedHoursHint": "按中文輸入約每分鐘50字估算",
   "byDay": "按日統計",
   "lastSevenDays": "最近七個自然日。",
   "dateColumn": "日期",
