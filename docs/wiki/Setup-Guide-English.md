@@ -115,6 +115,8 @@ Recommendations:
 
 - Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; retest after changing Base URL or model.
 - Text shorter than `min_chars = 40` is not polished by default.
+- Similar or identical model names can behave very differently across providers, so prefer the latency measured by API Config over the model name alone.
+- Code paths, filenames, and English identifiers are easy for an LLM to "correct" into plausible but wrong forms. Use screen OCR, hotwords, or a manual check for those terms.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
 
 ### If LLM Test Fails
@@ -125,6 +127,8 @@ Recommendations:
 | Model not found or forbidden | Model name spelling and account permission |
 | Connection failure | Base URL belongs to the configured provider, network/proxy is usable |
 | Test passes but polishing does not run | Polishing is enabled and text length reaches `min_chars` |
+| Test passes but real polishing is slow | Rerun the thinking adapter test and confirm thinking/reasoning is disabled or minimized |
+| Code paths are often rewritten | Enable screen OCR, or add common paths, filenames, and field names to hotwords |
 
 If LLM polishing fails during input, VoxType keeps the original ASR text and still tries to copy/paste it.
 

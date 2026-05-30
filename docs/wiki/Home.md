@@ -48,6 +48,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 - Right Alt and middle mouse triggers: off by default.
 - Recent context and automatic hotword candidates: off by default.
 - Screen OCR context: on by default, current display by default, no persisted OCR text.
+- Optional LLM polishing: off by default; when enabled, thinking/reasoning is disabled with provider-specific adapters where supported.
 - Local silence fallback: continuous low volume stops recording after 30 seconds by default, with a `0.03` threshold.
 - Doubao server endpointing example value: `end_window_size = 800`.
 - Update prompts provide an "Update now" action when a new installer is available.
@@ -74,3 +75,7 @@ Yes for the main speech-to-text workflow. Doubao ASR App Key and Access Key are 
 ### Is LLM polishing required?
 
 No. LLM polishing is optional. VoxType can run as a pure ASR voice input tool, and only calls an OpenAI-compatible LLM when polishing is enabled and configured.
+
+### Which LLM model should I use?
+
+Start with `qwen3.7-max` on DashScope/Bailian for daily polishing, or `qwen3.6-flash-2026-04-16` when latency matters more than edge-case accuracy. Rerun the LLM test after changing Base URL or model so VoxType can save the fastest thinking adapter. For code paths, filenames, and identifiers, prefer screen OCR, hotwords, or a manual check instead of relying on a model switch alone.

@@ -118,7 +118,8 @@ Tips:
 
 - Short messages often do not need polishing.
 - Documentation, meeting notes, and requirement drafts benefit more from polishing.
-- If polishing is slow, rerun the thinking adapter test, disable thinking, raise `min_chars`, or choose a faster model.
+- If polishing is slow, rerun the thinking adapter test, disable thinking, raise `min_chars`, or choose a faster model. Raising timeout can reduce failures, but it does not make the model faster.
+- If the text contains code paths, filenames, log fields, or English identifiers, let screen OCR and hotwords provide the exact spelling, and still check the final text manually.
 
 ## 8. Hotwords, Scene Notes, and Prompts
 

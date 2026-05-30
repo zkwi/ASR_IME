@@ -157,6 +157,20 @@ Try:
 - Increase `min_chars` so short text skips polishing.
 - Use a faster model.
 - Increase timeout only for slow networks or models; timeout does not make polishing faster.
+- If the same model is faster in another client, compare whether thinking/reasoning is disabled, whether the Base URL is the same, and whether that client uses a small output limit.
+
+See [LLM polishing model test](../audits/2026-05-28-llm-polishing-model-test.md), which now includes a 2026-05-30 retest showing how providers and thinking parameters affect latency.
+
+## Technical Paths or Filenames Are Rewritten
+
+LLMs try to turn ASR text into plausible polished text. Code paths, filenames, log fields, and English identifiers are the easiest terms to rewrite incorrectly.
+
+Try:
+
+- Enable screen OCR so exact paths from the current window or display can be used as ASR and optional LLM reference information.
+- Add common paths, filenames, product names, and field names to hotwords.
+- Manually check output that contains paths, commands, or log fields.
+- Do not rely on switching to one model alone; the current retest found that several models can rewrite technical paths.
 
 ## Hotwords Do Not Help Much
 
