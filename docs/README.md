@@ -27,6 +27,7 @@
 - LLM 润色模型测试：[2026-05-28 LLM 润色模型测试记录](audits/2026-05-28-llm-polishing-model-test.md)，含 2026-05-30 基于当前简化 prompt 和 `thinking_strategy` 的修正复测。
 - LLM 文档同步审计：[2026-05-30 LLM 文档同步审计](audits/2026-05-30-llm-docs-sync-audit.md)
 - LLM Prompt 拼装优化审计：[2026-05-30 LLM Prompt 拼装优化审计](audits/2026-05-30-llm-prompt-assembly-audit.md)
+- LLM 长文本提示词优化审计：[2026-05-30 LLM 长文本提示词优化审计](audits/2026-05-30-llm-length-aware-prompt-audit.md)
 - 设计和优化计划：[docs/plans/](plans/)
 - 豆包流式 ASR 参考：[docs/豆包流式语音识别参考文档.md](豆包流式语音识别参考文档.md)
 
