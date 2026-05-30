@@ -154,7 +154,7 @@ thinking_strategy = "auto"
 
 大模型配置走 OpenAI 兼容接口，默认示例使用阿里云百炼/DashScope 的北京地域地址 `https://dashscope.aliyuncs.com/compatible-mode/v1`。Base URL 可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址；例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。`api_key` 必须来自同一个大模型服务商，`model` 必须是该账号和地域可用的模型名。只需要语音识别时可以完全不配置大模型；开启润色后，短文本默认低于 `min_chars` 不会调用大模型，以减少延迟。达到最小字数的最终识别文本会发送到你配置的大模型服务；用户词典、场景与产品偏好、屏幕 OCR 和可选最近上下文会作为参考信息追加。最近上下文进入大模型默认关闭，只有 `[context].enable_recent_context` 和 `[llm_post_edit].use_recent_context` 同时开启时才会发送，且会限制为最近几段中的约 600 字。`thinking_strategy = "auto"` 会按服务商选择关闭思考/推理的兼容写法，例如 DashScope 使用 `enable_thinking=false`，DeepSeek 和 MiMo 使用 `thinking.type=disabled`，OpenRouter 使用较低 reasoning effort；API配置页的大模型测试会尝试候选策略并保存最快的成功结果。测试不会读取本地最近上下文正文。
 
-DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](docs/audits/2026-05-28-llm-polishing-model-test.md)：日常优先考虑 `qwen3.7-max`，低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，技术文本较多可考虑 `deepseek-v4-pro`。
+DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](docs/audits/2026-05-28-llm-polishing-model-test.md)，其中 2026-05-30 复测修正了旧结论：日常仍优先考虑 `qwen3.7-max`；低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，但它对提示词样式文本和技术路径更容易改偏；不要仅因技术文本切换到 `deepseek-v4-pro`，当前简化 prompt 下它也会改写代码路径，路径、文件名和标识符应优先依赖屏幕 OCR、热词或人工确认。
 
 大模型测试常见失败原因：
 

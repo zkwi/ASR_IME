@@ -114,7 +114,7 @@ API配置页还提供 **识别语言**。默认值是 `zh-CN`；如果经常输�
 
 默认示例使用阿里云百炼/DashScope 的 OpenAI 兼容接口。北京地域 Base URL 是 `https://dashscope.aliyuncs.com/compatible-mode/v1`；如果使用新加坡、美国或其他地域，需要同步更换 Base URL、API Key 和模型权限，不要只改其中一个字段。DeepSeek 等标准 OpenAI 兼容服务可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址，例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。
 
-DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../audits/2026-05-28-llm-polishing-model-test.md)。这轮测试中，日常优先考虑 `qwen3.7-max`，低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，技术文本较多可考虑 `deepseek-v4-pro`。实际能否调用取决于当前账号和地域权限。
+DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../audits/2026-05-28-llm-polishing-model-test.md)。其中 2026-05-30 复测修正了旧结论：日常仍优先考虑 `qwen3.7-max`；低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，但它对提示词样式文本和技术路径更容易改偏；不要仅因技术文本切换到 `deepseek-v4-pro`，当前简化 prompt 下它也会改写代码路径。实际能否调用取决于当前账号和地域权限。
 
 性能建议：
 

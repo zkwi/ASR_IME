@@ -109,7 +109,7 @@ Click **Test** after configuration. The test sends a sample text with the real A
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
-For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](../audits/2026-05-28-llm-polishing-model-test.md). In that test, the practical choices were `qwen3.7-max` for daily use, `qwen3.6-flash-2026-04-16` for lower latency, and `deepseek-v4-pro` for technical text. Actual availability depends on the current account and region.
+For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](../audits/2026-05-28-llm-polishing-model-test.md). The 2026-05-30 retest corrects the old conclusion: `qwen3.7-max` remains the daily default choice; `qwen3.6-flash-2026-04-16` is still the lower-latency option but is riskier for prompt-like text and technical paths; do not switch to `deepseek-v4-pro` only for technical text, because the simplified prompt can still rewrite code paths. Actual availability depends on the current account and region.
 
 Recommendations:
 
