@@ -153,7 +153,7 @@ Notes:
 
 Try:
 
-- Disable thinking.
+- Rerun the LLM test in API Config so VoxType saves the fastest thinking adapter, and keep thinking disabled.
 - Increase `min_chars` so short text skips polishing.
 - Use a faster model.
 - Increase timeout only for slow networks or models; timeout does not make polishing faster.

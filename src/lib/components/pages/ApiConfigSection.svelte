@@ -39,6 +39,15 @@
     { value: "yue-CN", labelKey: "asrLanguageYueCN" },
   ];
 
+  const llmThinkingStrategyOptions: Array<{ value: string; labelKey: CopyKey }> = [
+    { value: "auto", labelKey: "llmThinkingStrategyAuto" },
+    { value: "dashscope_enable_thinking", labelKey: "llmThinkingStrategyDashscope" },
+    { value: "thinking_disabled", labelKey: "llmThinkingStrategyDisabledObject" },
+    { value: "openrouter_reasoning_low", labelKey: "llmThinkingStrategyOpenRouterLow" },
+    { value: "openrouter_reasoning_minimal", labelKey: "llmThinkingStrategyOpenRouterMinimal" },
+    { value: "omit", labelKey: "llmThinkingStrategyOmit" },
+  ];
+
   type Props = {
     config: AppConfig;
     t: Translate;
@@ -266,6 +275,16 @@
             <input bind:value={config.llm_post_edit.model} />
             {#if fieldError("llm_post_edit.model")}<small class="field-error">{fieldError("llm_post_edit.model")}</small>{/if}
             <small class="field-hint">{t("llmApiModelHint")}</small>
+          </label>
+          <label class:field-invalid={Boolean(fieldError("llm_post_edit.thinking_strategy"))}>
+            <span>{t("llmThinkingStrategy")}</span>
+            <select bind:value={config.llm_post_edit.thinking_strategy}>
+              {#each llmThinkingStrategyOptions as option}
+                <option value={option.value}>{t(option.labelKey)}</option>
+              {/each}
+            </select>
+            {#if fieldError("llm_post_edit.thinking_strategy")}<small class="field-error">{fieldError("llm_post_edit.thinking_strategy")}</small>{/if}
+            <small class="field-hint">{t("llmThinkingStrategyHint")}</small>
           </label>
         </div>
         <button class="test-button" type="button" onclick={onTestLlmConfig} disabled={testingLlm}>

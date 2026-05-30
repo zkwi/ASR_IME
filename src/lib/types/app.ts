@@ -47,7 +47,7 @@ export type InstallUpdateResult = {
   message: string;
 };
 
-export type ConnectionTestResult = { message: string; elapsed_ms?: number };
+export type ConnectionTestResult = { message: string; elapsed_ms?: number; thinking_strategy?: string };
 export type DiagnosticReport = { text: string };
 export type ScreenContextTestResult = {
   available_languages: string[];
@@ -255,6 +255,7 @@ export type AppConfig = {
     model: string;
     timeout_seconds: number;
     enable_thinking: boolean;
+    thinking_strategy: string;
     system_prompt: string;
     user_prompt_template: string;
   };

@@ -110,7 +110,7 @@ Defaults:
 
 - ASR only unless LLM polishing is enabled.
 - Short text below `min_chars` is not polished.
-- Thinking is explicitly disabled where supported to reduce latency.
+- Thinking is disabled with provider-specific adapters where supported, and the LLM test saves the fastest successful adapter.
 - When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information.
 - Recent context for AI is off by default. It is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
 
@@ -118,7 +118,7 @@ Tips:
 
 - Short messages often do not need polishing.
 - Documentation, meeting notes, and requirement drafts benefit more from polishing.
-- If polishing is slow, disable thinking, raise `min_chars`, or choose a faster model.
+- If polishing is slow, rerun the thinking adapter test, disable thinking, raise `min_chars`, or choose a faster model.
 
 ## 8. Hotwords, Scene Notes, and Prompts
 
@@ -242,7 +242,7 @@ Updates:
 | --- | --- |
 | Faster real-time captions | Keep the internal 200ms audio segments and ensure network stability |
 | Faster final output | Disable LLM polishing or increase `min_chars` |
-| Faster polishing | Disable thinking and choose a faster model |
+| Faster polishing | Rerun the thinking adapter test, keep thinking disabled, and choose a faster model |
 | More reliable paste | Keep clipboard restore enabled and increase restore delay if needed |
 | Fewer accidental triggers | Keep right Alt and middle mouse disabled |
 | Better proper nouns | Maintain hotwords, scene notes, and screen OCR context |

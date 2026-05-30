@@ -11,6 +11,7 @@ const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 use crate::config_validation::format_validation_errors;
 pub use crate::config_validation::validate_config;
 use crate::error;
+use crate::llm_request_adapter::STRATEGY_AUTO;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -218,6 +219,8 @@ pub struct LlmPostEditConfig {
     pub timeout_seconds: f64,
     #[serde(default)]
     pub enable_thinking: bool,
+    #[serde(default = "default_llm_thinking_strategy")]
+    pub thinking_strategy: String,
     #[serde(default = "default_llm_system_prompt")]
     pub system_prompt: String,
     #[serde(default = "default_user_prompt_template")]
@@ -422,6 +425,7 @@ impl Default for LlmPostEditConfig {
             model: default_llm_model(),
             timeout_seconds: default_llm_timeout(),
             enable_thinking: false,
+            thinking_strategy: default_llm_thinking_strategy(),
             system_prompt: default_llm_system_prompt(),
             user_prompt_template: default_user_prompt_template(),
         }
@@ -836,6 +840,9 @@ fn default_llm_model() -> String {
 fn default_llm_timeout() -> f64 {
     30.0
 }
+fn default_llm_thinking_strategy() -> String {
+    STRATEGY_AUTO.to_string()
+}
 fn default_llm_system_prompt() -> String {
     r#"你是 VoxType 的语音输入文本润色器。用户输入来自 ASR 识别，输出会直接粘贴到光标位置。
 
@@ -1017,6 +1024,7 @@ mod tests {
         config.auto_hotwords.max_history_chars = 999;
         config.auto_hotwords.max_candidates = 101;
         config.screen_context.capture_scope = "all_screens".to_string();
+        config.llm_post_edit.thinking_strategy = "reasoning_none".to_string();
 
         let errors = validate_config(&config).expect_err("invalid config should fail");
         let fields = errors
@@ -1042,6 +1050,7 @@ mod tests {
         assert!(fields.contains(&"auto_hotwords.max_history_chars"));
         assert!(fields.contains(&"auto_hotwords.max_candidates"));
         assert!(fields.contains(&"screen_context.capture_scope"));
+        assert!(fields.contains(&"llm_post_edit.thinking_strategy"));
     }
 
     #[test]
@@ -1065,6 +1074,7 @@ mod tests {
         config.llm_post_edit.base_url = "ftp://example.com".to_string();
         config.llm_post_edit.model = " ".to_string();
         config.llm_post_edit.user_prompt_template = "polish this".to_string();
+        config.llm_post_edit.thinking_strategy = "bad_strategy".to_string();
 
         let errors = validate_config(&config).expect_err("invalid llm config should fail");
         let fields = errors
@@ -1077,6 +1087,7 @@ mod tests {
         assert!(fields.contains(&"llm_post_edit.base_url"));
         assert!(fields.contains(&"llm_post_edit.model"));
         assert!(fields.contains(&"llm_post_edit.user_prompt_template"));
+        assert!(fields.contains(&"llm_post_edit.thinking_strategy"));
     }
 
     #[test]

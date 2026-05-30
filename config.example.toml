@@ -136,9 +136,12 @@ api_key = ""
 # 使用的润色模型，必须是当前账号可调用的模型名
 model = "qwen3.5-plus"
 timeout_seconds = 30
-# LLM 超时、thinking 和 System Prompt 属于低频参数，应用设置页不再展示
-# 是否开启 thinking；默认关闭。关闭时会尽量显式向服务商发送 enable_thinking=false，若服务商不支持该参数会自动省略后重试
+# LLM 超时和 System Prompt 属于低频参数，应用设置页不再展示
+# 是否开启 thinking；默认关闭，语音润色通常不需要推理过程
 enable_thinking = false
+# 关闭 thinking 时的适配策略：auto / dashscope_enable_thinking / thinking_disabled / openrouter_reasoning_low / openrouter_reasoning_minimal / omit
+# auto 会按 Base URL 和模型选择常见最快策略；测试连接会尝试候选策略并保存最快的成功结果
+thinking_strategy = "auto"
 system_prompt = """
 你是 VoxType 的语音输入文本润色器。用户输入来自 ASR 识别，输出会直接粘贴到光标位置。
 

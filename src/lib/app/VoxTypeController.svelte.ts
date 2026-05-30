@@ -732,10 +732,24 @@ export function createVoxTypeController() {
     try {
       const result = await safeInvoke<ConnectionTestResult>("test_llm_config", { config: clonePlain(config) });
       if (result) {
+        let savedStrategy = false;
+        if (
+          typeof result.thinking_strategy === "string" &&
+          result.thinking_strategy &&
+          config.llm_post_edit.thinking_strategy !== result.thinking_strategy
+        ) {
+          config.llm_post_edit.thinking_strategy = result.thinking_strategy;
+          savedStrategy = Boolean(await persistConfig({ enforceAuth: false, focusErrors: false }));
+        }
         statusMessage =
-          typeof result.elapsed_ms === "number"
-            ? t("llmTestSucceededWithLatency", { ms: formatNumber(result.elapsed_ms) })
-            : t("llmTestSucceeded");
+          typeof result.elapsed_ms === "number" && savedStrategy
+            ? t("llmTestSucceededWithLatencyAndStrategy", {
+                ms: formatNumber(result.elapsed_ms),
+                strategy: result.thinking_strategy ?? "",
+              })
+            : typeof result.elapsed_ms === "number"
+              ? t("llmTestSucceededWithLatency", { ms: formatNumber(result.elapsed_ms) })
+              : t("llmTestSucceeded");
         notifications.show(statusMessage, "success");
       } else if (statusMessage) {
         notifications.show(statusMessage, "error");

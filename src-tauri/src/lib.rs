@@ -11,6 +11,7 @@ mod hotword_generator;
 mod hotword_history;
 mod llm_endpoint;
 mod llm_post_edit;
+mod llm_request_adapter;
 mod main_window;
 mod overlay;
 mod protocol;
@@ -62,6 +63,8 @@ struct ConnectionTestResult {
     message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     elapsed_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thinking_strategy: Option<String>,
 }
 
 impl ConnectionTestResult {
@@ -69,13 +72,19 @@ impl ConnectionTestResult {
         Self {
             message: message.into(),
             elapsed_ms: None,
+            thinking_strategy: None,
         }
     }
 
-    fn with_elapsed_ms(message: impl Into<String>, elapsed_ms: u64) -> Self {
+    fn with_llm_result(
+        message: impl Into<String>,
+        elapsed_ms: u64,
+        thinking_strategy: impl Into<String>,
+    ) -> Self {
         Self {
             message: message.into(),
             elapsed_ms: Some(elapsed_ms),
+            thinking_strategy: Some(thinking_strategy.into()),
         }
     }
 }
@@ -362,12 +371,13 @@ async fn test_llm_config(config: AppConfig) -> Result<ConnectionTestResult, Stri
     match llm_post_edit::test_connection(&config).await {
         Ok(result) => {
             app_log::info(format!(
-                "大模型配置测试成功: elapsed_ms={}",
-                result.elapsed_ms
+                "大模型配置测试成功: elapsed_ms={}, thinking_strategy={}",
+                result.elapsed_ms, result.thinking_strategy
             ));
-            Ok(ConnectionTestResult::with_elapsed_ms(
+            Ok(ConnectionTestResult::with_llm_result(
                 "大模型测试成功，当前 API Key 可用。",
                 result.elapsed_ms,
+                result.thinking_strategy,
             ))
         }
         Err(err) => {
@@ -605,6 +615,7 @@ fn clear_usage_stats() -> Result<ConnectionTestResult, String> {
     Ok(ConnectionTestResult {
         message: "使用统计已清除。".to_string(),
         elapsed_ms: None,
+        thinking_strategy: None,
     })
 }
 
@@ -618,6 +629,7 @@ fn clear_recent_context() -> Result<ConnectionTestResult, String> {
     Ok(ConnectionTestResult {
         message: "最近上下文已清除。".to_string(),
         elapsed_ms: None,
+        thinking_strategy: None,
     })
 }
 
@@ -637,6 +649,7 @@ fn clear_hotword_history() -> Result<ConnectionTestResult, String> {
     Ok(ConnectionTestResult {
         message: "自动热词采集文本已清空。".to_string(),
         elapsed_ms: None,
+        thinking_strategy: None,
     })
 }
 

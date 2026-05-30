@@ -103,8 +103,9 @@ Open **API Config -> LLM API**:
 | Base URL | OpenAI-compatible endpoint; service root, `/v1` URL, and full `/chat/completions` URL are accepted |
 | API Key | Provider API key from the same platform/region as the Base URL |
 | Model | For example `qwen3.5-plus`; must be available to the current account |
+| Thinking adapter | Auto by default; the test tries candidate strategies and saves the fastest successful one |
 
-Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
+Click **Test** after configuration. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
@@ -112,7 +113,7 @@ For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](.
 
 Recommendations:
 
-- Thinking is explicitly disabled by default where supported because voice polishing is latency-sensitive.
+- Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; retest after changing Base URL or model.
 - Text shorter than `min_chars = 40` is not polished by default.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
 
@@ -232,6 +233,7 @@ api_key = ""
 model = "qwen3.5-plus"
 min_chars = 40
 enable_thinking = false
+thinking_strategy = "auto"
 ```
 
 Recording:

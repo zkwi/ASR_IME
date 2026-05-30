@@ -3,6 +3,10 @@ use crate::{
     config::{effective_hotwords, AppConfig},
     hotword_history,
     llm_endpoint::chat_completions_endpoint,
+    llm_request_adapter::{
+        apply_thinking_strategy, remove_thinking_controls,
+        should_retry_without_unsupported_thinking,
+    },
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -192,23 +196,22 @@ async fn call_openai_compatible_for_hotwords(
         model,
         system_prompt,
         user_prompt,
-        thinking_flag(base_url, settings.enable_thinking),
+        base_url,
+        settings.enable_thinking,
+        &settings.thinking_strategy,
         hotword_max_tokens(max_candidates),
     );
     let response = send_hotword_request(&client, base_url, api_key, &body)
         .await
         .map_err(|err| friendly_generation_error(&err))?;
-    let thinking = body.get("enable_thinking").and_then(Value::as_bool);
     match handle_generation_response(response).await {
         Ok(content) => Ok(content),
-        Err(err) if should_retry_without_disabled_thinking(base_url, thinking, &err) => {
+        Err(err) if should_retry_without_unsupported_thinking(base_url, &body, &err) => {
             app_log::info(
-                "LLM provider rejected enable_thinking=false for hotwords, retrying without it",
+                "LLM provider rejected disabled thinking controls for hotwords, retrying without them",
             );
             let mut retry_body = body.clone();
-            if let Some(object) = retry_body.as_object_mut() {
-                object.remove("enable_thinking");
-            }
+            remove_thinking_controls(&mut retry_body);
             let response = send_hotword_request(&client, base_url, api_key, &retry_body)
                 .await
                 .map_err(|err| friendly_generation_error(&err))?;
@@ -239,7 +242,9 @@ fn chat_body(
     model: &str,
     system_prompt: &str,
     user_prompt: &str,
-    enable_thinking: Option<bool>,
+    base_url: &str,
+    enable_thinking: bool,
+    thinking_strategy: &str,
     max_tokens: u32,
 ) -> Value {
     let mut body = json!({
@@ -251,9 +256,13 @@ fn chat_body(
             "temperature": 0.2,
             "max_tokens": max_tokens
     });
-    if let Some(enable_thinking) = enable_thinking {
-        body["enable_thinking"] = json!(enable_thinking);
-    }
+    apply_thinking_strategy(
+        &mut body,
+        base_url,
+        model,
+        enable_thinking,
+        thinking_strategy,
+    );
     body
 }
 
@@ -495,31 +504,6 @@ fn response_was_truncated(value: &Value) -> bool {
         .and_then(Value::as_str)
         .map(|reason| matches!(reason, "length" | "max_tokens"))
         .unwrap_or(false)
-}
-
-fn thinking_flag(_base_url: &str, enable_thinking: bool) -> Option<bool> {
-    Some(enable_thinking)
-}
-
-fn should_retry_without_disabled_thinking(
-    base_url: &str,
-    enable_thinking: Option<bool>,
-    error: &str,
-) -> bool {
-    if enable_thinking != Some(false) || base_url.contains("dashscope.aliyuncs.com") {
-        return false;
-    }
-    let lower = error.to_ascii_lowercase();
-    lower.contains("enable_thinking")
-        && !lower.contains("restricted to true")
-        && (lower.contains("unknown")
-            || lower.contains("unrecognized")
-            || lower.contains("unsupported")
-            || lower.contains("not support")
-            || lower.contains("unexpected")
-            || lower.contains("extra")
-            || lower.contains("additional")
-            || lower.contains("invalid_request_error"))
 }
 
 fn generation_error_for_user(error: &str) -> String {

@@ -107,6 +107,7 @@ export const fallbackConfig: AppConfig = {
     model: "qwen3.5-plus",
     timeout_seconds: 30,
     enable_thinking: false,
+    thinking_strategy: "auto",
     system_prompt: defaultLlmSystemPrompt,
     user_prompt_template: defaultLlmUserPromptTemplate,
   },

@@ -2,6 +2,10 @@ use crate::{
     app_log,
     config::{effective_hotwords, AppConfig},
     llm_endpoint::chat_completions_endpoint,
+    llm_request_adapter::{
+        apply_thinking_strategy, remove_thinking_controls,
+        should_retry_without_unsupported_thinking, thinking_strategy_candidates, STRATEGY_OMIT,
+    },
 };
 use serde_json::{json, Value};
 use std::time::{Duration, Instant};
@@ -18,6 +22,12 @@ pub struct PolishOutcome {
 
 pub struct LlmConnectionTestResult {
     pub elapsed_ms: u64,
+    pub thinking_strategy: String,
+}
+
+struct ChatJsonResult {
+    value: Value,
+    retried_without_thinking: bool,
 }
 
 pub fn should_polish(config: &AppConfig, text: &str) -> bool {
@@ -191,22 +201,54 @@ pub async fn test_connection(config: &AppConfig) -> Result<LlmConnectionTestResu
         .timeout(timeout)
         .build()
         .map_err(|err| format!("创建大模型测试客户端失败: {}", err))?;
-    let body = connection_test_chat_body(config, base_url, model);
-    let started_at = Instant::now();
-    let value = post_chat_json(&client, base_url, api_key, &body)
-        .await
-        .map_err(|err| friendly_llm_test_error(&err))?;
-    if !has_connection_test_output(&value) {
-        return Err(
-            "大模型已响应，但测试返回空内容；请检查模型名称，或关闭思考模式后再测试。".to_string(),
-        );
+    let candidates = thinking_strategy_candidates(base_url, model, &settings.thinking_strategy);
+    let mut best_result: Option<LlmConnectionTestResult> = None;
+    let mut last_error = None;
+    for candidate in candidates {
+        let body = connection_test_chat_body(config, base_url, model, candidate);
+        let started_at = Instant::now();
+        match post_chat_json(&client, base_url, api_key, &body).await {
+            Ok(result) if has_connection_test_output(&result.value) => {
+                let elapsed_ms = elapsed_millis(started_at);
+                let thinking_strategy = if result.retried_without_thinking {
+                    STRATEGY_OMIT.to_string()
+                } else {
+                    candidate.to_string()
+                };
+                app_log::info(format!(
+                    "LLM connection strategy passed: strategy={} elapsed_ms={}",
+                    thinking_strategy, elapsed_ms
+                ));
+                let next = LlmConnectionTestResult {
+                    elapsed_ms,
+                    thinking_strategy,
+                };
+                if best_result
+                    .as_ref()
+                    .is_none_or(|current| next.elapsed_ms < current.elapsed_ms)
+                {
+                    best_result = Some(next);
+                }
+            }
+            Ok(_) => {
+                last_error = Some(
+                    "大模型已响应，但测试返回空内容；请检查模型名称，或关闭思考模式后再测试。"
+                        .to_string(),
+                );
+            }
+            Err(err) => {
+                last_error = Some(friendly_llm_test_error(&err));
+            }
+        }
     }
-    let elapsed_ms = elapsed_millis(started_at);
+    let Some(result) = best_result else {
+        return Err(last_error.unwrap_or_else(|| "大模型测试失败，请检查模型配置。".to_string()));
+    };
     app_log::info(format!(
-        "LLM connection test finished: elapsed_ms={}",
-        elapsed_ms
+        "LLM connection test finished: elapsed_ms={} thinking_strategy={}",
+        result.elapsed_ms, result.thinking_strategy
     ));
-    Ok(LlmConnectionTestResult { elapsed_ms })
+    Ok(result)
 }
 
 fn unchanged(text: &str) -> PolishOutcome {
@@ -239,11 +281,13 @@ async fn call_openai_compatible(
         model,
         &system_prompt_for_request(config),
         user_prompt,
-        thinking_flag(base_url, config.llm_post_edit.enable_thinking),
+        base_url,
+        config.llm_post_edit.enable_thinking,
+        &config.llm_post_edit.thinking_strategy,
         None,
     );
-    let value = post_chat_json(&client, base_url, api_key, &body).await?;
-    Ok(extract_message_content(&value))
+    let result = post_chat_json(&client, base_url, api_key, &body).await?;
+    Ok(extract_message_content(&result.value))
 }
 
 async fn post_chat_json(
@@ -251,19 +295,25 @@ async fn post_chat_json(
     base_url: &str,
     api_key: &str,
     body: &Value,
-) -> Result<Value, String> {
+) -> Result<ChatJsonResult, String> {
     let response = send_chat_request(client, base_url, api_key, body).await?;
-    let thinking = body.get("enable_thinking").and_then(Value::as_bool);
     match parse_chat_response(response).await {
-        Ok(value) => Ok(value),
-        Err(err) if should_retry_without_disabled_thinking(base_url, thinking, &err) => {
-            app_log::info("LLM provider rejected enable_thinking=false, retrying without it");
+        Ok(value) => Ok(ChatJsonResult {
+            value,
+            retried_without_thinking: false,
+        }),
+        Err(err) if should_retry_without_unsupported_thinking(base_url, body, &err) => {
+            app_log::info(
+                "LLM provider rejected disabled thinking controls, retrying without them",
+            );
             let mut retry_body = body.clone();
-            if let Some(object) = retry_body.as_object_mut() {
-                object.remove("enable_thinking");
-            }
+            remove_thinking_controls(&mut retry_body);
             let response = send_chat_request(client, base_url, api_key, &retry_body).await?;
-            parse_chat_response(response).await
+            let value = parse_chat_response(response).await?;
+            Ok(ChatJsonResult {
+                value,
+                retried_without_thinking: true,
+            })
         }
         Err(err) => Err(err),
     }
@@ -315,7 +365,9 @@ fn chat_body(
     model: &str,
     system_prompt: &str,
     user_prompt: &str,
-    enable_thinking: Option<bool>,
+    base_url: &str,
+    enable_thinking: bool,
+    thinking_strategy: &str,
     max_tokens: Option<u32>,
 ) -> Value {
     let mut body = json!({
@@ -325,16 +377,25 @@ fn chat_body(
             {"role": "user", "content": user_prompt}
         ]
     });
-    if let Some(enable_thinking) = enable_thinking {
-        body["enable_thinking"] = json!(enable_thinking);
-    }
+    apply_thinking_strategy(
+        &mut body,
+        base_url,
+        model,
+        enable_thinking,
+        thinking_strategy,
+    );
     if let Some(max_tokens) = max_tokens {
         body["max_tokens"] = json!(max_tokens);
     }
     body
 }
 
-fn connection_test_chat_body(config: &AppConfig, base_url: &str, model: &str) -> Value {
+fn connection_test_chat_body(
+    config: &AppConfig,
+    base_url: &str,
+    model: &str,
+    thinking_strategy: &str,
+) -> Value {
     let mut test_config = config.clone();
     test_config.llm_post_edit.use_recent_context = false;
     test_config.context.recent_context.clear();
@@ -344,38 +405,15 @@ fn connection_test_chat_body(config: &AppConfig, base_url: &str, model: &str) ->
         model,
         &system_prompt,
         &user_prompt,
-        thinking_flag(base_url, test_config.llm_post_edit.enable_thinking),
+        base_url,
+        test_config.llm_post_edit.enable_thinking,
+        thinking_strategy,
         Some(LLM_CONNECTION_TEST_MAX_TOKENS),
     )
 }
 
 fn elapsed_millis(started_at: Instant) -> u64 {
     started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
-}
-
-fn thinking_flag(_base_url: &str, enable_thinking: bool) -> Option<bool> {
-    Some(enable_thinking)
-}
-
-fn should_retry_without_disabled_thinking(
-    base_url: &str,
-    enable_thinking: Option<bool>,
-    error: &str,
-) -> bool {
-    if enable_thinking != Some(false) || base_url.contains("dashscope.aliyuncs.com") {
-        return false;
-    }
-    let lower = error.to_ascii_lowercase();
-    lower.contains("enable_thinking")
-        && !lower.contains("restricted to true")
-        && (lower.contains("unknown")
-            || lower.contains("unrecognized")
-            || lower.contains("unsupported")
-            || lower.contains("not support")
-            || lower.contains("unexpected")
-            || lower.contains("extra")
-            || lower.contains("additional")
-            || lower.contains("invalid_request_error"))
 }
 
 fn extract_message_content(value: &Value) -> String {
@@ -457,10 +495,13 @@ mod tests {
         build_polish_user_prompt, build_recent_context_reference, chat_body,
         connection_test_chat_body, extract_message_content, friendly_llm_error,
         friendly_llm_test_error, has_connection_test_output, should_polish,
-        should_retry_without_disabled_thinking, system_prompt_for_request, thinking_flag,
-        LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT, LLM_RECENT_CONTEXT_MAX_CHARS,
+        system_prompt_for_request, LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT,
+        LLM_RECENT_CONTEXT_MAX_CHARS,
     };
     use crate::config::{AppConfig, TextContext};
+    use crate::llm_request_adapter::{
+        STRATEGY_AUTO, STRATEGY_DASHSCOPE_ENABLE_THINKING, STRATEGY_THINKING_DISABLED,
+    };
     use serde_json::json;
 
     #[test]
@@ -473,14 +514,42 @@ mod tests {
     }
 
     #[test]
-    fn only_sends_thinking_flag_when_enabled() {
-        let body = chat_body("model", "system", "user", None, None);
-        assert!(body.get("enable_thinking").is_none());
-        let body = chat_body("model", "system", "user", Some(true), Some(8));
+    fn applies_provider_thinking_strategy_to_body() {
+        let body = chat_body(
+            "model",
+            "system",
+            "user",
+            "https://api.deepseek.com",
+            false,
+            STRATEGY_AUTO,
+            None,
+        );
+        assert_eq!(body["thinking"], json!({ "type": "disabled" }));
+
+        let body = chat_body(
+            "model",
+            "system",
+            "user",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            false,
+            STRATEGY_AUTO,
+            None,
+        );
         assert_eq!(
             body.get("enable_thinking").and_then(|item| item.as_bool()),
-            Some(true)
+            Some(false)
         );
+
+        let body = chat_body(
+            "model",
+            "system",
+            "user",
+            "https://api.openai.com/v1",
+            true,
+            STRATEGY_DASHSCOPE_ENABLE_THINKING,
+            Some(8),
+        );
+        assert_eq!(body["enable_thinking"], json!(true));
         assert_eq!(
             body.get("max_tokens").and_then(|item| item.as_u64()),
             Some(8)
@@ -522,7 +591,9 @@ mod tests {
             "model",
             "system",
             "user",
-            Some(true),
+            "https://api.openai.com/v1",
+            false,
+            STRATEGY_AUTO,
             Some(LLM_CONNECTION_TEST_MAX_TOKENS),
         );
 
@@ -537,7 +608,12 @@ mod tests {
     #[test]
     fn connection_test_uses_real_polish_prompt_and_sample_text() {
         let config = AppConfig::default();
-        let body = connection_test_chat_body(&config, "https://api.openai.com/v1", "test-model");
+        let body = connection_test_chat_body(
+            &config,
+            "https://api.openai.com/v1",
+            "test-model",
+            STRATEGY_THINKING_DISABLED,
+        );
         let messages = body
             .get("messages")
             .and_then(|item| item.as_array())
@@ -567,48 +643,16 @@ mod tests {
             text: "private recent voice input".to_string(),
         }];
 
-        let body = connection_test_chat_body(&config, "https://api.openai.com/v1", "test-model");
+        let body = connection_test_chat_body(
+            &config,
+            "https://api.openai.com/v1",
+            "test-model",
+            STRATEGY_THINKING_DISABLED,
+        );
         let user_prompt = body["messages"][1]["content"].as_str().unwrap_or_default();
 
         assert!(!user_prompt.contains("private recent voice input"));
         assert!(!user_prompt.contains("最近上下文参考信息开始"));
-    }
-
-    #[test]
-    fn thinking_flag_explicitly_disables_by_default() {
-        assert_eq!(
-            thinking_flag("https://dashscope.aliyuncs.com/compatible-mode/v1", false),
-            Some(false)
-        );
-        assert_eq!(
-            thinking_flag("https://api.openai.com/v1", false),
-            Some(false)
-        );
-        assert_eq!(thinking_flag("https://api.openai.com/v1", true), Some(true));
-    }
-
-    #[test]
-    fn disabled_thinking_retry_only_for_unsupported_parameter_errors() {
-        assert!(should_retry_without_disabled_thinking(
-            "https://api.openai.com/v1",
-            Some(false),
-            "LLM 返回状态码: 400; Unrecognized request argument supplied: enable_thinking"
-        ));
-        assert!(!should_retry_without_disabled_thinking(
-            "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            Some(false),
-            "LLM 返回状态码: 400; Unrecognized request argument supplied: enable_thinking"
-        ));
-        assert!(!should_retry_without_disabled_thinking(
-            "https://api.openai.com/v1",
-            Some(false),
-            "The value of the enable_thinking parameter is restricted to True"
-        ));
-        assert!(!should_retry_without_disabled_thinking(
-            "https://api.openai.com/v1",
-            Some(true),
-            "Unrecognized request argument supplied: enable_thinking"
-        ));
     }
 
     #[test]

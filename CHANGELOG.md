@@ -6,6 +6,25 @@
 
 ## [未发布]
 
+## [0.1.85] - 2026-05-30
+
+### 新增
+
+- 大模型润色新增 `thinking_strategy` 思考适配配置，默认 `auto`；可按服务商选择 DashScope `enable_thinking=false`、DeepSeek/MiMo `thinking.type=disabled`、OpenRouter 低 reasoning effort 或不发送思考字段。
+- API 配置页新增“思考适配”选择项；测试大模型连接时会尝试候选关闭策略，选择耗时最短的成功结果并保存到配置。
+
+### 改进
+
+- 实际润色和自动热词生成共用同一套 LLM 请求适配逻辑，避免不同链路对 thinking/reasoning 字段处理不一致。
+- 非兼容服务商拒绝关闭思考字段时，会自动省略相关字段后重试，减少因未知参数导致的失败。
+- 文档、配置模板、Wiki 和三语言文案同步说明思考适配策略，以及更换 Base URL 或模型后应重新测试。
+
+### 审计
+
+- 本次改动影响 LLM 请求参数、LLM 连接测试、自动热词生成请求参数、配置结构、API 配置页、三语言文案、配置样例、README、Wiki 草稿、版本元数据和发布审计记录。
+- `npm run ai:release-check` 和 `npx tauri build` 均通过；Rust 审计仅报告当前 Tauri 依赖链中已允许的上游 warnings。
+- 不改默认大模型提示词，不新增全局 `max_tokens` 限制，不改 ASR 请求协议、空识别失败态、LLM 润色触发条件、剪贴板输出、热键默认值、托盘行为、统计正文记录或日志脱敏策略。
+
 ## [0.1.84] - 2026-05-30
 
 ### 改进

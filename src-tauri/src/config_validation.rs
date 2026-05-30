@@ -1,4 +1,5 @@
 use crate::config::{AppConfig, ConfigValidationError};
+use crate::llm_request_adapter::is_valid_thinking_strategy;
 
 /// 校验用户配置文件中会影响主链路的字段。
 ///
@@ -236,6 +237,13 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         10_000,
         "大模型最少润色字数需在 0 到 10000 之间。",
     );
+    if !is_valid_thinking_strategy(&config.llm_post_edit.thinking_strategy) {
+        push_validation_error(
+            &mut errors,
+            "llm_post_edit.thinking_strategy",
+            "思考模式适配策略只能选择 auto、dashscope_enable_thinking、thinking_disabled、openrouter_reasoning_low、openrouter_reasoning_minimal 或 omit。",
+        );
+    }
     if config.llm_post_edit.enabled {
         if config.llm_post_edit.api_key.trim().is_empty() {
             push_validation_error(
