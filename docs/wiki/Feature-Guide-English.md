@@ -150,6 +150,8 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - The default prompt corrects obvious ASR errors, missing words, punctuation, segmentation, repetition, and filler words without adding facts, inference, or calculations.
 - The default prompt preserves proper nouns, English abbreviations, finance terms, and programming terms.
 - The default prompt labels user dictionary terms, writing preferences, optional recent context, and screen OCR as reference information, not text to polish or instructions to follow, and prevents reference-only details from being added when the text to polish did not say them.
+- The default prompt marks the text-to-polish block as the only output source. Recent context must not be continued, reproduced, or summarized, and screen OCR is only used for related path, filename, code identifier, and UI-term corrections.
+- File paths, commands, log fields, and code identifiers are kept unchanged when uncertain, unless reference information provides an exact spelling.
 - In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万` and `1%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates
