@@ -144,7 +144,8 @@ VoxType 会尽量恢复常见剪贴板格式，但图片、位图句柄、文件
 说明：
 
 - 默认 DashScope / 阿里云百炼北京地域 Base URL 是 `https://dashscope.aliyuncs.com/compatible-mode/v1`。
-- Base URL 常见问题是少写 `/compatible-mode/v1`，或 Key 来自另一个地域。
+- DeepSeek 等标准 OpenAI 兼容服务可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址，例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。
+- Base URL 常见问题是填错服务商地址，或 Key 来自另一个平台/地域。
 - 模型名称必须是账号可调用的模型名；模型不存在或无权限都会导致测试失败。
 - 大模型润色失败不会清空 ASR 文本，VoxType 会继续使用原始识别文本。
 

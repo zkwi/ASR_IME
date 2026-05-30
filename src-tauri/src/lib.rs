@@ -9,6 +9,7 @@ mod error;
 mod hotkey;
 mod hotword_generator;
 mod hotword_history;
+mod llm_endpoint;
 mod llm_post_edit;
 mod main_window;
 mod overlay;

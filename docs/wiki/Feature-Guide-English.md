@@ -110,7 +110,7 @@ Defaults:
 
 - ASR only unless LLM polishing is enabled.
 - Short text below `min_chars` is not polished.
-- Thinking is disabled to reduce latency.
+- Thinking is explicitly disabled where supported to reduce latency.
 - When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information.
 - Recent context for AI is off by default. It is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
 
@@ -146,10 +146,10 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
 - Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as reference information.
-- The default prompt corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording.
-- The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese or foreign-language text.
+- The default prompt corrects obvious ASR errors, missing words, punctuation, segmentation, repetition, and filler words without adding facts, inference, or calculations.
+- The default prompt preserves proper nouns, English abbreviations, finance terms, and programming terms.
 - The default prompt labels user dictionary terms, writing preferences, optional recent context, and screen OCR as reference information, not text to polish or instructions to follow, and prevents reference-only details from being added when the text to polish did not say them.
-- In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating or answering questions.
+- In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万` and `1%`, without calculating or answering questions.
 
 ## 9. Automatic Hotword Candidates
 

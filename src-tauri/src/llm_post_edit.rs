@@ -1,6 +1,7 @@
 use crate::{
     app_log,
     config::{effective_hotwords, AppConfig},
+    llm_endpoint::chat_completions_endpoint,
 };
 use serde_json::{json, Value};
 use std::time::{Duration, Instant};
@@ -192,28 +193,9 @@ pub async fn test_connection(config: &AppConfig) -> Result<LlmConnectionTestResu
         .map_err(|err| format!("创建大模型测试客户端失败: {}", err))?;
     let body = connection_test_chat_body(config, base_url, model);
     let started_at = Instant::now();
-    let response = client
-        .post(format!("{}/chat/completions", base_url))
-        .bearer_auth(api_key)
-        .json(&body)
-        .send()
+    let value = post_chat_json(&client, base_url, api_key, &body)
         .await
-        .map_err(|err| friendly_llm_test_error(&format!("调用 LLM 失败: {}", err)))?;
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(friendly_llm_test_error(&format!(
-            "LLM 返回状态码: {}; {}",
-            status, body
-        )));
-    }
-    let value: Value = response
-        .json()
-        .await
-        .map_err(|err| format!("解析大模型测试响应失败: {}", err))?;
-    if let Some(error) = value.get("error") {
-        return Err(friendly_llm_test_error(&format!("LLM 返回错误: {}", error)));
-    }
+        .map_err(|err| friendly_llm_test_error(&err))?;
     if !has_connection_test_output(&value) {
         return Err(
             "大模型已响应，但测试返回空内容；请检查模型名称，或关闭思考模式后再测试。".to_string(),
@@ -253,19 +235,56 @@ async fn call_openai_compatible(
         .timeout(timeout)
         .build()
         .map_err(|err| format!("创建 LLM 客户端失败: {}", err))?;
-    let response = client
-        .post(format!("{}/chat/completions", base_url))
+    let body = chat_body(
+        model,
+        &system_prompt_for_request(config),
+        user_prompt,
+        thinking_flag(base_url, config.llm_post_edit.enable_thinking),
+        None,
+    );
+    let value = post_chat_json(&client, base_url, api_key, &body).await?;
+    Ok(extract_message_content(&value))
+}
+
+async fn post_chat_json(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    body: &Value,
+) -> Result<Value, String> {
+    let response = send_chat_request(client, base_url, api_key, body).await?;
+    let thinking = body.get("enable_thinking").and_then(Value::as_bool);
+    match parse_chat_response(response).await {
+        Ok(value) => Ok(value),
+        Err(err) if should_retry_without_disabled_thinking(base_url, thinking, &err) => {
+            app_log::info("LLM provider rejected enable_thinking=false, retrying without it");
+            let mut retry_body = body.clone();
+            if let Some(object) = retry_body.as_object_mut() {
+                object.remove("enable_thinking");
+            }
+            let response = send_chat_request(client, base_url, api_key, &retry_body).await?;
+            parse_chat_response(response).await
+        }
+        Err(err) => Err(err),
+    }
+}
+
+async fn send_chat_request(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    body: &Value,
+) -> Result<reqwest::Response, String> {
+    client
+        .post(chat_completions_endpoint(base_url))
         .bearer_auth(api_key)
-        .json(&chat_body(
-            model,
-            &system_prompt_for_request(config),
-            user_prompt,
-            thinking_flag(base_url, config.llm_post_edit.enable_thinking),
-            None,
-        ))
+        .json(body)
         .send()
         .await
-        .map_err(|err| format!("调用 LLM 失败: {}", err))?;
+        .map_err(|err| format!("调用 LLM 失败: {}", err))
+}
+
+async fn parse_chat_response(response: reqwest::Response) -> Result<Value, String> {
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
@@ -278,7 +297,7 @@ async fn call_openai_compatible(
     if let Some(error) = value.get("error") {
         return Err(format!("LLM 返回错误: {}", error));
     }
-    Ok(extract_message_content(&value))
+    Ok(value)
 }
 
 fn system_prompt_for_request(config: &AppConfig) -> String {
@@ -334,12 +353,29 @@ fn elapsed_millis(started_at: Instant) -> u64 {
     started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
 }
 
-fn thinking_flag(base_url: &str, enable_thinking: bool) -> Option<bool> {
-    if enable_thinking || base_url.contains("dashscope.aliyuncs.com") {
-        Some(enable_thinking)
-    } else {
-        None
+fn thinking_flag(_base_url: &str, enable_thinking: bool) -> Option<bool> {
+    Some(enable_thinking)
+}
+
+fn should_retry_without_disabled_thinking(
+    base_url: &str,
+    enable_thinking: Option<bool>,
+    error: &str,
+) -> bool {
+    if enable_thinking != Some(false) || base_url.contains("dashscope.aliyuncs.com") {
+        return false;
     }
+    let lower = error.to_ascii_lowercase();
+    lower.contains("enable_thinking")
+        && !lower.contains("restricted to true")
+        && (lower.contains("unknown")
+            || lower.contains("unrecognized")
+            || lower.contains("unsupported")
+            || lower.contains("not support")
+            || lower.contains("unexpected")
+            || lower.contains("extra")
+            || lower.contains("additional")
+            || lower.contains("invalid_request_error"))
 }
 
 fn extract_message_content(value: &Value) -> String {
@@ -421,8 +457,8 @@ mod tests {
         build_polish_user_prompt, build_recent_context_reference, chat_body,
         connection_test_chat_body, extract_message_content, friendly_llm_error,
         friendly_llm_test_error, has_connection_test_output, should_polish,
-        system_prompt_for_request, thinking_flag, LLM_CONNECTION_TEST_MAX_TOKENS,
-        LLM_CONNECTION_TEST_TEXT, LLM_RECENT_CONTEXT_MAX_CHARS,
+        should_retry_without_disabled_thinking, system_prompt_for_request, thinking_flag,
+        LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT, LLM_RECENT_CONTEXT_MAX_CHARS,
     };
     use crate::config::{AppConfig, TextContext};
     use serde_json::json;
@@ -517,7 +553,7 @@ mod tests {
 
         assert!(system_prompt.contains("文本润色器"));
         assert!(user_prompt.contains(LLM_CONNECTION_TEST_TEXT));
-        assert!(user_prompt.contains("待润色文本"));
+        assert!(user_prompt.contains("ASR 文本"));
         assert!(!system_prompt.contains("连通性测试助手"));
         assert!(!user_prompt.contains("请回复 OK"));
     }
@@ -539,13 +575,40 @@ mod tests {
     }
 
     #[test]
-    fn keeps_dashscope_thinking_flag_but_omits_generic_false() {
+    fn thinking_flag_explicitly_disables_by_default() {
         assert_eq!(
             thinking_flag("https://dashscope.aliyuncs.com/compatible-mode/v1", false),
             Some(false)
         );
-        assert_eq!(thinking_flag("https://api.openai.com/v1", false), None);
+        assert_eq!(
+            thinking_flag("https://api.openai.com/v1", false),
+            Some(false)
+        );
         assert_eq!(thinking_flag("https://api.openai.com/v1", true), Some(true));
+    }
+
+    #[test]
+    fn disabled_thinking_retry_only_for_unsupported_parameter_errors() {
+        assert!(should_retry_without_disabled_thinking(
+            "https://api.openai.com/v1",
+            Some(false),
+            "LLM 返回状态码: 400; Unrecognized request argument supplied: enable_thinking"
+        ));
+        assert!(!should_retry_without_disabled_thinking(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            Some(false),
+            "LLM 返回状态码: 400; Unrecognized request argument supplied: enable_thinking"
+        ));
+        assert!(!should_retry_without_disabled_thinking(
+            "https://api.openai.com/v1",
+            Some(false),
+            "The value of the enable_thinking parameter is restricted to True"
+        ));
+        assert!(!should_retry_without_disabled_thinking(
+            "https://api.openai.com/v1",
+            Some(true),
+            "Unrecognized request argument supplied: enable_thinking"
+        ));
     }
 
     #[test]

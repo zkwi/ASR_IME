@@ -2,6 +2,7 @@ use crate::{
     app_log,
     config::{effective_hotwords, AppConfig},
     hotword_history,
+    llm_endpoint::chat_completions_endpoint,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -187,20 +188,51 @@ async fn call_openai_compatible_for_hotwords(
         .timeout(timeout)
         .build()
         .map_err(|err| format!("创建自动热词生成客户端失败: {}", err))?;
-    let response = client
-        .post(format!("{}/chat/completions", base_url))
+    let body = chat_body(
+        model,
+        system_prompt,
+        user_prompt,
+        thinking_flag(base_url, settings.enable_thinking),
+        hotword_max_tokens(max_candidates),
+    );
+    let response = send_hotword_request(&client, base_url, api_key, &body)
+        .await
+        .map_err(|err| friendly_generation_error(&err))?;
+    let thinking = body.get("enable_thinking").and_then(Value::as_bool);
+    match handle_generation_response(response).await {
+        Ok(content) => Ok(content),
+        Err(err) if should_retry_without_disabled_thinking(base_url, thinking, &err) => {
+            app_log::info(
+                "LLM provider rejected enable_thinking=false for hotwords, retrying without it",
+            );
+            let mut retry_body = body.clone();
+            if let Some(object) = retry_body.as_object_mut() {
+                object.remove("enable_thinking");
+            }
+            let response = send_hotword_request(&client, base_url, api_key, &retry_body)
+                .await
+                .map_err(|err| friendly_generation_error(&err))?;
+            handle_generation_response(response)
+                .await
+                .map_err(|err| generation_error_for_user(&err))
+        }
+        Err(err) => Err(generation_error_for_user(&err)),
+    }
+}
+
+async fn send_hotword_request(
+    client: &reqwest::Client,
+    base_url: &str,
+    api_key: &str,
+    body: &Value,
+) -> Result<reqwest::Response, String> {
+    client
+        .post(chat_completions_endpoint(base_url))
         .bearer_auth(api_key)
-        .json(&chat_body(
-            model,
-            system_prompt,
-            user_prompt,
-            thinking_flag(base_url, settings.enable_thinking),
-            hotword_max_tokens(max_candidates),
-        ))
+        .json(body)
         .send()
         .await
-        .map_err(|err| friendly_generation_error(&format!("调用 LLM 失败: {}", err)))?;
-    handle_generation_response(response).await
+        .map_err(|err| format!("调用 LLM 失败: {}", err))
 }
 
 fn chat_body(
@@ -229,20 +261,14 @@ async fn handle_generation_response(response: reqwest::Response) -> Result<Strin
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(friendly_generation_error(&format!(
-            "LLM 返回状态码: {}; {}",
-            status, body
-        )));
+        return Err(format!("LLM 返回状态码: {}; {}", status, body));
     }
     let value: Value = response
         .json()
         .await
         .map_err(|err| format!("解析自动热词生成响应失败: {}", err))?;
     if let Some(error) = value.get("error") {
-        return Err(friendly_generation_error(&format!(
-            "LLM 返回错误: {}",
-            error
-        )));
+        return Err(format!("LLM 返回错误: {}", error));
     }
     if response_was_truncated(&value) {
         return Err("大模型返回的热词候选被截断。请减少历史文本上限或候选数量后重试。".to_string());
@@ -471,11 +497,36 @@ fn response_was_truncated(value: &Value) -> bool {
         .unwrap_or(false)
 }
 
-fn thinking_flag(base_url: &str, enable_thinking: bool) -> Option<bool> {
-    if enable_thinking || base_url.contains("dashscope.aliyuncs.com") {
-        Some(enable_thinking)
+fn thinking_flag(_base_url: &str, enable_thinking: bool) -> Option<bool> {
+    Some(enable_thinking)
+}
+
+fn should_retry_without_disabled_thinking(
+    base_url: &str,
+    enable_thinking: Option<bool>,
+    error: &str,
+) -> bool {
+    if enable_thinking != Some(false) || base_url.contains("dashscope.aliyuncs.com") {
+        return false;
+    }
+    let lower = error.to_ascii_lowercase();
+    lower.contains("enable_thinking")
+        && !lower.contains("restricted to true")
+        && (lower.contains("unknown")
+            || lower.contains("unrecognized")
+            || lower.contains("unsupported")
+            || lower.contains("not support")
+            || lower.contains("unexpected")
+            || lower.contains("extra")
+            || lower.contains("additional")
+            || lower.contains("invalid_request_error"))
+}
+
+fn generation_error_for_user(error: &str) -> String {
+    if error.starts_with("LLM 返回") || error.starts_with("调用 LLM") {
+        friendly_generation_error(error)
     } else {
-        None
+        error.to_string()
     }
 }
 

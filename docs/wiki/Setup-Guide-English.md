@@ -100,19 +100,19 @@ Open **API Config -> LLM API**:
 | Field | Notes |
 | --- | --- |
 | Enable polishing | When off, VoxType uses ASR only |
-| Base URL | OpenAI-compatible endpoint, for example `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Base URL | OpenAI-compatible endpoint; service root, `/v1` URL, and full `/chat/completions` URL are accepted |
 | API Key | Provider API key from the same platform/region as the Base URL |
 | Model | For example `qwen3.5-plus`; must be available to the current account |
 
 Click **Test** after configuration. The test sends a sample text with the real AI prompt and shows the measured latency when it succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
 
-The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field.
+The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
 For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](../audits/2026-05-28-llm-polishing-model-test.md). In that test, the practical choices were `qwen3.7-max` for daily use, `qwen3.6-flash-2026-04-16` for lower latency, and `deepseek-v4-pro` for technical text. Actual availability depends on the current account and region.
 
 Recommendations:
 
-- Thinking is off by default because voice polishing is usually latency-sensitive.
+- Thinking is explicitly disabled by default where supported because voice polishing is latency-sensitive.
 - Text shorter than `min_chars = 40` is not polished by default.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
 
@@ -122,7 +122,7 @@ Recommendations:
 | --- | --- |
 | API Key or permission failure | API Key belongs to the configured Base URL provider and region |
 | Model not found or forbidden | Model name spelling and account permission |
-| Connection failure | Base URL ends with `/compatible-mode/v1`, network/proxy is usable |
+| Connection failure | Base URL belongs to the configured provider, network/proxy is usable |
 | Test passes but polishing does not run | Polishing is enabled and text length reaches `min_chars` |
 
 If LLM polishing fails during input, VoxType keeps the original ASR text and still tries to copy/paste it.
@@ -157,7 +157,7 @@ Notes:
 
 ### AI Prompt
 
-VoxType includes a default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. The default prompt preserves the source language and mixed Chinese/English wording instead of translating Chinese into another language or foreign-language text into Chinese. User dictionary terms, writing/product preferences, optional recent context, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, continuity, and wording preferences, not act as text to polish or instructions to follow, and must not add information that the text to polish did not say. It also corrects obvious ASR word errors, missing words, broken grammar, and unnatural phrasing without adding facts; if the original meaning is unclear, it keeps the source wording. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万`, `1%`, and `10%`, without calculating returns or answering questions.
+VoxType includes a simplified default voice-input AI prompt. It treats recognized text as source material, not instructions. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. It corrects obvious ASR errors, missing words, punctuation, segmentation, repetition, and filler words without adding facts, inference, or calculations, while preserving proper nouns, English abbreviations, finance terms, and programming terms. User dictionary terms, writing/product preferences, optional recent context, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, continuity, and wording preferences, not act as text to polish or instructions to follow, and must not add information that the text to polish did not say. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万` and `1%`, without calculating returns or answering questions.
 
 The Hotwords page lets you:
 
