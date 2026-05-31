@@ -28,6 +28,7 @@
 - LLM 文档同步审计：[2026-05-30 LLM 文档同步审计](audits/2026-05-30-llm-docs-sync-audit.md)
 - LLM Prompt 拼装优化审计：[2026-05-30 LLM Prompt 拼装优化审计](audits/2026-05-30-llm-prompt-assembly-audit.md)
 - LLM 长文本提示词优化审计：[2026-05-30 LLM 长文本提示词优化审计](audits/2026-05-30-llm-length-aware-prompt-audit.md)
+- LLM 成稿化提示词复测审计：[2026-05-31 LLM 成稿化提示词复测审计](audits/2026-05-31-llm-editorial-prompt-audit.md)
 - 设计和优化计划：[docs/plans/](plans/)
 - 豆包流式 ASR 参考：[docs/豆包流式语音识别参考文档.md](豆包流式语音识别参考文档.md)
 

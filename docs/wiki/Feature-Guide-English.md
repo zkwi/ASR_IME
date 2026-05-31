@@ -147,9 +147,9 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
 - Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as reference information.
-- The default prompt separates short and long text: short text gets light correction for ASR errors, punctuation, segmentation, and terms without expansion or reordering; long text may remove filler words, meaningless particles, repeated expressions, dead pauses, and correction trails, then reorder, split into paragraphs, or split into simple points by final intent when that improves clarity, without adding facts or changing intent.
+- The default prompt separates short and long text: short messages, one-line commands, and questions get light correction, with natural punctuation allowed but no expansion; long spoken notes, records, retrospectives, explanations, meeting notes, product feedback, and investment reviews are polished into publishable prose, usually as 2-4 natural paragraphs.
 - The default prompt preserves proper nouns, English abbreviations, finance terms, and programming terms.
-- The default prompt avoids adding Markdown, backticks, or other formatting markers unless the original text clearly needs code styling.
+- The default prompt preserves the original facts, judgment, intensity, and stance, and avoids adding headings, lists, Markdown, or backticks.
 - The default prompt labels user dictionary terms, writing preferences, optional recent context, and screen OCR as reference information, not text to polish or instructions to follow, and prevents reference-only details from being added when the text to polish did not say them.
 - The default prompt marks the text-to-polish block as the only output source. Recent context must not be continued, reproduced, or summarized, and screen OCR is only used for related path, filename, code identifier, and UI-term corrections.
 - File paths, commands, log fields, and code identifiers are kept unchanged when uncertain, unless reference information provides an exact spelling.
