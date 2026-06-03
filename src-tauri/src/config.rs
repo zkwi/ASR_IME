@@ -760,7 +760,7 @@ fn default_max_record_seconds() -> u64 {
     300
 }
 fn default_stop_grace_ms() -> u64 {
-    500
+    800
 }
 fn default_silence_auto_stop_seconds() -> u64 {
     30
@@ -935,6 +935,7 @@ mod tests {
         assert!(!config.triggers.middle_mouse_enabled);
         assert!(!config.triggers.right_alt_enabled);
         assert!(!config.audio.mute_system_volume_while_recording);
+        assert_eq!(config.audio.stop_grace_ms, 800);
         assert_eq!(config.audio.silence_auto_stop_seconds, 30);
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.request.end_window_size, Some(800));

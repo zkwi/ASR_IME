@@ -64,7 +64,7 @@ export const fallbackConfig: AppConfig = {
     channels: 1,
     segment_ms: 200,
     max_record_seconds: 300,
-    stop_grace_ms: 500,
+    stop_grace_ms: 800,
     silence_auto_stop_seconds: 30,
     silence_level_threshold: 0.03,
     mute_system_volume_while_recording: false,

@@ -201,7 +201,7 @@ DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../aud
 
 屏幕 OCR 上下文默认开启。默认识别当前显示器，适合参考一个文档并在另一个窗口输入；也可在选项页切换为仅当前窗口。识别结果会轻量合并中文字符之间的多余空格后，作为本轮 ASR 和可选大模型请求的临时上下文，不写入日志、统计或配置，也不会缓存最近 2-3 份截图 OCR 内容。屏幕含敏感信息时，可切换为仅当前窗口或关闭。
 
-Resource ID、ASR WebSocket 地址、模型名、最终结果等待超时、最长录音秒数、LLM 超时、主热键启用开关、录音时静音系统音量、屏幕 OCR 字数上限和等待时间、字幕自定义尺寸/位置/颜色、剪贴板恢复延迟、快照大小和重试参数属于底层参数，保留在 `config.toml`。
+Resource ID、ASR WebSocket 地址、模型名、最终结果等待超时、最长录音秒数、尾音保留毫秒、LLM 超时、主热键启用开关、录音时静音系统音量、屏幕 OCR 字数上限和等待时间、字幕自定义尺寸/位置/颜色、剪贴板恢复延迟、快照大小和重试参数属于底层参数，保留在 `config.toml`。
 
 左键单击托盘图标可打开主窗口；托盘右键菜单可打开配置、查看日志、问题反馈、检查更新、重启程序或退出。配置更新后需要重新加载程序状态时，可直接使用“重启程序”。
 
@@ -255,6 +255,7 @@ thinking_strategy = "auto"
 ```toml
 [audio]
 max_record_seconds = 300
+stop_grace_ms = 800
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 mute_system_volume_while_recording = false

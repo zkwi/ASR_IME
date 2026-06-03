@@ -195,7 +195,7 @@ To review or clear local data, open Privacy & local data from the sidebar.
 
 Screen OCR context is on by default. It captures the current display by default, which helps when you reference one document while typing into another window. You can switch it to the current window only in Options. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. Switch to current-window-only or disable it when the screen contains sensitive content.
 
-Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters.
+Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, stop grace milliseconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters.
 
 ## 7. Recommended Defaults
 
@@ -245,6 +245,7 @@ Recording:
 ```toml
 [audio]
 max_record_seconds = 300
+stop_grace_ms = 800
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 mute_system_volume_while_recording = false

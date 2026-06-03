@@ -191,6 +191,17 @@ ignored_hotwords = []
 
 配置修改后会自动保存，标题栏会短暂显示“更改将自动保存 / 正在保存设置 / 设置已保存”。自动保存前会做基础字段校验，明显非法的采样率、声道数、录音时长、粘贴延迟、剪贴板恢复延迟、快照大小、枚举值、URL scheme、GitHub 仓库格式、LLM 必填项、超时时间、悬浮窗尺寸和字幕颜色不会写入配置文件。
 
+录音相关配置：
+
+```toml
+[audio]
+max_record_seconds = 300
+stop_grace_ms = 800
+silence_auto_stop_seconds = 30
+silence_level_threshold = 0.03
+mute_system_volume_while_recording = false
+```
+
 文本后处理相关配置：
 
 ```toml
