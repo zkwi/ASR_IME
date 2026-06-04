@@ -245,6 +245,7 @@ export function createVoxTypeController() {
     isOverlay = params.has("overlay");
     isToast = params.has("toast");
     toastHotkey = params.get("hotkey") || toastHotkey;
+    applyDocumentMode();
     refreshMainDensity();
     window.addEventListener("resize", refreshMainDensity);
     logFrontendEvent(
@@ -336,6 +337,7 @@ export function createVoxTypeController() {
       clearAutoSaveTimer();
       clearConfigSavedIndicatorTimer();
       overlay.dispose();
+      clearDocumentMode();
       window.removeEventListener("resize", refreshMainDensity);
       window.removeEventListener("resize", overlay.refreshLayout);
       window.removeEventListener("error", onError);
@@ -422,6 +424,15 @@ export function createVoxTypeController() {
   }
   function frontendMode() {
     return getFrontendMode(isOverlay, isToast);
+  }
+  function applyDocumentMode() {
+    const mode = frontendMode();
+    document.documentElement.dataset.voxtypeMode = mode;
+    document.body.dataset.voxtypeMode = mode;
+  }
+  function clearDocumentMode() {
+    delete document.documentElement.dataset.voxtypeMode;
+    delete document.body.dataset.voxtypeMode;
   }
   function t(key: CopyKey, values: Record<string, string> = {}) {
     let value = copy[language][key];

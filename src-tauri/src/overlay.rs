@@ -2,8 +2,8 @@ use crate::config::UiConfig;
 use serde::Serialize;
 use std::sync::{Mutex, OnceLock};
 use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder,
+    utils::config::Color, AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor,
+    WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
@@ -14,6 +14,7 @@ pub const POST_EDITING_TEXT: &str = "正在润色...";
 pub const EMPTY_TRANSCRIPT_TEXT: &str = "没有识别到文字，请重试一次。";
 pub const PASTE_FAILED_TEXT: &str = "粘贴失败，文本已复制，可手动 Ctrl+V。";
 const DEFAULT_TEXT: &str = RECORDING_TEXT;
+const TRANSPARENT_BACKGROUND: Color = Color(0, 0, 0, 0);
 static OVERLAY_TEXT: OnceLock<Mutex<String>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize)]
@@ -39,10 +40,15 @@ pub fn create_overlay_window(app: &AppHandle) -> Result<(), String> {
             .always_on_top(true)
             .skip_taskbar(true)
             .transparent(true)
+            .background_color(TRANSPARENT_BACKGROUND)
             .focused(false)
             .visible(false)
             .build()
             .map_err(|err| format!("创建悬浮字幕窗失败: {}", err))?;
+
+    if let Err(err) = window.set_background_color(Some(TRANSPARENT_BACKGROUND)) {
+        crate::app_log::warn(format!("设置悬浮字幕窗透明背景失败: {}", err));
+    }
 
     if let Err(err) = window.set_focusable(false) {
         crate::app_log::warn(format!("设置悬浮字幕窗不可聚焦失败: {}", err));

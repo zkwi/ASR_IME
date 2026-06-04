@@ -33,6 +33,8 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  :global(html[data-voxtype-mode="overlay"]),
+  :global(body[data-voxtype-mode="overlay"]),
   :global(html:has(.overlay-root)),
   :global(body:has(.overlay-root)) {
     min-width: 0;
@@ -42,6 +44,8 @@
     background: transparent;
   }
 
+  :global(html[data-voxtype-mode="toast"]),
+  :global(body[data-voxtype-mode="toast"]),
   :global(html:has(.toast-root)),
   :global(body:has(.toast-root)) {
     min-width: 0;
@@ -52,8 +56,12 @@
     font-size: 14px;
   }
 
+  :global(body[data-voxtype-mode="overlay"]::-webkit-scrollbar),
+  :global(body[data-voxtype-mode="overlay"] *::-webkit-scrollbar),
   :global(body:has(.overlay-root)::-webkit-scrollbar),
   :global(body:has(.overlay-root) *::-webkit-scrollbar),
+  :global(body[data-voxtype-mode="toast"]::-webkit-scrollbar),
+  :global(body[data-voxtype-mode="toast"] *::-webkit-scrollbar),
   :global(body:has(.toast-root)::-webkit-scrollbar),
   :global(body:has(.toast-root) *::-webkit-scrollbar) {
     width: 0;
@@ -100,8 +108,10 @@
     --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.055);
   }
 
-  :global(html:not(:has(.overlay-root)):not(:has(.toast-root))),
-  :global(body:not(:has(.overlay-root)):not(:has(.toast-root))) {
+  :global(html[data-voxtype-mode="main"]),
+  :global(body[data-voxtype-mode="main"]),
+  :global(html:not([data-voxtype-mode]):not(:has(.overlay-root)):not(:has(.toast-root))),
+  :global(body:not([data-voxtype-mode]):not(:has(.overlay-root)):not(:has(.toast-root))) {
     background: var(--bg-page);
     font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SF Pro Display", "Noto Sans CJK SC", sans-serif;
   }
