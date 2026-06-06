@@ -223,7 +223,7 @@ export const zhCN = {
   "apiConfigPageTitle": "API配置与健康检查",
   "apiConfigPageDescription": "配置语音识别和大模型服务，并确认连接可用。",
   "speechRecognitionApiTitle": "语音识别 API",
-  "speechRecognitionApiDescription": "填写豆包 ASR 密钥，并按需指定识别语言。",
+  "speechRecognitionApiDescription": "填写豆包 ASR 密钥，识别语言默认使用自动/服务默认。",
   "llmApiSettings": "大模型 API",
   "llmApiSettingsDescription": "配置可选大模型服务，用于文本润色和自动热词候选。",
   "enableThinking": "启用思考模式",
@@ -334,9 +334,9 @@ export const zhCN = {
   "doubaoAuthRequiredHint": "豆包语音识别是语音输入的必填项。",
   "doubaoDocsCta": "豆包帮助文档",
   "asrLanguageTitle": "识别语言",
-  "asrLanguageDescription": "指定豆包语音识别重点识别的输入语言，适合多语言场景切换。",
+  "asrLanguageDescription": "默认不发送 language 参数，适配豆包二遍识别；只有需要尝试固定非默认语种时再切换。",
   "asrInputLanguage": "输入语言",
-  "asrInputLanguageHint": "默认中文；留空使用服务默认/自动。豆包文档提示该参数仅部分流式模式支持。",
+  "asrInputLanguageHint": "默认留空，旧 zh-CN 也按自动处理。当前二遍识别不支持 language，留空更适合中文、英文、方言和混合输入。",
   "asrLanguageAuto": "自动 / 服务默认",
   "asrLanguageZhCN": "中文普通话（zh-CN）",
   "asrLanguageEnUS": "英语（en-US）",
@@ -616,6 +616,11 @@ export const zhCNUserErrorDetails = {
     "title": "麦克风启动失败",
     "cause": "设备被其他软件占用，或采样率、声道数不被设备支持。",
     "action": "关闭占用麦克风的软件，或恢复默认录音参数后再试。"
+  },
+  "MIC_STREAM_FAILED": {
+    "title": "麦克风采集中断",
+    "cause": "麦克风驱动、蓝牙耳机连接或其他软件独占占用导致输入流运行中异常。",
+    "action": "重新插拔或切换输入设备，关闭可能占用麦克风的软件后再试。"
   },
   "CLIPBOARD_WRITE_FAILED": {
     "title": "剪贴板写入失败",

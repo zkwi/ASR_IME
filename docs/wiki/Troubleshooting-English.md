@@ -71,6 +71,7 @@ Possible causes:
 - Microphone permission is disabled.
 - Wrong input device.
 - Microphone volume is too low or too far away.
+- Microphone driver, Bluetooth headset, or exclusive app access causes an input-stream error during recording.
 - The recording contains no useful speech.
 - Network or ASR service issue.
 
@@ -80,10 +81,12 @@ Fix:
 2. Select the correct input device in Options.
 3. Test Doubao ASR from API Config.
 4. Try again in a quieter environment.
+5. If VoxType reports a microphone capture error, reconnect or switch the input device and close apps that may exclusively use the microphone.
 
 Notes:
 
 - Empty recognition becomes a failure. It does not run polishing, paste, or successful statistics.
+- A microphone input-stream error also becomes a failure, so missing-frame audio does not produce low-quality recognized text.
 - Continuous low volume follows the manual-stop flow after 30 seconds by default, so a server endpointing miss does not record until the maximum duration.
 - If you need long pauses, adjust or disable the local silence fallback in `config.toml`.
 

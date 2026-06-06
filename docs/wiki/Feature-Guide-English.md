@@ -59,6 +59,7 @@ Tips:
 
 - Select a fixed input device if you have multiple microphones.
 - Low volume, long distance, noisy rooms, and disabled Windows microphone permission can cause empty recognition.
+- A microphone input-stream error fails the current session immediately, so incomplete audio is not polished, pasted, or counted as success.
 - If a recording contains no useful speech, VoxType uses the local silence fallback to stop recording instead of waiting for the maximum duration.
 - System-volume mute while recording is off by default; enable it only if echo affects recognition.
 

@@ -76,7 +76,8 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
         ("channel".to_string(), json!(ASR_OUTPUT_CHANNELS)),
     ]);
     let language = config.request.language.trim();
-    if !language.is_empty() {
+    // bigmodel_async + enable_nonstream 二遍识别不支持 audio.language；zh-CN 旧默认按服务默认处理。
+    if !language.is_empty() && language != "zh-CN" {
         audio.insert("language".to_string(), json!(language));
     }
 
@@ -256,6 +257,25 @@ mod tests {
     }
 
     #[test]
+    fn request_payload_treats_zh_cn_as_service_default_for_two_pass() {
+        let mut config = AppConfig::default();
+        config.request.language = "zh-CN".to_string();
+
+        let payload = build_request_payload(&config, None);
+
+        assert!(payload["audio"].get("language").is_none());
+    }
+
+    #[test]
+    fn request_payload_omits_default_audio_language() {
+        let config = AppConfig::default();
+
+        let payload = build_request_payload(&config, None);
+
+        assert!(payload["audio"].get("language").is_none());
+    }
+
+    #[test]
     fn request_payload_forces_two_pass_final_result_parameters() {
         let mut config = AppConfig::default();
         config.request.enable_nonstream = false;
@@ -316,6 +336,19 @@ mod tests {
         let payload = build_request_payload(&config, None);
 
         assert!(payload["audio"].get("language").is_none());
+    }
+
+    #[test]
+    fn request_payload_wraps_context_as_serialized_corpus_string() {
+        let context = r#"{"hotwords":[{"word":"VoxType"}]}"#.to_string();
+
+        let payload = build_request_payload(&AppConfig::default(), Some(context));
+        let context = payload["request"]["corpus"]["context"]
+            .as_str()
+            .expect("Doubao expects corpus.context to be a JSON string");
+        let parsed: Value = serde_json::from_str(context).unwrap();
+
+        assert_eq!(parsed["hotwords"][0]["word"], "VoxType");
     }
 
     #[test]

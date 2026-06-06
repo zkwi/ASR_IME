@@ -105,7 +105,8 @@ export function isErrorStatus(message: string) {
     message.includes("连接豆包 ASR 失败") ||
     message.includes("豆包 ASR 服务返回错误码") ||
     message.includes("开机自启动设置失败") ||
-    message.includes("启动录音失败")
+    message.includes("启动录音失败") ||
+    message.includes("麦克风采集异常")
   );
 }
 
@@ -114,6 +115,7 @@ export function shouldOpenSettingsForError(message: string, code?: string | null
     code === "CONFIG_MISSING" ||
     code === "ASR_AUTH_MISSING" ||
     code === "MIC_DEVICE_NOT_FOUND" ||
+    code === "MIC_STREAM_FAILED" ||
     isConfigError(message) ||
     message.includes("API Key") ||
     message.includes("Base URL")
@@ -121,7 +123,12 @@ export function shouldOpenSettingsForError(message: string, code?: string | null
 }
 
 export function settingsPanelForError(message: string, code?: string | null) {
-  if (code === "MIC_DEVICE_NOT_FOUND" || message.includes("麦克风") || message.toLowerCase().includes("microphone")) {
+  if (
+    code === "MIC_DEVICE_NOT_FOUND" ||
+    code === "MIC_STREAM_FAILED" ||
+    message.includes("麦克风") ||
+    message.toLowerCase().includes("microphone")
+  ) {
     return "settings-audio";
   }
   return "settings-auth";

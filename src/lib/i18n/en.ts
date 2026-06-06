@@ -224,7 +224,7 @@ export const en = {
   "apiConfigPageTitle": "API Config and health check",
   "apiConfigPageDescription": "Set up speech recognition and optional AI polishing, then test both services.",
   "speechRecognitionApiTitle": "Speech recognition API",
-  "speechRecognitionApiDescription": "Fill Doubao ASR keys and choose the recognition language if needed.",
+  "speechRecognitionApiDescription": "Fill Doubao ASR keys; recognition language defaults to Auto/service default.",
   "llmApiSettings": "AI polishing service",
   "llmApiSettingsDescription": "Configure the optional AI service for text polishing and term suggestions.",
   "enableThinking": "Enable thinking mode",
@@ -335,9 +335,9 @@ export const en = {
   "doubaoAuthRequiredHint": "Doubao speech keys are required for voice input.",
   "doubaoDocsCta": "Doubao docs",
   "asrLanguageTitle": "Recognition language",
-  "asrLanguageDescription": "Tell Doubao speech recognition which input language to prioritize. Useful when switching between languages.",
+  "asrLanguageDescription": "By default VoxType does not send language, matching Doubao two-pass recognition; set one only when trying a non-default language.",
   "asrInputLanguage": "Input language",
-  "asrInputLanguageHint": "Default is Chinese. Choose Auto/service default to omit the parameter. Doubao docs note this is supported only by some streaming modes.",
+  "asrInputLanguageHint": "Default is blank; old zh-CN is also treated as Auto. Two-pass recognition does not support language, so blank is better for Chinese, English, dialect, and mixed input.",
   "asrLanguageAuto": "Auto / service default",
   "asrLanguageZhCN": "Chinese Mandarin (zh-CN)",
   "asrLanguageEnUS": "English (en-US)",
@@ -617,6 +617,11 @@ export const enUserErrorDetails = {
     "title": "Microphone failed to start",
     "cause": "Another app may be using it, or the recording parameters are unsupported.",
     "action": "Close apps using the mic, or restore default recording parameters and retry."
+  },
+  "MIC_STREAM_FAILED": {
+    "title": "Microphone capture stopped",
+    "cause": "The microphone driver, Bluetooth headset connection, or another app's exclusive access interrupted the input stream.",
+    "action": "Reconnect or switch the input device, close apps that may be using the microphone, then retry."
   },
   "CLIPBOARD_WRITE_FAILED": {
     "title": "Clipboard write failed",

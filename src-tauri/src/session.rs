@@ -152,6 +152,7 @@ impl SessionController {
         } else {
             None
         };
+        let (audio_error_tx, audio_error_rx) = std::sync::mpsc::channel();
         app_log::info(format!(
             "录音启动请求: max_seconds={}, stop_grace_ms={}, silence_auto_stop_seconds={}, silence_level_threshold={}, mute_system_volume={}",
             max_seconds,
@@ -170,41 +171,45 @@ impl SessionController {
             };
             emit_state(Some(app), &starting);
         }
-        let audio_capture =
-            match audio::start_capture(&loaded.data.audio, Some(audio_tx), level_tx, silence_tx) {
-                Ok(capture) => capture,
-                Err(err) => {
-                    let error_code = if err.contains("未找到")
-                        || err.contains("找不到")
-                        || err.contains("没有可用")
+        let audio_capture = match audio::start_capture(
+            &loaded.data.audio,
+            Some(audio_tx),
+            level_tx,
+            silence_tx,
+            Some(audio_error_tx),
+        ) {
+            Ok(capture) => capture,
+            Err(err) => {
+                let error_code =
+                    if err.contains("未找到") || err.contains("找不到") || err.contains("没有可用")
                     {
                         "MIC_DEVICE_NOT_FOUND"
                     } else {
                         "MIC_START_FAILED"
                     };
-                    let state = self.force_stop_generation(
-                        generation,
-                        SessionPhase::Failed,
-                        "Recording failed to start.",
-                        Some(error_code),
+                let state = self.force_stop_generation(
+                    generation,
+                    SessionPhase::Failed,
+                    "Recording failed to start.",
+                    Some(error_code),
+                );
+                if let Some(app) = app.as_ref() {
+                    overlay::update_text(app, format!("启动录音失败: {}", err));
+                    overlay::hide(app);
+                    emit_state(
+                        Some(app),
+                        &state.unwrap_or(SessionState {
+                            recording: false,
+                            phase: SessionPhase::Failed,
+                            message: format!("Recording failed: {}", err),
+                            error_code: Some(error_code.to_string()),
+                        }),
                     );
-                    if let Some(app) = app.as_ref() {
-                        overlay::update_text(app, format!("启动录音失败: {}", err));
-                        overlay::hide(app);
-                        emit_state(
-                            Some(app),
-                            &state.unwrap_or(SessionState {
-                                recording: false,
-                                phase: SessionPhase::Failed,
-                                message: format!("Recording failed: {}", err),
-                                error_code: Some(error_code.to_string()),
-                            }),
-                        );
-                    }
-                    app_log::warn(format!("启动麦克风失败: {}", err));
-                    return Err(err);
                 }
-            };
+                app_log::warn(format!("启动麦克风失败: {}", err));
+                return Err(err);
+            }
+        };
         let started_at = Instant::now();
         let volume_state = if loaded.data.audio.mute_system_volume_while_recording {
             system_audio::safe_mute_and_save()
@@ -229,6 +234,7 @@ impl SessionController {
                 loaded.data.audio.stop_grace_ms,
             );
         }
+        spawn_audio_error_listener(self.clone(), app.clone(), generation, audio_error_rx);
         let mut runtime_config = loaded.data.clone();
         runtime_config.audio.sample_rate = audio_info.sample_rate;
         runtime_config.audio.channels = audio_info.channels;
@@ -414,6 +420,31 @@ impl SessionController {
             message: message.to_string(),
             error_code: error_code.map(str::to_string),
         })
+    }
+
+    fn fail_recording_generation_and_invalidate(
+        &self,
+        generation: u64,
+        message: &str,
+        error_code: &str,
+    ) -> Option<(SessionState, u64)> {
+        let Ok(mut inner) = self.inner.lock() else {
+            app_log::warn("终止异常录音失败：session mutex poisoned");
+            return None;
+        };
+        if !inner.recording || inner.generation != generation {
+            return None;
+        }
+        inner.recording = false;
+        inner.phase = SessionPhase::Failed;
+        inner.message = message.to_string();
+        inner.error_code = Some(error_code.to_string());
+        system_audio::safe_restore(inner.volume_state.take());
+        inner.audio_capture = None;
+        inner.generation = inner.generation.wrapping_add(1);
+        app_log::warn(message);
+        let guard_generation = inner.generation;
+        Some((state_from_inner(&inner), guard_generation))
     }
 
     fn begin_stopping_generation(&self, generation: u64, message: &str) -> Option<SessionState> {
@@ -670,6 +701,50 @@ fn spawn_silence_auto_stop_listener(
     });
 }
 
+fn spawn_audio_error_listener(
+    controller: SessionController,
+    app: Option<AppHandle>,
+    generation: u64,
+    audio_error_rx: Receiver<String>,
+) {
+    thread::spawn(move || {
+        let Ok(detail) = audio_error_rx.recv() else {
+            return;
+        };
+        let message = format!(
+            "麦克风采集异常，已停止本次识别，避免使用不完整音频。{}",
+            detail
+        );
+        let Some((state, guard_generation)) = controller.fail_recording_generation_and_invalidate(
+            generation,
+            &message,
+            "MIC_STREAM_FAILED",
+        ) else {
+            return;
+        };
+        if let Some(app) = app.as_ref() {
+            emit_state(Some(app), &state);
+            overlay::update_text(app, &message);
+            let _ = app.emit(
+                "asr-final-text",
+                asr_ws::AsrFinalText {
+                    text: String::new(),
+                    error: Some(message),
+                    error_code: Some("MIC_STREAM_FAILED".to_string()),
+                    warning: None,
+                    warning_code: None,
+                },
+            );
+        }
+        thread::sleep(Duration::from_millis(1_800));
+        if let Some(app) = app.as_ref() {
+            if controller.is_current_generation(guard_generation) {
+                overlay::hide(app);
+            }
+        }
+    });
+}
+
 fn wait_for_stop_tail(controller: &SessionController, generation: u64, grace_ms: u64) {
     let started_at = Instant::now();
     let min_wait = effective_stop_tail_min_wait(grace_ms);
@@ -825,6 +900,35 @@ mod tests {
         assert!(state.recording);
         assert_eq!(state.phase, SessionPhase::Recording);
         assert_eq!(state.error_code, None);
+    }
+
+    #[test]
+    fn audio_error_failure_invalidates_current_asr_worker() {
+        let controller = SessionController::default();
+        {
+            let mut inner = controller.inner.lock().unwrap();
+            inner.recording = true;
+            inner.phase = SessionPhase::Recording;
+            inner.message = "Recording started.".to_string();
+            inner.generation = 9;
+        }
+
+        let (state, guard_generation) = controller
+            .fail_recording_generation_and_invalidate(
+                9,
+                "Microphone stream failed.",
+                "MIC_STREAM_FAILED",
+            )
+            .unwrap();
+
+        assert!(!state.recording);
+        assert_eq!(state.phase, SessionPhase::Failed);
+        assert_eq!(state.error_code.as_deref(), Some("MIC_STREAM_FAILED"));
+        assert!(!controller.is_current_generation(9));
+        assert!(controller.is_current_generation(guard_generation));
+        assert!(controller
+            .set_phase_for_generation(9, None, SessionPhase::Pasting, "Stale output.", None)
+            .is_none());
     }
 
     #[test]

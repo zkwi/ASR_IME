@@ -3,7 +3,7 @@ use crate::config::AudioConfig;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, SampleFormat, Stream, StreamConfig, SupportedStreamConfig};
 use serde::Serialize;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -40,6 +40,7 @@ struct CaptureOutputs {
     pcm_sink: Option<Arc<Mutex<PcmSink>>>,
     level_tx: Option<mpsc::Sender<f32>>,
     silence_tx: Option<mpsc::Sender<()>>,
+    error_reporter: CaptureErrorReporter,
     silence_auto_stop_seconds: u64,
     silence_level_threshold: f32,
     voice_activity: VoiceActivity,
@@ -79,6 +80,7 @@ pub fn start_capture(
     chunk_tx: Option<mpsc::Sender<Vec<u8>>>,
     level_tx: Option<mpsc::Sender<f32>>,
     silence_tx: Option<mpsc::Sender<()>>,
+    error_tx: Option<mpsc::Sender<String>>,
 ) -> Result<AudioCapture, String> {
     let audio = audio.clone();
     let counters = CaptureCounters {
@@ -97,6 +99,7 @@ pub fn start_capture(
             pcm_sink: None,
             level_tx,
             silence_tx,
+            error_reporter: CaptureErrorReporter::new(error_tx),
             silence_auto_stop_seconds: audio.silence_auto_stop_seconds,
             silence_level_threshold: audio.silence_level_threshold,
             voice_activity: worker_voice_activity,
@@ -177,6 +180,31 @@ impl Drop for AudioCapture {
     }
 }
 
+#[derive(Clone)]
+struct CaptureErrorReporter {
+    tx: Option<mpsc::Sender<String>>,
+    reported: Arc<AtomicBool>,
+}
+
+impl CaptureErrorReporter {
+    fn new(tx: Option<mpsc::Sender<String>>) -> Self {
+        Self {
+            tx,
+            reported: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    fn report(&self, message: String) {
+        app_log::warn(&message);
+        if self.reported.swap(true, Ordering::Relaxed) {
+            return;
+        }
+        if let Some(tx) = &self.tx {
+            let _ = tx.send(message);
+        }
+    }
+}
+
 #[derive(Clone, Default)]
 struct VoiceActivity {
     last_voice_at: Arc<Mutex<Option<Instant>>>,
@@ -242,7 +270,10 @@ fn start_capture_in_thread(
         )))
     });
     let pcm_sink = outputs.pcm_sink.clone();
-    let err_fn = |err| app_log::warn(format!("audio input stream error: {}", err));
+    let stream_error_reporter = outputs.error_reporter.clone();
+    let err_fn = move |err| {
+        stream_error_reporter.report(format!("麦克风输入流异常，音频可能不完整: {}", err))
+    };
     let stream = match sample_format {
         SampleFormat::I16 => {
             build_i16_stream(&device, &stream_config, counters.clone(), outputs, err_fn)?
@@ -287,6 +318,7 @@ fn select_input_config(
     audio: &AudioConfig,
 ) -> Result<SupportedStreamConfig, String> {
     let target_rate = audio.sample_rate;
+    let default_config = device.default_input_config().ok();
     let mut fallback = None;
     for range in device
         .supported_input_configs()
@@ -302,8 +334,8 @@ fn select_input_config(
             return Ok(range.with_sample_rate(target_rate));
         }
     }
-    fallback
-        .or_else(|| device.default_input_config().ok())
+    default_config
+        .or(fallback)
         .ok_or_else(|| "麦克风没有可用采样配置".to_string())
 }
 
@@ -419,6 +451,26 @@ fn send_silence_auto_stop(
     if let Some(tx) = tx {
         if silence.observe(level, frame_count) {
             let _ = tx.send(());
+        }
+    }
+}
+
+fn push_pcm_sink(
+    pcm_sink: &Option<Arc<Mutex<PcmSink>>>,
+    error_reporter: &CaptureErrorReporter,
+    counters: &CaptureCounters,
+    push: impl FnOnce(&mut PcmSink) -> usize,
+) {
+    let Some(sink) = pcm_sink else {
+        return;
+    };
+    match sink.lock() {
+        Ok(mut sink) => {
+            let emitted = push(&mut sink);
+            counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
+        }
+        Err(_) => {
+            error_reporter.report("麦克风音频缓冲异常，音频可能不完整。".to_string());
         }
     }
 }
@@ -718,6 +770,7 @@ fn build_i16_stream(
         level_tx,
         silence_tx,
         voice_activity,
+        error_reporter,
         ..
     } = outputs;
     device
@@ -730,12 +783,9 @@ fn build_i16_stream(
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(sink) = &pcm_sink {
-                    if let Ok(mut sink) = sink.lock() {
-                        let emitted = sink.push_i16(data);
-                        counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    }
-                }
+                push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
+                    sink.push_i16(data)
+                });
             },
             err_fn,
             None,
@@ -762,6 +812,7 @@ fn build_u16_stream(
         level_tx,
         silence_tx,
         voice_activity,
+        error_reporter,
         ..
     } = outputs;
     device
@@ -774,12 +825,9 @@ fn build_u16_stream(
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(sink) = &pcm_sink {
-                    if let Ok(mut sink) = sink.lock() {
-                        let emitted = sink.push_u16(data);
-                        counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    }
-                }
+                push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
+                    sink.push_u16(data)
+                });
             },
             err_fn,
             None,
@@ -806,6 +854,7 @@ fn build_u8_stream(
         level_tx,
         silence_tx,
         voice_activity,
+        error_reporter,
         ..
     } = outputs;
     device
@@ -818,12 +867,9 @@ fn build_u8_stream(
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(sink) = &pcm_sink {
-                    if let Ok(mut sink) = sink.lock() {
-                        let emitted = sink.push_u8(data);
-                        counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    }
-                }
+                push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
+                    sink.push_u8(data)
+                });
             },
             err_fn,
             None,
@@ -850,6 +896,7 @@ fn build_f32_stream(
         level_tx,
         silence_tx,
         voice_activity,
+        error_reporter,
         ..
     } = outputs;
     device
@@ -862,12 +909,9 @@ fn build_f32_stream(
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(sink) = &pcm_sink {
-                    if let Ok(mut sink) = sink.lock() {
-                        let emitted = sink.push_f32(data);
-                        counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    }
-                }
+                push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
+                    sink.push_f32(data)
+                });
             },
             err_fn,
             None,
@@ -878,8 +922,8 @@ fn build_f32_stream(
 #[cfg(test)]
 mod tests {
     use super::{
-        effective_asr_segment_ms, target_chunk_bytes, PcmNormalizer, PcmSink, SegmentedAudioBuffer,
-        SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
+        effective_asr_segment_ms, target_chunk_bytes, CaptureErrorReporter, PcmNormalizer, PcmSink,
+        SegmentedAudioBuffer, SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
     };
     use std::sync::mpsc;
 
@@ -951,6 +995,18 @@ mod tests {
         assert_eq!(effective_asr_segment_ms(500), 200);
         assert_eq!(target_chunk_bytes(16_000, 1, 20), 3_200);
         assert_eq!(target_chunk_bytes(16_000, 1, 500), 6_400);
+    }
+
+    #[test]
+    fn capture_error_reporter_only_sends_first_error() {
+        let (tx, rx) = mpsc::channel();
+        let reporter = CaptureErrorReporter::new(Some(tx));
+
+        reporter.report("first audio error".to_string());
+        reporter.report("second audio error".to_string());
+
+        assert_eq!(rx.try_recv().unwrap(), "first audio error");
+        assert!(rx.try_recv().is_err());
     }
 
     #[test]

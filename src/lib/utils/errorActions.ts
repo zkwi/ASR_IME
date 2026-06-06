@@ -12,6 +12,7 @@ export function actionsForUserError(code?: string | null): UserErrorAction[] {
       return ["retry_recording"];
     case "MIC_DEVICE_NOT_FOUND":
     case "MIC_START_FAILED":
+    case "MIC_STREAM_FAILED":
       return ["open_options", "copy_diagnostic_report"];
     case "CLIPBOARD_WRITE_FAILED":
     case "PASTE_FAILED":

@@ -68,7 +68,7 @@ VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource
 
 Click **Test** after filling credentials. When the test passes, return to Home and start voice input.
 
-API Config also includes **Recognition language**. The default is `zh-CN`. For English, Japanese, Cantonese, or other languages supported by Doubao docs, switch the language here. Choose Auto/service default to omit the language parameter. If ASR testing fails after changing the language, switch back to Auto/service default or confirm the current API mode.
+API Config also includes **Recognition language**. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Existing `zh-CN` configs are also treated as Auto/service default; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when you explicitly want to try locking recognition to a non-default language.
 
 ### If Doubao ASR Test Fails
 
@@ -251,7 +251,7 @@ silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
-VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. Before the first real audio packet, it sends only about `50ms` of leading silence to help Doubao stabilize initial speech recognition. Interim Doubao text is shown in the floating caption as quickly as possible, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet, making the first packet about `150ms` and later packets default to `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. Interim Doubao text is shown in the floating caption as quickly as possible, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
 
 Triggers:
 

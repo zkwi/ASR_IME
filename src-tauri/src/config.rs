@@ -792,7 +792,7 @@ fn default_model_name() -> String {
     "bigmodel".to_string()
 }
 fn default_asr_language() -> String {
-    "zh-CN".to_string()
+    String::new()
 }
 fn default_result_type() -> String {
     "full".to_string()
@@ -950,7 +950,7 @@ mod tests {
         assert_eq!(config.audio.silence_auto_stop_seconds, 30);
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.request.end_window_size, Some(800));
-        assert_eq!(config.request.language, "zh-CN");
+        assert!(config.request.language.is_empty());
         assert_eq!(config.request.result_type, "full");
         assert!(config.request.enable_nonstream);
         assert!(config.request.show_utterances);

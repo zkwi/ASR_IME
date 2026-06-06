@@ -224,7 +224,7 @@ export const zhTW = {
   "apiConfigPageTitle": "API配置與健康檢查",
   "apiConfigPageDescription": "配置語音識別和大模型服務，並確認連線可用。",
   "speechRecognitionApiTitle": "語音識別 API",
-  "speechRecognitionApiDescription": "填寫豆包 ASR 密鑰，並按需指定識別語言。",
+  "speechRecognitionApiDescription": "填寫豆包 ASR 密鑰，識別語言預設使用自動/服務預設。",
   "llmApiSettings": "大模型 API",
   "llmApiSettingsDescription": "配置可選大模型服務，用於文字潤飾和自動熱詞候選。",
   "enableThinking": "啟用思考模式",
@@ -335,9 +335,9 @@ export const zhTW = {
   "doubaoAuthRequiredHint": "豆包語音識別是語音輸入的必填項。",
   "doubaoDocsCta": "豆包說明文件",
   "asrLanguageTitle": "識別語言",
-  "asrLanguageDescription": "指定豆包語音識別重點識別的輸入語言，適合多語言場景切換。",
+  "asrLanguageDescription": "預設不傳送 language 參數，適配豆包二遍識別；只有需要嘗試固定非預設語種時再切換。",
   "asrInputLanguage": "輸入語言",
-  "asrInputLanguageHint": "預設中文；留空使用服務預設/自動。豆包文件提示此參數僅部分串流模式支援。",
+  "asrInputLanguageHint": "預設留空，舊 zh-CN 也按自動處理。目前二遍識別不支援 language，留空更適合中文、英文、方言和混合輸入。",
   "asrLanguageAuto": "自動 / 服務預設",
   "asrLanguageZhCN": "中文普通話（zh-CN）",
   "asrLanguageEnUS": "英語（en-US）",
@@ -617,6 +617,11 @@ export const zhTWUserErrorDetails = {
     "title": "麥克風啟動失敗",
     "cause": "裝置被其他軟體占用，或取樣率、聲道數不被裝置支援。",
     "action": "關閉占用麥克風的軟體，或恢復預設錄音參數後再試。"
+  },
+  "MIC_STREAM_FAILED": {
+    "title": "麥克風採集中斷",
+    "cause": "麥克風驅動、藍牙耳機連線或其他軟體獨占占用導致輸入流執行中異常。",
+    "action": "重新插拔或切換輸入裝置，關閉可能占用麥克風的軟體後再試。"
   },
   "CLIPBOARD_WRITE_FAILED": {
     "title": "剪貼簿寫入失敗",
