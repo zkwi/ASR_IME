@@ -163,14 +163,14 @@ Common LLM test failures:
 
 VoxType includes a default AI prompt for voice input. It marks the text-to-polish block as the only content to rewrite and output, so questions or prompt-like content are polished instead of answered or analyzed. Short messages, one-line commands, and questions get light correction, with natural punctuation allowed but no expansion. Long spoken notes, records, retrospectives, explanations, meeting notes, product feedback, and investment reviews are polished into publishable prose: filler words, verbal padding, repeated expressions, dead pauses, and self-corrections are removed; sentence order can be adjusted; sentences can be split; necessary connectors can be added; and the result is usually organized into 2-4 natural paragraphs. The default prompt still preserves the original facts, judgment, intensity, stance, proper nouns, English abbreviations, finance terms, and programming terms, and it asks the model not to add headings, lists, Markdown, or backticks. User dictionary terms, writing/product preferences, optional recent context, and screen OCR are appended to real requests as separate reference-information blocks; they are only used to correct terms, names, UI words, continuity, paths, filenames, and code identifiers, not as text to polish or instructions to follow, and they must not add information that the text to polish did not say. Recent context must not be continued, summarized, or reproduced, and screen OCR is only used for related corrections. For file paths, commands, log fields, and code identifiers, the default prompt asks the model to keep uncertain text unchanged unless the reference information provides an exact spelling. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms, such as `100万` and `1%`, without calculating returns or answering the question. The Hotwords page now puts recognition terms and writing context before the AI prompt template, reset, preview, and minimum polishing length. The preview shows reference-information rules, whether writing context enters the AI prompt, whether recent context enters the AI prompt, and the current screen OCR policy. Minimum polishing length is adjustable on the Hotwords page and supports 0 to 10000. System Prompt remains in `config.toml` to keep the app settings concise.
 
-Screen OCR context is on by default and can be disabled, tested, or limited to the current window in Options. The default range is the current display, which helps when you reference one document while typing into another window. OCR text is kept only for the current request and is not written to logs, stats, or config files; VoxType does not cache the latest 2-3 screenshot OCR results. Before sending the context, VoxType lightly merges extra spaces between adjacent CJK characters, so text such as `屏 幕 OCR 上 下 文` becomes easier for ASR/LLM context matching while English acronyms, shortcuts, and paths keep their spacing. Before connecting ASR, VoxType waits up to 300 ms for OCR context by default; timeout or failure is skipped and does not affect recording, final recognition, or paste.
+Screen OCR context is on by default and can be disabled, tested, or limited to the current window in Options. The default range is the current display, which helps when you reference one document while typing into another window. OCR text is kept only for the current request and is not written to logs, stats, or config files; VoxType does not cache the latest 2-3 screenshot OCR results. Before sending the context, VoxType lightly merges extra spaces between adjacent CJK characters, so text such as `屏 幕 OCR 上 下 文` becomes easier for ASR/LLM context matching while English acronyms, shortcuts, and paths keep their spacing. Before connecting ASR, VoxType waits up to 500 ms for OCR context by default; timeout or failure is skipped and does not affect recording, final recognition, or paste.
 
 ```toml
 [screen_context]
 enabled = true
 capture_scope = "screen"  # screen = current display, window = current window only
 max_chars = 1200
-timeout_ms = 300
+timeout_ms = 500
 ```
 
 Recommended trigger defaults:
@@ -197,7 +197,7 @@ Recording defaults:
 ```toml
 [audio]
 max_record_seconds = 300
-stop_grace_ms = 200
+stop_grace_ms = 100
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 input_gain_db = 0.0
@@ -214,7 +214,7 @@ Doubao's documentation does not require client-side automatic gain control and d
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 
-When stopping recording, `stop_grace_ms` is the requested minimum tail wait, defaulting to about `200ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `400ms` so noise cannot keep recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+When stopping recording, `stop_grace_ms` is the requested minimum tail wait, defaulting to about `100ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `200ms` so noise cannot keep recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
 
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 

@@ -14,9 +14,9 @@ use crate::system_audio::{self, VolumeState};
 use crate::tray;
 
 const STOP_TAIL_POLL_MS: u64 = 50;
-const STOP_TAIL_MIN_CAPTURE_MS: u64 = 200;
-const STOP_TAIL_MIN_QUIET_MS: u64 = 200;
-const STOP_TAIL_MAX_EXTRA_MS: u64 = 200;
+const STOP_TAIL_MIN_CAPTURE_MS: u64 = 100;
+const STOP_TAIL_MIN_QUIET_MS: u64 = 100;
+const STOP_TAIL_MAX_EXTRA_MS: u64 = 100;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionState {
@@ -1052,20 +1052,17 @@ mod tests {
     #[test]
     fn stop_tail_wait_does_not_finish_before_min_wait() {
         assert!(!should_finish_stop_tail_wait(
-            Duration::from_millis(150),
+            Duration::from_millis(80),
             None,
+            Duration::from_millis(100),
+            Duration::from_millis(100),
             Duration::from_millis(200),
-            Duration::from_millis(200),
-            Duration::from_millis(400),
         ));
     }
 
     #[test]
     fn effective_stop_tail_min_wait_has_internal_floor() {
-        assert_eq!(
-            effective_stop_tail_min_wait(100),
-            Duration::from_millis(200)
-        );
+        assert_eq!(effective_stop_tail_min_wait(50), Duration::from_millis(100));
         assert_eq!(
             effective_stop_tail_min_wait(800),
             Duration::from_millis(800)
@@ -1079,33 +1076,33 @@ mod tests {
     #[test]
     fn stop_tail_wait_extends_when_voice_is_recent() {
         assert!(!should_finish_stop_tail_wait(
-            Duration::from_millis(250),
-            Some(Duration::from_millis(100)),
+            Duration::from_millis(150),
+            Some(Duration::from_millis(50)),
+            Duration::from_millis(100),
+            Duration::from_millis(100),
             Duration::from_millis(200),
-            Duration::from_millis(200),
-            Duration::from_millis(400),
         ));
     }
 
     #[test]
     fn stop_tail_wait_finishes_after_quiet_tail() {
         assert!(should_finish_stop_tail_wait(
-            Duration::from_millis(420),
-            Some(Duration::from_millis(220)),
+            Duration::from_millis(220),
+            Some(Duration::from_millis(120)),
+            Duration::from_millis(100),
+            Duration::from_millis(100),
             Duration::from_millis(200),
-            Duration::from_millis(200),
-            Duration::from_millis(400),
         ));
     }
 
     #[test]
     fn stop_tail_wait_forces_finish_at_max_wait() {
         assert!(should_finish_stop_tail_wait(
-            Duration::from_millis(400),
+            Duration::from_millis(200),
             Some(Duration::from_millis(20)),
+            Duration::from_millis(100),
+            Duration::from_millis(100),
             Duration::from_millis(200),
-            Duration::from_millis(200),
-            Duration::from_millis(400),
         ));
     }
 }

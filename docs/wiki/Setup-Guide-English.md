@@ -245,14 +245,14 @@ Recording:
 ```toml
 [audio]
 max_record_seconds = 300
-stop_grace_ms = 200
+stop_grace_ms = 100
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
 ```
 
-VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. When the microphone is quiet but clear, set `input_gain_db` in recording troubleshooting; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet. Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping, defaulting to about `200ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `400ms` so noise cannot keep recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. When the microphone is quiet but clear, set `input_gain_db` in recording troubleshooting; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet. Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping, defaulting to about `100ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `200ms` so noise cannot keep recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
 
 First-word acceleration is enabled by default with a moderate `accelerate_score` of `8` so captions start sooner. If the first word becomes noticeably less accurate, set `enable_accelerate_text = false` in `config.toml`, or lower `accelerate_score` to `0`.
 
@@ -284,7 +284,7 @@ Screen OCR context:
 enabled = true
 capture_scope = "screen"  # screen = current display, window = current window only
 max_chars = 1200
-timeout_ms = 300
+timeout_ms = 500
 ```
 
 Updates:

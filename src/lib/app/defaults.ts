@@ -64,7 +64,7 @@ export const fallbackConfig: AppConfig = {
     channels: 1,
     segment_ms: 200,
     max_record_seconds: 300,
-    stop_grace_ms: 200,
+    stop_grace_ms: 100,
     silence_auto_stop_seconds: 30,
     silence_level_threshold: 0.03,
     input_gain_db: 0,
@@ -98,7 +98,7 @@ export const fallbackConfig: AppConfig = {
     enabled: true,
     capture_scope: "screen",
     max_chars: 1200,
-    timeout_ms: 300,
+    timeout_ms: 500,
   },
   triggers: { hotkey_enabled: true, middle_mouse_enabled: false, right_alt_enabled: false },
   typing: {
