@@ -25,11 +25,11 @@ pub struct AsrFinalText {
 }
 
 const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
-const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(220);
+const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(80);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(900);
-const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 100;
-const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 100;
+const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
+const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
     "豆包 ASR 连接已结束，但未返回完整最终结果。请重试，或检查网络稳定性。";
@@ -426,6 +426,7 @@ async fn run_websocket_session(
 
     let mut seq = 2;
     let mut audio_pacer = AudioSendPacer::new();
+    // 只在首尾补很短静音；中间麦克风分片保持原样，避免稀释真实语音。
     let mut pending_audio = VecDeque::from(initial_audio_silence_chunks(&config));
     let mut audio_input_closed = false;
     let mut end_packet_pending = false;
@@ -514,7 +515,11 @@ async fn run_websocket_session(
             }
         }
 
-        let response_poll_timeout = audio_pacer.response_poll_timeout(Duration::from_millis(40));
+        let response_poll_timeout = websocket_response_poll_timeout(
+            audio_finished,
+            &audio_pacer,
+            Duration::from_millis(40),
+        );
         match tokio::time::timeout(response_poll_timeout, websocket.next()).await {
             Ok(Some(Ok(Message::Binary(data)))) => {
                 let parsed = protocol::parse_response(&data)?;
@@ -524,7 +529,8 @@ async fn run_websocket_session(
                 let packet_text =
                     normalize_live_text(&asr::extract_display_text(parsed.payload_msg.as_ref()));
                 let settling_after_final = final_packet_settle_started.is_some();
-                if !packet_text.is_empty() && packet_text != display_text {
+                let live_packet_text_seen = !packet_text.is_empty();
+                if live_packet_text_seen && packet_text != display_text {
                     display_text = packet_text.clone();
                     if partial_limiter.should_emit(&display_text) {
                         emit_partial_text(&app, &display_text);
@@ -540,7 +546,7 @@ async fn run_websocket_session(
                             .map(|item| item.text.as_str())
                             .collect::<Vec<_>>()
                             .join("");
-                        if !text.trim().is_empty() {
+                        if !live_packet_text_seen && !text.trim().is_empty() {
                             let normalized =
                                 asr::normalize_final_text(&text, remove_trailing_period);
                             if partial_limiter.should_emit(&normalized) {
@@ -660,6 +666,18 @@ impl AudioSendPacer {
 
     fn mark_sent_bytes(&mut self, byte_len: usize) {
         self.next_send_at = Some(Instant::now() + Self::interval_for_audio_bytes(byte_len));
+    }
+}
+
+fn websocket_response_poll_timeout(
+    audio_finished: bool,
+    audio_pacer: &AudioSendPacer,
+    default_timeout: Duration,
+) -> Duration {
+    if audio_finished {
+        default_timeout
+    } else {
+        audio_pacer.response_poll_timeout(default_timeout)
     }
 }
 
@@ -1013,15 +1031,16 @@ fn friendly_asr_service_error(code: i32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        final_audio_silence_chunks, finish_output_sent_session, friendly_asr_connection_error,
-        friendly_asr_service_error, initial_audio_silence_chunks, is_success_code,
-        select_final_output_text, should_finish_final_packet_settle,
+        asr_pcm_bytes_for_ms, final_audio_silence_chunks, finish_output_sent_session,
+        friendly_asr_connection_error, friendly_asr_service_error, initial_audio_silence_chunks,
+        is_success_code, select_final_output_text, should_finish_final_packet_settle,
         should_hold_overlay_for_output_warning, should_timeout_waiting_final, silent_test_audio,
-        upsert_definite_segment, AudioSendPacer,
+        upsert_definite_segment, websocket_response_poll_timeout, AudioSendPacer,
+        PartialTextLimiter, PARTIAL_TEXT_MIN_INTERVAL,
     };
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
     use crate::{asr::DefiniteSegment, config::AppConfig};
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn accepts_doubao_success_codes() {
@@ -1188,7 +1207,7 @@ mod tests {
         let chunks = final_audio_silence_chunks(&config);
 
         assert_eq!(chunks.len(), 1);
-        assert!(chunks.iter().all(|chunk| chunk.len() == 3_200));
+        assert!(chunks.iter().all(|chunk| chunk.len() == 1_600));
         assert!(chunks.iter().flatten().all(|byte| *byte == 0));
     }
 
@@ -1200,7 +1219,7 @@ mod tests {
         let chunks = initial_audio_silence_chunks(&config);
 
         assert_eq!(chunks.len(), 1);
-        assert!(chunks.iter().all(|chunk| chunk.len() == 3_200));
+        assert!(chunks.iter().all(|chunk| chunk.len() == 1_600));
         assert!(chunks.iter().flatten().all(|byte| *byte == 0));
     }
 
@@ -1209,17 +1228,39 @@ mod tests {
         let mut config = AppConfig::default();
         config.audio.segment_ms = 20;
 
-        assert_eq!(initial_audio_silence_chunks(&config)[0].len(), 3_200);
+        assert_eq!(initial_audio_silence_chunks(&config)[0].len(), 1_600);
 
         config.audio.segment_ms = 500;
 
-        assert_eq!(final_audio_silence_chunks(&config)[0].len(), 3_200);
+        assert_eq!(final_audio_silence_chunks(&config)[0].len(), 1_600);
+    }
+
+    #[test]
+    fn silence_padding_is_only_head_and_tail() {
+        let config = AppConfig::default();
+        let middle_audio = vec![7; asr_pcm_bytes_for_ms(200) as usize];
+        let mut chunks = Vec::new();
+
+        chunks.extend(initial_audio_silence_chunks(&config));
+        chunks.push(middle_audio.clone());
+        chunks.extend(final_audio_silence_chunks(&config));
+
+        assert_eq!(chunks.len(), 3);
+        assert_eq!(chunks[0].len(), 1_600);
+        assert_eq!(chunks[1], middle_audio);
+        assert_eq!(chunks[2].len(), 1_600);
+        assert!(chunks[0].iter().all(|byte| *byte == 0));
+        assert!(chunks[2].iter().all(|byte| *byte == 0));
     }
 
     #[test]
     fn audio_send_pacer_uses_actual_packet_duration_with_documented_bounds() {
         assert_eq!(
             AudioSendPacer::interval_for_audio_bytes(640),
+            Duration::from_millis(100)
+        );
+        assert_eq!(
+            AudioSendPacer::interval_for_audio_bytes(3_200),
             Duration::from_millis(100)
         );
         assert_eq!(
@@ -1248,6 +1289,32 @@ mod tests {
         assert!(
             pacer.response_poll_timeout(Duration::from_millis(40)) <= Duration::from_millis(40)
         );
+    }
+
+    #[test]
+    fn final_wait_uses_default_response_poll_timeout_after_audio_finished() {
+        let pacer = AudioSendPacer {
+            next_send_at: Some(Instant::now() - Duration::from_millis(1)),
+        };
+
+        assert_eq!(
+            pacer.response_poll_timeout(Duration::from_millis(40)),
+            Duration::from_millis(1)
+        );
+        assert_eq!(
+            websocket_response_poll_timeout(true, &pacer, Duration::from_millis(40)),
+            Duration::from_millis(40)
+        );
+    }
+
+    #[test]
+    fn partial_text_limiter_allows_faster_live_caption_updates() {
+        let mut limiter = PartialTextLimiter::new();
+
+        assert_eq!(PARTIAL_TEXT_MIN_INTERVAL, Duration::from_millis(80));
+        assert!(limiter.should_emit("第一段"));
+        assert!(!limiter.should_emit("第一段"));
+        assert!(!limiter.should_emit(""));
     }
 
     #[test]

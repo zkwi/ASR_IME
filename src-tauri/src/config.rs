@@ -810,7 +810,7 @@ fn default_screen_context_max_chars() -> usize {
     1_200
 }
 fn default_screen_context_timeout_ms() -> u64 {
-    700
+    300
 }
 fn default_paste_delay_ms() -> u64 {
     120
@@ -958,6 +958,7 @@ mod tests {
         assert!(!config.llm_post_edit.use_recent_context);
         assert!(config.screen_context.enabled);
         assert_eq!(config.screen_context.capture_scope, "screen");
+        assert_eq!(config.screen_context.timeout_ms, 300);
         assert!(!config.auto_hotwords.enabled);
         assert!(config.auto_hotwords.accepted_hotwords.is_empty());
         assert_eq!(config.auto_hotwords.max_history_chars, 5_000);

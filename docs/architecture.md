@@ -71,7 +71,7 @@ flowchart TD
 ## ASR / LLM / OCR 数据流
 
 1. 开始录音时，`SessionController` 加载配置，启动麦克风采集，并按需启动屏幕 OCR。
-2. `screen_context.rs` 按配置截取当前显示器或当前前台窗口，OCR 文本只在本轮请求内使用；失败或超时会跳过，不阻断录音和粘贴。
+2. `screen_context.rs` 按配置截取当前显示器或当前前台窗口；ASR 建连前只短暂等待 OCR，上下文只在本轮请求内使用，失败或超时会跳过，不阻断录音、最终识别和粘贴。
 3. `asr.rs` 组装豆包 ASR 请求。热词、最近上下文、场景上下文和 OCR 结果会作为上下文发送；OCR 会标注为开始录音时的屏幕 OCR 上下文，不是用户指令或待识别文本。
 4. `asr_ws.rs` 维护流式 WebSocket 会话，实时片段用于悬浮字幕，最终结果进入后处理。
 5. `llm_post_edit.rs` 只在 LLM 已启用、文本长度达到 `min_chars` 且 Base URL、API Key、模型名完整时调用；用户词典、场景与偏好上下文、可选最近上下文和屏幕 OCR 会作为参考信息分区追加，并明确不是待润色文本或指令来源，也不能把待润色文本没说的参考信息补进输出。最近上下文进入 LLM 需要 `context.enable_recent_context` 和 `llm_post_edit.use_recent_context` 同时开启，并限制为最近几段中的约 600 字；默认提示词会保持待润色文本的主要语言，不主动翻译中文或外语内容；否则直接使用 ASR 最终文本。

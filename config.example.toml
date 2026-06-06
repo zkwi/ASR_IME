@@ -71,7 +71,7 @@ enabled = true
 capture_scope = "screen"
 # OCR 文本只保留本轮请求，不写入日志、统计或配置；超时/失败会自动跳过，不影响录音
 max_chars = 1200
-timeout_ms = 700
+timeout_ms = 300
 
 [auto_hotwords]
 # 是否保存 VoxType 最终语音输入文本，用于手动生成热词候选；默认关闭

@@ -97,7 +97,7 @@ export const fallbackConfig: AppConfig = {
     enabled: true,
     capture_scope: "screen",
     max_chars: 1200,
-    timeout_ms: 700,
+    timeout_ms: 300,
   },
   triggers: { hotkey_enabled: true, middle_mouse_enabled: false, right_alt_enabled: false },
   typing: {

@@ -110,7 +110,7 @@ pub fn wait_for_context(
             None
         }
         Err(RecvTimeoutError::Timeout) => {
-            app_log::warn(format!("屏幕 OCR 超过 {}ms 未返回，已跳过。", timeout_ms));
+            app_log::info(format!("屏幕 OCR 超过 {}ms 未返回，已跳过。", timeout_ms));
             None
         }
         Err(RecvTimeoutError::Disconnected) => {

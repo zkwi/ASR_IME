@@ -251,7 +251,7 @@ silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
-VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. Before the first real audio packet, it sends a short leading silence to help Doubao stabilize initial speech recognition. `stop_grace_ms` is the requested minimum tail wait after stopping. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. Before the first real audio packet, it sends only about `50ms` of leading silence to help Doubao stabilize initial speech recognition. Interim Doubao text is shown in the floating caption as quickly as possible, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, only about `50ms` of trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
 
 Triggers:
 
@@ -279,7 +279,7 @@ Screen OCR context:
 enabled = true
 capture_scope = "screen"  # screen = current display, window = current window only
 max_chars = 1200
-timeout_ms = 700
+timeout_ms = 300
 ```
 
 Updates:
