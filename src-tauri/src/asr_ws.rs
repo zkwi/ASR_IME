@@ -29,7 +29,6 @@ const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(80);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(900);
 const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
-const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
     "豆包 ASR 连接已结束，但未返回完整最终结果。请重试，或检查网络稳定性。";
@@ -426,7 +425,7 @@ async fn run_websocket_session(
 
     let mut seq = 2;
     let mut audio_pacer = AudioSendPacer::new();
-    // 只在首尾补很短静音；中间麦克风分片保持原样，避免稀释真实语音。
+    // 只在开头补很短静音；结束依赖停录尾音等待和 flush，不再额外补静音。
     let mut pending_audio = VecDeque::from(initial_audio_silence_chunks(&config));
     let mut audio_input_closed = false;
     let mut end_packet_pending = false;
@@ -449,7 +448,6 @@ async fn run_websocket_session(
                         Ok(chunk) => pending_audio.push_back(chunk),
                         Err(TryRecvError::Empty) => break,
                         Err(TryRecvError::Disconnected) => {
-                            pending_audio.extend(final_audio_silence_chunks(&config));
                             audio_input_closed = true;
                             end_packet_pending = true;
                             break;
@@ -688,13 +686,6 @@ fn initial_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
     )
 }
 
-fn final_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
-    silence_chunks_for_ms(
-        FINAL_AUDIO_SILENCE_PADDING_MS,
-        audio::effective_asr_segment_ms(config.audio.segment_ms),
-    )
-}
-
 fn silence_chunks_for_ms(padding_ms: u64, segment_ms: u64) -> Vec<Vec<u8>> {
     let total_bytes = asr_pcm_bytes_for_ms(padding_ms);
     let chunk_bytes = asr_pcm_bytes_for_ms(segment_ms.max(1)).max(2);
@@ -709,10 +700,10 @@ fn silence_chunks_for_ms(padding_ms: u64, segment_ms: u64) -> Vec<Vec<u8>> {
 }
 
 fn asr_pcm_bytes_for_ms(duration_ms: u64) -> u64 {
-    audio::ASR_OUTPUT_SAMPLE_RATE as u64
-        * audio::ASR_OUTPUT_CHANNELS as u64
-        * 2
-        * duration_ms.max(1)
+    if duration_ms == 0 {
+        return 0;
+    }
+    audio::ASR_OUTPUT_SAMPLE_RATE as u64 * audio::ASR_OUTPUT_CHANNELS as u64 * 2 * duration_ms
         / 1000
 }
 
@@ -1031,12 +1022,13 @@ fn friendly_asr_service_error(code: i32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        asr_pcm_bytes_for_ms, final_audio_silence_chunks, finish_output_sent_session,
-        friendly_asr_connection_error, friendly_asr_service_error, initial_audio_silence_chunks,
-        is_success_code, select_final_output_text, should_finish_final_packet_settle,
-        should_hold_overlay_for_output_warning, should_timeout_waiting_final, silent_test_audio,
-        upsert_definite_segment, websocket_response_poll_timeout, AudioSendPacer,
-        PartialTextLimiter, PARTIAL_TEXT_MIN_INTERVAL,
+        asr_pcm_bytes_for_ms, finish_output_sent_session, friendly_asr_connection_error,
+        friendly_asr_service_error, initial_audio_silence_chunks, is_success_code,
+        select_final_output_text, should_finish_final_packet_settle,
+        should_hold_overlay_for_output_warning, should_timeout_waiting_final,
+        silence_chunks_for_ms, silent_test_audio, upsert_definite_segment,
+        websocket_response_poll_timeout, AudioSendPacer, PartialTextLimiter,
+        PARTIAL_TEXT_MIN_INTERVAL,
     };
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
     use crate::{asr::DefiniteSegment, config::AppConfig};
@@ -1200,18 +1192,6 @@ mod tests {
     }
 
     #[test]
-    fn final_audio_silence_chunks_use_short_asr_pcm_pad() {
-        let mut config = AppConfig::default();
-        config.request.end_window_size = Some(800);
-        config.audio.segment_ms = 200;
-        let chunks = final_audio_silence_chunks(&config);
-
-        assert_eq!(chunks.len(), 1);
-        assert!(chunks.iter().all(|chunk| chunk.len() == 1_600));
-        assert!(chunks.iter().flatten().all(|byte| *byte == 0));
-    }
-
-    #[test]
     fn initial_audio_silence_chunks_prime_asr_before_first_real_audio() {
         let mut config = AppConfig::default();
         config.audio.segment_ms = 200;
@@ -1224,7 +1204,7 @@ mod tests {
     }
 
     #[test]
-    fn silence_padding_uses_effective_asr_segment_bounds() {
+    fn initial_silence_padding_uses_effective_asr_segment_bounds() {
         let mut config = AppConfig::default();
         config.audio.segment_ms = 20;
 
@@ -1232,25 +1212,27 @@ mod tests {
 
         config.audio.segment_ms = 500;
 
-        assert_eq!(final_audio_silence_chunks(&config)[0].len(), 1_600);
+        assert_eq!(initial_audio_silence_chunks(&config)[0].len(), 1_600);
     }
 
     #[test]
-    fn silence_padding_is_only_head_and_tail() {
+    fn silence_padding_is_only_before_first_real_audio() {
         let config = AppConfig::default();
         let middle_audio = vec![7; asr_pcm_bytes_for_ms(200) as usize];
         let mut chunks = Vec::new();
 
         chunks.extend(initial_audio_silence_chunks(&config));
         chunks.push(middle_audio.clone());
-        chunks.extend(final_audio_silence_chunks(&config));
 
-        assert_eq!(chunks.len(), 3);
+        assert_eq!(chunks.len(), 2);
         assert_eq!(chunks[0].len(), 1_600);
         assert_eq!(chunks[1], middle_audio);
-        assert_eq!(chunks[2].len(), 1_600);
         assert!(chunks[0].iter().all(|byte| *byte == 0));
-        assert!(chunks[2].iter().all(|byte| *byte == 0));
+    }
+
+    #[test]
+    fn zero_silence_padding_produces_no_audio_chunks() {
+        assert!(silence_chunks_for_ms(0, 200).is_empty());
     }
 
     #[test]
