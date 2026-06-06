@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn last_audio_request_uses_negative_sequence() {
-        let packet = build_audio_request(9, b"", true).unwrap();
+        let packet = build_audio_request(9, b"pcm", true).unwrap();
         assert_eq!(packet[1], 0x23);
         assert_eq!(i32::from_be_bytes(packet[4..8].try_into().unwrap()), -9);
     }

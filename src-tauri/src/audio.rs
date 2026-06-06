@@ -10,6 +10,8 @@ use std::time::{Duration, Instant};
 
 pub const ASR_OUTPUT_SAMPLE_RATE: u32 = 16_000;
 pub const ASR_OUTPUT_CHANNELS: u16 = 1;
+pub const ASR_MIN_SEGMENT_MS: u64 = 100;
+pub const ASR_MAX_SEGMENT_MS: u64 = 200;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AudioCaptureInfo {
@@ -306,8 +308,12 @@ fn select_input_config(
 }
 
 fn target_chunk_bytes(sample_rate: u32, channels: u16, segment_ms: u64) -> usize {
-    let frames = ((sample_rate as u64 * segment_ms.max(1)) / 1000).max(1);
+    let frames = ((sample_rate as u64 * effective_asr_segment_ms(segment_ms)) / 1000).max(1);
     frames as usize * channels.max(1) as usize * 2
+}
+
+pub fn effective_asr_segment_ms(segment_ms: u64) -> u64 {
+    segment_ms.clamp(ASR_MIN_SEGMENT_MS, ASR_MAX_SEGMENT_MS)
 }
 
 fn send_level(tx: &Option<mpsc::Sender<f32>>, level: f32) {
@@ -872,8 +878,8 @@ fn build_f32_stream(
 #[cfg(test)]
 mod tests {
     use super::{
-        PcmNormalizer, PcmSink, SegmentedAudioBuffer, SilenceAutoStopper, ASR_OUTPUT_CHANNELS,
-        ASR_OUTPUT_SAMPLE_RATE,
+        effective_asr_segment_ms, target_chunk_bytes, PcmNormalizer, PcmSink, SegmentedAudioBuffer,
+        SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
     };
     use std::sync::mpsc;
 
@@ -936,6 +942,15 @@ mod tests {
         let mut stopper = SilenceAutoStopper::new(16_000, 0, 0.04);
 
         assert!(!stopper.observe(0.0, 16_000 * 600));
+    }
+
+    #[test]
+    fn asr_segment_ms_is_clamped_to_doubao_recommended_range() {
+        assert_eq!(effective_asr_segment_ms(20), 100);
+        assert_eq!(effective_asr_segment_ms(160), 160);
+        assert_eq!(effective_asr_segment_ms(500), 200);
+        assert_eq!(target_chunk_bytes(16_000, 1, 20), 3_200);
+        assert_eq!(target_chunk_bytes(16_000, 1, 500), 6_400);
     }
 
     #[test]

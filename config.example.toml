@@ -17,7 +17,7 @@ resource_id = "volc.seedasr.sauc.duration"
 sample_rate = 16000
 # 录音声道偏好；发送豆包前会统一转换为单声道
 channels = 1
-# 每次发送到 ASR 的音频块时长，越小越实时
+# 每次发送到 ASR 的音频块时长；实际发给豆包时会限制在 100-200ms，默认 200ms
 segment_ms = 200
 # 单次最长录音秒数
 max_record_seconds = 300

@@ -9,6 +9,7 @@ use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
 const OVERLAY_LABEL: &str = "caption-overlay";
+pub const STARTING_TEXT: &str = "正在启动麦克风...";
 pub const RECORDING_TEXT: &str = "正在听你说话...";
 pub const POST_EDITING_TEXT: &str = "正在润色...";
 pub const EMPTY_TRANSCRIPT_TEXT: &str = "没有识别到文字，请重试一次。";
@@ -56,10 +57,6 @@ pub fn create_overlay_window(app: &AppHandle) -> Result<(), String> {
 
     crate::app_log::info("悬浮字幕窗已创建");
     Ok(())
-}
-
-pub fn show_for_recording(app: &AppHandle, ui: &UiConfig) {
-    show_with_text(app, ui, DEFAULT_TEXT);
 }
 
 pub fn show_message(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {

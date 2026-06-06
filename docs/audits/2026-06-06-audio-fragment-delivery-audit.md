@@ -8,7 +8,7 @@
 
 ## 豆包文档依据
 
-- 大模型流式语音识别建议单包音频 100-200ms，发包间隔 100-200ms，过大或过小都会影响性能。
+- 大模型流式语音识别建议单包音频 100-200ms，发包间隔 100-200ms，双向流式 200ms 分包最优；过大或过小都会影响性能。
 - 发送最后一包（负包）后，服务端会返回识别到的结果；双向流式优化版只在结果变化时返回新的数据包。
 - `result_type` 默认为 `full`，返回累计结果；`single` 为增量结果。
 
@@ -23,8 +23,8 @@
    - flush 重采样器里不足一个输出采样窗口的尾部样本；
    - flush 不足一个音频包的分片尾部。
 5. ASR WebSocket 首包后先按正常分片节奏发送短头部静音，帮助服务端稳定识别开头。
-6. ASR WebSocket 循环发送通道中所有已入队音频包；若启动阶段产生积压，也按 100-200ms 节奏发送，避免瞬间打包影响服务端处理。
-7. 音频通道断开后，继续发送尾部静音包，再发送负包。
+6. ASR WebSocket 循环发送通道中所有已入队音频包；若启动阶段产生积压，也按每个包的实际音频时长安排下一次发送，并限制在 100-200ms，避免瞬间打包或短包长等影响服务端处理；等待下一包发送期间仍继续读取豆包响应，不阻塞实时反馈。
+7. 音频通道断开后，继续发送尾部静音包，并将最后一个音频包直接作为负包发送。
 8. 负包后等待豆包最终包，并在短暂 settle 后选择最终文本。
 
 ## 已覆盖边界
@@ -33,11 +33,14 @@
 - 停录时不足一个分片大小的 PCM 尾包会被发送。
 - 非完整声道帧不会被 `chunks_exact` 静默丢弃。
 - 首个真实音频包前会发送短静音，降低开头几个字被截断的概率。
-- 麦克风启动成功后才显示录音悬浮字幕，避免在采集尚未就绪时提示用户开始说话。
-- 真实音频、头部静音和尾部静音都按豆包建议的分片节奏发送。
+- ASR 实际采集分片会限制在 100-200ms；默认 200ms 保留豆包双向流式推荐值。
+- 录音悬浮字幕会立即显示启动状态；麦克风启动成功后才切换为正在听你说话，避免在采集尚未就绪时提示用户开始说话。
+- 真实音频、约 100ms 头部静音和约 100ms 尾部静音都按豆包建议的分片节奏发送。
+- 100ms 头尾补片和不足一片的尾包按实际音频时长安排发送，不再按默认 200ms 人为拉长。
+- 音频发送节奏等待不阻塞 WebSocket 响应读取，实时字幕和最终状态不会被本地发包 sleep 拖慢。
 - ASR 最终文本必须来自最终包；只有中间文本或 definitive 分句但没有最终包时会失败。
 - 最终包比 definitive 分句包含更多尾字时，优先使用最终包文本。
-- 负包前会补尾部静音，降低尾字被 VAD 截断的概率。
+- 最后一个音频包直接使用负序列发送，降低尾字被 VAD 截断的概率，同时避免额外空负包拉长停录后的等待。
 
 ## 验证命令
 
@@ -45,8 +48,9 @@
 cargo test audio::tests
 cargo test final_output
 cargo test initial_audio_silence_chunks_prime_asr_before_first_real_audio
-cargo test audio_send_pacer_keeps_documented_packet_interval_bounds
-cargo test final_audio_silence_chunks
+cargo test silence_padding_uses_effective_asr_segment_bounds
+cargo test audio_send_pacer_uses_actual_packet_duration_with_documented_bounds
+cargo test final_audio_silence_chunks_use_short_asr_pcm_pad
 npm run ai:check
 ```
 

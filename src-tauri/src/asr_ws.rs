@@ -5,6 +5,7 @@ use crate::{
 };
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
+use std::collections::VecDeque;
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -27,8 +28,8 @@ const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
 const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(220);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(900);
-const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 400;
-const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 1_000;
+const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 100;
+const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 100;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
     "豆包 ASR 连接已结束，但未返回完整最终结果。请重试，或检查网络稳定性。";
@@ -375,7 +376,9 @@ async fn polish_with_delayed_status(
 fn silent_test_audio(config: &AppConfig) -> Vec<u8> {
     let bytes_per_second =
         audio::ASR_OUTPUT_SAMPLE_RATE as usize * audio::ASR_OUTPUT_CHANNELS as usize * 2;
-    let requested = bytes_per_second.saturating_mul(config.audio.segment_ms as usize) / 1000;
+    let requested = bytes_per_second
+        .saturating_mul(audio::effective_asr_segment_ms(config.audio.segment_ms) as usize)
+        / 1000;
     let byte_len = requested.clamp(3_200, 32_000);
     vec![0; byte_len]
 }
@@ -422,18 +425,10 @@ async fn run_websocket_session(
     app_log::info("ASR 首包已发送");
 
     let mut seq = 2;
-    let mut audio_pacer = AudioSendPacer::new(config.audio.segment_ms);
-    for padding in initial_audio_silence_chunks(&config) {
-        audio_pacer.wait_before_send().await;
-        websocket
-            .send(Message::Binary(
-                protocol::build_audio_request(seq, &padding, false)?.into(),
-            ))
-            .await
-            .map_err(|err| format!("发送 ASR 头部静音包失败: {}", err))?;
-        audio_pacer.mark_sent();
-        seq += 1;
-    }
+    let mut audio_pacer = AudioSendPacer::new();
+    let mut pending_audio = VecDeque::from(initial_audio_silence_chunks(&config));
+    let mut audio_input_closed = false;
+    let mut end_packet_pending = false;
     let mut audio_finished = false;
     let mut final_wait_started: Option<Instant> = None;
     let final_timeout =
@@ -447,32 +442,52 @@ async fn run_websocket_session(
 
     loop {
         if !audio_finished {
-            match audio_rx.try_recv() {
-                Ok(chunk) => {
-                    audio_pacer.wait_before_send().await;
+            if !audio_input_closed {
+                loop {
+                    match audio_rx.try_recv() {
+                        Ok(chunk) => pending_audio.push_back(chunk),
+                        Err(TryRecvError::Empty) => break,
+                        Err(TryRecvError::Disconnected) => {
+                            pending_audio.extend(final_audio_silence_chunks(&config));
+                            audio_input_closed = true;
+                            end_packet_pending = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if audio_pacer.ready_to_send() {
+                if let Some(chunk) = pending_audio.pop_front() {
+                    let is_last_audio_chunk = end_packet_pending && pending_audio.is_empty();
                     websocket
                         .send(Message::Binary(
-                            protocol::build_audio_request(seq, &chunk, false)?.into(),
+                            protocol::build_audio_request(seq, &chunk, is_last_audio_chunk)?.into(),
                         ))
                         .await
                         .map_err(|err| format!("发送 ASR 音频包失败: {}", err))?;
-                    audio_pacer.mark_sent();
-                    seq += 1;
-                }
-                Err(TryRecvError::Empty) => {}
-                Err(TryRecvError::Disconnected) => {
-                    for padding in final_audio_silence_chunks(&config) {
-                        audio_pacer.wait_before_send().await;
-                        websocket
-                            .send(Message::Binary(
-                                protocol::build_audio_request(seq, &padding, false)?.into(),
-                            ))
-                            .await
-                            .map_err(|err| format!("发送 ASR 尾部静音包失败: {}", err))?;
-                        audio_pacer.mark_sent();
-                        seq += 1;
+                    if is_last_audio_chunk {
+                        audio_finished = true;
+                        end_packet_pending = false;
+                        final_wait_started = Some(Instant::now());
+                        if session
+                            .set_phase_for_generation(
+                                generation,
+                                Some(&app),
+                                SessionPhase::WaitingFinalResult,
+                                "Waiting for final ASR result.",
+                                None,
+                            )
+                            .is_none()
+                        {
+                            return Err("ASR session expired.".to_string());
+                        }
+                        app_log::info("ASR 最后一包音频已发送");
+                    } else {
+                        audio_pacer.mark_sent_bytes(chunk.len());
                     }
-                    audio_pacer.wait_before_send().await;
+                    seq += 1;
+                } else if end_packet_pending {
                     websocket
                         .send(Message::Binary(
                             protocol::build_audio_request(seq, &[], true)?.into(),
@@ -480,6 +495,7 @@ async fn run_websocket_session(
                         .await
                         .map_err(|err| format!("发送 ASR 结束包失败: {}", err))?;
                     audio_finished = true;
+                    end_packet_pending = false;
                     final_wait_started = Some(Instant::now());
                     if session
                         .set_phase_for_generation(
@@ -498,7 +514,8 @@ async fn run_websocket_session(
             }
         }
 
-        match tokio::time::timeout(Duration::from_millis(40), websocket.next()).await {
+        let response_poll_timeout = audio_pacer.response_poll_timeout(Duration::from_millis(40));
+        match tokio::time::timeout(response_poll_timeout, websocket.next()).await {
             Ok(Some(Ok(Message::Binary(data)))) => {
                 let parsed = protocol::parse_response(&data)?;
                 if !is_success_code(parsed.code) {
@@ -606,47 +623,58 @@ fn upsert_definite_segment(
 }
 
 struct AudioSendPacer {
-    interval: Duration,
     next_send_at: Option<Instant>,
 }
 
 impl AudioSendPacer {
-    fn new(segment_ms: u64) -> Self {
-        Self {
-            interval: Self::interval_for_segment_ms(segment_ms),
-            next_send_at: None,
-        }
+    fn new() -> Self {
+        Self { next_send_at: None }
     }
 
-    fn interval_for_segment_ms(segment_ms: u64) -> Duration {
-        Duration::from_millis(segment_ms.clamp(100, 200))
+    fn interval_for_audio_bytes(byte_len: usize) -> Duration {
+        Duration::from_millis(
+            asr_pcm_duration_ms_for_bytes(byte_len)
+                .clamp(audio::ASR_MIN_SEGMENT_MS, audio::ASR_MAX_SEGMENT_MS),
+        )
     }
 
-    async fn wait_before_send(&mut self) {
+    fn ready_to_send(&self) -> bool {
+        self.next_send_at
+            .map(|next_send_at| Instant::now() >= next_send_at)
+            .unwrap_or(true)
+    }
+
+    fn response_poll_timeout(&self, default_timeout: Duration) -> Duration {
         let Some(next_send_at) = self.next_send_at else {
-            return;
+            return default_timeout;
         };
-        if let Some(wait) = next_send_at.checked_duration_since(Instant::now()) {
-            tokio::time::sleep(wait).await;
+        let wait = next_send_at
+            .checked_duration_since(Instant::now())
+            .unwrap_or_default();
+        if wait.is_zero() {
+            Duration::from_millis(1)
+        } else {
+            wait.min(default_timeout)
         }
     }
 
-    fn mark_sent(&mut self) {
-        self.next_send_at = Some(Instant::now() + self.interval);
+    fn mark_sent_bytes(&mut self, byte_len: usize) {
+        self.next_send_at = Some(Instant::now() + Self::interval_for_audio_bytes(byte_len));
     }
 }
 
 fn initial_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
-    silence_chunks_for_ms(INITIAL_AUDIO_SILENCE_PADDING_MS, config.audio.segment_ms)
+    silence_chunks_for_ms(
+        INITIAL_AUDIO_SILENCE_PADDING_MS,
+        audio::effective_asr_segment_ms(config.audio.segment_ms),
+    )
 }
 
 fn final_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
-    let padding_ms = config
-        .request
-        .end_window_size
-        .unwrap_or(FINAL_AUDIO_SILENCE_PADDING_MS)
-        .max(FINAL_AUDIO_SILENCE_PADDING_MS);
-    silence_chunks_for_ms(padding_ms, config.audio.segment_ms)
+    silence_chunks_for_ms(
+        FINAL_AUDIO_SILENCE_PADDING_MS,
+        audio::effective_asr_segment_ms(config.audio.segment_ms),
+    )
 }
 
 fn silence_chunks_for_ms(padding_ms: u64, segment_ms: u64) -> Vec<Vec<u8>> {
@@ -668,6 +696,14 @@ fn asr_pcm_bytes_for_ms(duration_ms: u64) -> u64 {
         * 2
         * duration_ms.max(1)
         / 1000
+}
+
+fn asr_pcm_duration_ms_for_bytes(byte_len: usize) -> u64 {
+    let bytes_per_second =
+        audio::ASR_OUTPUT_SAMPLE_RATE as u64 * audio::ASR_OUTPUT_CHANNELS as u64 * 2;
+    (byte_len as u64)
+        .saturating_mul(1000)
+        .div_ceil(bytes_per_second)
 }
 
 fn should_finish_final_packet_settle(elapsed: Option<Duration>) -> bool {
@@ -1145,14 +1181,14 @@ mod tests {
     }
 
     #[test]
-    fn final_audio_silence_chunks_use_asr_pcm_format_and_configured_segment_size() {
+    fn final_audio_silence_chunks_use_short_asr_pcm_pad() {
         let mut config = AppConfig::default();
         config.request.end_window_size = Some(800);
         config.audio.segment_ms = 200;
         let chunks = final_audio_silence_chunks(&config);
 
-        assert_eq!(chunks.len(), 5);
-        assert!(chunks.iter().all(|chunk| chunk.len() == 6_400));
+        assert_eq!(chunks.len(), 1);
+        assert!(chunks.iter().all(|chunk| chunk.len() == 3_200));
         assert!(chunks.iter().flatten().all(|byte| *byte == 0));
     }
 
@@ -1163,24 +1199,54 @@ mod tests {
 
         let chunks = initial_audio_silence_chunks(&config);
 
-        assert_eq!(chunks.len(), 2);
-        assert!(chunks.iter().all(|chunk| chunk.len() == 6_400));
+        assert_eq!(chunks.len(), 1);
+        assert!(chunks.iter().all(|chunk| chunk.len() == 3_200));
         assert!(chunks.iter().flatten().all(|byte| *byte == 0));
     }
 
     #[test]
-    fn audio_send_pacer_keeps_documented_packet_interval_bounds() {
+    fn silence_padding_uses_effective_asr_segment_bounds() {
+        let mut config = AppConfig::default();
+        config.audio.segment_ms = 20;
+
+        assert_eq!(initial_audio_silence_chunks(&config)[0].len(), 3_200);
+
+        config.audio.segment_ms = 500;
+
+        assert_eq!(final_audio_silence_chunks(&config)[0].len(), 3_200);
+    }
+
+    #[test]
+    fn audio_send_pacer_uses_actual_packet_duration_with_documented_bounds() {
         assert_eq!(
-            AudioSendPacer::interval_for_segment_ms(20),
+            AudioSendPacer::interval_for_audio_bytes(640),
             Duration::from_millis(100)
         );
         assert_eq!(
-            AudioSendPacer::interval_for_segment_ms(160),
+            AudioSendPacer::interval_for_audio_bytes(5_120),
             Duration::from_millis(160)
         );
         assert_eq!(
-            AudioSendPacer::interval_for_segment_ms(500),
+            AudioSendPacer::interval_for_audio_bytes(16_000),
             Duration::from_millis(200)
+        );
+    }
+
+    #[test]
+    fn audio_send_pacer_does_not_block_response_polling_until_next_packet() {
+        let mut pacer = AudioSendPacer::new();
+
+        assert!(pacer.ready_to_send());
+        assert_eq!(
+            pacer.response_poll_timeout(Duration::from_millis(40)),
+            Duration::from_millis(40)
+        );
+
+        pacer.mark_sent_bytes(3_200);
+
+        assert!(!pacer.ready_to_send());
+        assert!(
+            pacer.response_poll_timeout(Duration::from_millis(40)) <= Duration::from_millis(40)
         );
     }
 

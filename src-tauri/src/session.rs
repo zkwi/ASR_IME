@@ -161,6 +161,7 @@ impl SessionController {
             loaded.data.audio.mute_system_volume_while_recording
         ));
         if let Some(app) = app.as_ref() {
+            overlay::show_message(app, &loaded.data.ui, overlay::STARTING_TEXT);
             let starting = SessionState {
                 recording: true,
                 phase: SessionPhase::Starting,
@@ -188,6 +189,8 @@ impl SessionController {
                         Some(error_code),
                     );
                     if let Some(app) = app.as_ref() {
+                        overlay::update_text(app, format!("启动录音失败: {}", err));
+                        overlay::hide(app);
                         emit_state(
                             Some(app),
                             &state.unwrap_or(SessionState {
@@ -214,9 +217,6 @@ impl SessionController {
             "麦克风采集已启动: device=\"{}\", rate={}Hz, channels={}",
             audio_info.device_name, audio_info.sample_rate, audio_info.channels
         ));
-        if let Some(app) = app.as_ref() {
-            overlay::show_for_recording(app, &loaded.data.ui);
-        }
         if let (Some(app_for_level), Some(level_rx)) = (app.clone(), level_rx) {
             spawn_audio_level_emitter(app_for_level, level_rx);
         }
