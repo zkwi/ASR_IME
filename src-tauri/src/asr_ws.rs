@@ -25,10 +25,15 @@ pub struct AsrFinalText {
 }
 
 const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
+// 近期实测表明：速度优化应优先放在响应轮询和字幕节流，而不是缩短默认 200ms ASR 音频包。
+// 豆包双向流式对 100-200ms 音频包更稳；这里的 50/20ms 只影响本地显示和收包等待。
+// 维护依据见 docs/asr-quality-latency-guardrails.md。
 const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(50);
 const RESPONSE_POLL_TIMEOUT: Duration = Duration::from_millis(20);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
+// 收到最终包后短暂 settle，给二遍修正一次补尾机会；不回退到直接接受中间结果。
 const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(300);
+// 头部保护并入第一包真实音频，避免独立短包破坏豆包推荐的发包节奏。
 const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
@@ -828,6 +833,10 @@ fn select_final_output_text(
     Ok(final_text)
 }
 
+// 最终输出仍必须来自豆包最终包；definite 分句用于稳定性，但不能压掉更完整的最终包。
+// 0.1.102 的回归经验：final 包补齐尾字时，前文可能相对 definite 分句有小幅改写。
+// 因此先接受严格包含，再用高重合度兜底；完全不相关的更长 final 包仍会被拒绝。
+// 改这里时同步 docs/asr-quality-latency-guardrails.md，并先补 final_output_ 回归测试。
 fn final_text_covers_definitive_text(final_text: &str, definitive_text: &str) -> bool {
     let compact_final = compact_for_final_prefix(final_text);
     let compact_definitive = compact_for_final_prefix(definitive_text);

@@ -58,6 +58,7 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     request.insert("enable_nonstream".to_string(), json!(true));
     request.insert("enable_itn".to_string(), json!(config.request.enable_itn));
     request.insert("enable_punc".to_string(), json!(config.request.enable_punc));
+    // DDC 偏“语义顺滑”，实测会增加专有词、短命令或标点敏感口述被改写的风险，默认保持关闭。
     request.insert("enable_ddc".to_string(), json!(config.request.enable_ddc));
     request.insert("show_utterances".to_string(), json!(true));
     request.insert("result_type".to_string(), json!("full"));
@@ -71,6 +72,7 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
         json!(enable_accelerate_text),
     );
     if enable_accelerate_text {
+        // 中等首字加速提升字幕跟手感；若首字误识别变多，应降分或关闭，而不是改变最终文本门禁。
         request.insert(
             "accelerate_score".to_string(),
             json!(config

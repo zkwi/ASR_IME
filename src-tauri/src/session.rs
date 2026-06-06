@@ -14,6 +14,9 @@ use crate::system_audio::{self, VolumeState};
 use crate::tray;
 
 const STOP_TAIL_POLL_MS: u64 = 50;
+// 0.1.101 后验证较稳的折中：默认至少收 100ms 尾音，仍有人声时最多约 200ms。
+// 如果再次出现实际尾字被切断，优先调大 stop_grace_ms/这些窗口；不要用中间 ASR 文本兜底。
+// 维护依据见 docs/asr-quality-latency-guardrails.md。
 const STOP_TAIL_MIN_CAPTURE_MS: u64 = 100;
 const STOP_TAIL_MIN_QUIET_MS: u64 = 100;
 const STOP_TAIL_MAX_EXTRA_MS: u64 = 100;

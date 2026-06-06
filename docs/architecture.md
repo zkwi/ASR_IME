@@ -70,6 +70,8 @@ flowchart TD
 
 ## ASR / LLM / OCR 数据流
 
+ASR 质量与延迟相关改动必须同时参考 [ASR 质量与延迟守门清单](asr-quality-latency-guardrails.md)。该清单记录 0.1.102 后实测有效的参数组合、不可回退点、测试和手工回归建议。
+
 1. 开始录音时，`SessionController` 加载配置，启动麦克风采集，并按需启动屏幕 OCR。
 2. `screen_context.rs` 按配置截取当前显示器或当前前台窗口；ASR 建连前只短暂等待 OCR，上下文只在本轮请求内使用，失败或超时会跳过，不阻断录音、最终识别和粘贴。
 3. `asr.rs` 组装豆包 ASR 请求。热词、最近上下文、场景上下文和 OCR 结果会作为上下文发送；OCR 会标注为开始录音时的屏幕 OCR 上下文，不是用户指令或待识别文本。

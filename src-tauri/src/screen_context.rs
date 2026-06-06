@@ -93,6 +93,8 @@ pub fn wait_for_context(
     timeout_ms: u64,
 ) -> Option<ScreenContextSnapshot> {
     let receiver = receiver?;
+    // 500ms 是近期实测的命中率/首字延迟折中：OCR 超时只跳过上下文，不应阻断录音或最终输出。
+    // 维护依据见 docs/asr-quality-latency-guardrails.md。
     match receiver.recv_timeout(Duration::from_millis(timeout_ms.max(1))) {
         Ok(Ok(snapshot)) if !snapshot.text.trim().is_empty() => Some(snapshot),
         Ok(Ok(snapshot)) => {
