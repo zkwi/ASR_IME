@@ -205,6 +205,8 @@ mute_system_volume_while_recording = false
 
 VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them.
 
+When stopping recording, `stop_grace_ms` is the requested minimum tail wait. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, and a short silence pad is sent before the end packet to help Doubao trigger the final two-pass endpoint.
+
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 
 ## First Use

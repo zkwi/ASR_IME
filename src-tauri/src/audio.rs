@@ -4,9 +4,9 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, SampleFormat, Stream, StreamConfig, SupportedStreamConfig};
 use serde::Serialize;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub const ASR_OUTPUT_SAMPLE_RATE: u32 = 16_000;
 pub const ASR_OUTPUT_CHANNELS: u16 = 1;
@@ -34,11 +34,12 @@ struct CaptureCounters {
 }
 
 struct CaptureOutputs {
-    chunk_tx: Option<mpsc::Sender<Vec<u8>>>,
+    chunk_buffer: Option<Arc<Mutex<SegmentedAudioBuffer>>>,
     level_tx: Option<mpsc::Sender<f32>>,
     silence_tx: Option<mpsc::Sender<()>>,
     silence_auto_stop_seconds: u64,
     silence_level_threshold: f32,
+    voice_activity: VoiceActivity,
 }
 
 pub struct AudioCapture {
@@ -48,6 +49,8 @@ pub struct AudioCapture {
     sample_rate: u32,
     channels: u16,
     counters: CaptureCounters,
+    chunk_buffer: Option<Arc<Mutex<SegmentedAudioBuffer>>>,
+    voice_activity: VoiceActivity,
 }
 
 impl AudioCapture {
@@ -59,6 +62,10 @@ impl AudioCapture {
             chunks: self.counters.chunks.load(Ordering::Relaxed),
             pcm_bytes: self.counters.pcm_bytes.load(Ordering::Relaxed),
         }
+    }
+
+    pub fn recent_voice_elapsed(&self) -> Option<Duration> {
+        self.voice_activity.recent_voice_elapsed()
     }
 }
 
@@ -76,14 +83,28 @@ pub fn start_capture(
     let worker_counters = counters.clone();
     let (ready_tx, ready_rx) = mpsc::channel();
     let (stop_tx, stop_rx) = mpsc::channel();
+    let chunk_buffer = chunk_tx.map(|tx| {
+        Arc::new(Mutex::new(SegmentedAudioBuffer::new(
+            tx,
+            target_chunk_bytes(
+                ASR_OUTPUT_SAMPLE_RATE,
+                ASR_OUTPUT_CHANNELS,
+                audio.segment_ms,
+            ),
+        )))
+    });
+    let worker_chunk_buffer = chunk_buffer.clone();
+    let voice_activity = VoiceActivity::default();
+    let worker_voice_activity = voice_activity.clone();
 
     let join_handle = thread::spawn(move || {
         let outputs = CaptureOutputs {
-            chunk_tx,
+            chunk_buffer: worker_chunk_buffer,
             level_tx,
             silence_tx,
             silence_auto_stop_seconds: audio.silence_auto_stop_seconds,
             silence_level_threshold: audio.silence_level_threshold,
+            voice_activity: worker_voice_activity,
         };
         let (stream, device_name, sample_rate, channels) =
             match start_capture_in_thread(&audio, worker_counters, outputs) {
@@ -114,6 +135,8 @@ pub fn start_capture(
         sample_rate,
         channels,
         counters,
+        chunk_buffer,
+        voice_activity,
     })
 }
 
@@ -148,6 +171,34 @@ impl Drop for AudioCapture {
         if let Some(join_handle) = self.join_handle.take() {
             let _ = join_handle.join();
         }
+        if let Some(buffer) = &self.chunk_buffer {
+            if let Ok(mut buffer) = buffer.lock() {
+                buffer.flush();
+            }
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+struct VoiceActivity {
+    last_voice_at: Arc<Mutex<Option<Instant>>>,
+}
+
+impl VoiceActivity {
+    fn observe(&self, level: f32, threshold: f32) {
+        if level <= threshold {
+            return;
+        }
+        if let Ok(mut last_voice_at) = self.last_voice_at.lock() {
+            *last_voice_at = Some(Instant::now());
+        }
+    }
+
+    fn recent_voice_elapsed(&self) -> Option<Duration> {
+        self.last_voice_at
+            .lock()
+            .ok()
+            .and_then(|last_voice_at| last_voice_at.map(|instant| instant.elapsed()))
     }
 }
 
@@ -169,11 +220,6 @@ fn start_capture_in_thread(
         sample_rate: supported.sample_rate(),
         buffer_size: cpal::BufferSize::Default,
     };
-    let target_chunk_bytes = target_chunk_bytes(
-        ASR_OUTPUT_SAMPLE_RATE,
-        ASR_OUTPUT_CHANNELS,
-        audio.segment_ms,
-    );
     if stream_config.sample_rate != ASR_OUTPUT_SAMPLE_RATE
         || stream_config.channels != ASR_OUTPUT_CHANNELS
     {
@@ -187,38 +233,18 @@ fn start_capture_in_thread(
     }
     let err_fn = |err| app_log::warn(format!("audio input stream error: {}", err));
     let stream = match sample_format {
-        SampleFormat::I16 => build_i16_stream(
-            &device,
-            &stream_config,
-            target_chunk_bytes,
-            counters.clone(),
-            outputs,
-            err_fn,
-        )?,
-        SampleFormat::U16 => build_u16_stream(
-            &device,
-            &stream_config,
-            target_chunk_bytes,
-            counters.clone(),
-            outputs,
-            err_fn,
-        )?,
-        SampleFormat::U8 => build_u8_stream(
-            &device,
-            &stream_config,
-            target_chunk_bytes,
-            counters.clone(),
-            outputs,
-            err_fn,
-        )?,
-        SampleFormat::F32 => build_f32_stream(
-            &device,
-            &stream_config,
-            target_chunk_bytes,
-            counters.clone(),
-            outputs,
-            err_fn,
-        )?,
+        SampleFormat::I16 => {
+            build_i16_stream(&device, &stream_config, counters.clone(), outputs, err_fn)?
+        }
+        SampleFormat::U16 => {
+            build_u16_stream(&device, &stream_config, counters.clone(), outputs, err_fn)?
+        }
+        SampleFormat::U8 => {
+            build_u8_stream(&device, &stream_config, counters.clone(), outputs, err_fn)?
+        }
+        SampleFormat::F32 => {
+            build_f32_stream(&device, &stream_config, counters.clone(), outputs, err_fn)?
+        }
         other => return Err(format!("暂不支持的输入采样格式: {:?}", other)),
     };
     stream
@@ -274,16 +300,41 @@ fn target_chunk_bytes(sample_rate: u32, channels: u16, segment_ms: u64) -> usize
     frames as usize * channels.max(1) as usize * 2
 }
 
-fn send_segmented_bytes(tx: &mpsc::Sender<Vec<u8>>, pending: &mut Vec<u8>, target_bytes: usize) {
-    while pending.len() >= target_bytes {
-        let chunk = pending.drain(..target_bytes).collect::<Vec<_>>();
-        let _ = tx.send(chunk);
-    }
-}
-
 fn send_level(tx: &Option<mpsc::Sender<f32>>, level: f32) {
     if let Some(tx) = tx {
         let _ = tx.send(level.clamp(0.0, 1.0));
+    }
+}
+
+struct SegmentedAudioBuffer {
+    tx: mpsc::Sender<Vec<u8>>,
+    pending: Vec<u8>,
+    target_bytes: usize,
+}
+
+impl SegmentedAudioBuffer {
+    fn new(tx: mpsc::Sender<Vec<u8>>, target_bytes: usize) -> Self {
+        Self {
+            tx,
+            pending: Vec::new(),
+            target_bytes: target_bytes.max(1),
+        }
+    }
+
+    fn push(&mut self, bytes: &[u8]) {
+        self.pending.extend_from_slice(bytes);
+        while self.pending.len() >= self.target_bytes {
+            let chunk = self.pending.drain(..self.target_bytes).collect::<Vec<_>>();
+            let _ = self.tx.send(chunk);
+        }
+    }
+
+    fn flush(&mut self) {
+        if self.pending.is_empty() {
+            return;
+        }
+        let tail = std::mem::take(&mut self.pending);
+        let _ = self.tx.send(tail);
     }
 }
 
@@ -438,11 +489,11 @@ impl PcmNormalizer {
     fn push_u16(&mut self, data: &[u16], pending: &mut Vec<u8>) -> usize {
         let before = pending.len();
         for frame in data.chunks_exact(self.source_channels) {
-            let sum = frame
+            let samples = frame
                 .iter()
                 .map(|sample| *sample as i32 - 32768)
-                .sum::<i32>();
-            self.push_mono_sample(clamp_i32_to_i16(sum / frame.len() as i32), pending);
+                .collect::<Vec<_>>();
+            self.push_mono_sample(mix_centered_i32_frame(&samples), pending);
         }
         pending.len().saturating_sub(before)
     }
@@ -450,11 +501,11 @@ impl PcmNormalizer {
     fn push_u8(&mut self, data: &[u8], pending: &mut Vec<u8>) -> usize {
         let before = pending.len();
         for frame in data.chunks_exact(self.source_channels) {
-            let sum = frame
+            let samples = frame
                 .iter()
                 .map(|sample| (*sample as i32 - 128) << 8)
-                .sum::<i32>();
-            self.push_mono_sample(clamp_i32_to_i16(sum / frame.len() as i32), pending);
+                .collect::<Vec<_>>();
+            self.push_mono_sample(mix_centered_i32_frame(&samples), pending);
         }
         pending.len().saturating_sub(before)
     }
@@ -462,11 +513,7 @@ impl PcmNormalizer {
     fn push_f32(&mut self, data: &[f32], pending: &mut Vec<u8>) -> usize {
         let before = pending.len();
         for frame in data.chunks_exact(self.source_channels) {
-            let avg = frame
-                .iter()
-                .map(|sample| sample.clamp(-1.0, 1.0))
-                .sum::<f32>()
-                / frame.len() as f32;
+            let avg = mix_f32_frame(frame);
             self.push_mono_sample((avg * i16::MAX as f32) as i16, pending);
         }
         pending.len().saturating_sub(before)
@@ -510,8 +557,55 @@ impl PcmNormalizer {
 }
 
 fn mix_i16_frame(frame: &[i16]) -> i16 {
-    let sum = frame.iter().map(|sample| *sample as i32).sum::<i32>();
-    clamp_i32_to_i16(sum / frame.len().max(1) as i32)
+    let samples = frame
+        .iter()
+        .map(|sample| *sample as i32)
+        .collect::<Vec<_>>();
+    mix_centered_i32_frame(&samples)
+}
+
+fn mix_centered_i32_frame(frame: &[i32]) -> i16 {
+    if frame.is_empty() {
+        return 0;
+    }
+    let sum = frame.iter().sum::<i32>();
+    let average = sum / frame.len() as i32;
+    let mut strongest = frame[0];
+    for sample in &frame[1..] {
+        if sample.unsigned_abs() > strongest.unsigned_abs() {
+            strongest = *sample;
+        }
+    }
+
+    if average.unsigned_abs().saturating_mul(2) < strongest.unsigned_abs() {
+        clamp_i32_to_i16(strongest)
+    } else {
+        clamp_i32_to_i16(average)
+    }
+}
+
+fn mix_f32_frame(frame: &[f32]) -> f32 {
+    if frame.is_empty() {
+        return 0.0;
+    }
+    let sum = frame
+        .iter()
+        .map(|sample| sample.clamp(-1.0, 1.0))
+        .sum::<f32>();
+    let average = sum / frame.len() as f32;
+    let mut strongest = frame[0].clamp(-1.0, 1.0);
+    for sample in &frame[1..] {
+        let sample = sample.clamp(-1.0, 1.0);
+        if sample.abs() > strongest.abs() {
+            strongest = sample;
+        }
+    }
+
+    if average.abs() * 2.0 < strongest.abs() {
+        strongest
+    } else {
+        average
+    }
 }
 
 fn clamp_i32_to_i16(value: i32) -> i16 {
@@ -525,13 +619,13 @@ fn clamp_i64_to_i16(value: i64) -> i16 {
 fn build_i16_stream(
     device: &Device,
     config: &StreamConfig,
-    target_chunk_bytes: usize,
     counters: CaptureCounters,
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let mut pending = Vec::new();
+    let mut normalized = Vec::new();
+    let voice_threshold = outputs.silence_level_threshold;
     let mut normalizer = PcmNormalizer::new(config.sample_rate, channels, ASR_OUTPUT_SAMPLE_RATE);
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
@@ -539,9 +633,10 @@ fn build_i16_stream(
         outputs.silence_level_threshold,
     );
     let CaptureOutputs {
-        chunk_tx,
+        chunk_buffer,
         level_tx,
         silence_tx,
+        voice_activity,
         ..
     } = outputs;
     device
@@ -552,11 +647,17 @@ fn build_i16_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = rms_i16(data);
                 send_level(&level_tx, level);
+                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(tx) = &chunk_tx {
-                    let emitted = normalizer.push_i16(data, &mut pending);
+                if let Some(buffer) = &chunk_buffer {
+                    normalized.clear();
+                    let emitted = normalizer.push_i16(data, &mut normalized);
                     counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    send_segmented_bytes(tx, &mut pending, target_chunk_bytes);
+                    if !normalized.is_empty() {
+                        if let Ok(mut buffer) = buffer.lock() {
+                            buffer.push(&normalized);
+                        }
+                    }
                 }
             },
             err_fn,
@@ -568,13 +669,13 @@ fn build_i16_stream(
 fn build_u16_stream(
     device: &Device,
     config: &StreamConfig,
-    target_chunk_bytes: usize,
     counters: CaptureCounters,
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let mut pending = Vec::new();
+    let mut normalized = Vec::new();
+    let voice_threshold = outputs.silence_level_threshold;
     let mut normalizer = PcmNormalizer::new(config.sample_rate, channels, ASR_OUTPUT_SAMPLE_RATE);
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
@@ -582,9 +683,10 @@ fn build_u16_stream(
         outputs.silence_level_threshold,
     );
     let CaptureOutputs {
-        chunk_tx,
+        chunk_buffer,
         level_tx,
         silence_tx,
+        voice_activity,
         ..
     } = outputs;
     device
@@ -595,11 +697,17 @@ fn build_u16_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = rms_u16(data);
                 send_level(&level_tx, level);
+                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(tx) = &chunk_tx {
-                    let emitted = normalizer.push_u16(data, &mut pending);
+                if let Some(buffer) = &chunk_buffer {
+                    normalized.clear();
+                    let emitted = normalizer.push_u16(data, &mut normalized);
                     counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    send_segmented_bytes(tx, &mut pending, target_chunk_bytes);
+                    if !normalized.is_empty() {
+                        if let Ok(mut buffer) = buffer.lock() {
+                            buffer.push(&normalized);
+                        }
+                    }
                 }
             },
             err_fn,
@@ -611,13 +719,13 @@ fn build_u16_stream(
 fn build_u8_stream(
     device: &Device,
     config: &StreamConfig,
-    target_chunk_bytes: usize,
     counters: CaptureCounters,
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let mut pending = Vec::new();
+    let mut normalized = Vec::new();
+    let voice_threshold = outputs.silence_level_threshold;
     let mut normalizer = PcmNormalizer::new(config.sample_rate, channels, ASR_OUTPUT_SAMPLE_RATE);
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
@@ -625,9 +733,10 @@ fn build_u8_stream(
         outputs.silence_level_threshold,
     );
     let CaptureOutputs {
-        chunk_tx,
+        chunk_buffer,
         level_tx,
         silence_tx,
+        voice_activity,
         ..
     } = outputs;
     device
@@ -638,11 +747,17 @@ fn build_u8_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = rms_u8(data);
                 send_level(&level_tx, level);
+                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(tx) = &chunk_tx {
-                    let emitted = normalizer.push_u8(data, &mut pending);
+                if let Some(buffer) = &chunk_buffer {
+                    normalized.clear();
+                    let emitted = normalizer.push_u8(data, &mut normalized);
                     counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    send_segmented_bytes(tx, &mut pending, target_chunk_bytes);
+                    if !normalized.is_empty() {
+                        if let Ok(mut buffer) = buffer.lock() {
+                            buffer.push(&normalized);
+                        }
+                    }
                 }
             },
             err_fn,
@@ -654,13 +769,13 @@ fn build_u8_stream(
 fn build_f32_stream(
     device: &Device,
     config: &StreamConfig,
-    target_chunk_bytes: usize,
     counters: CaptureCounters,
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let mut pending = Vec::new();
+    let mut normalized = Vec::new();
+    let voice_threshold = outputs.silence_level_threshold;
     let mut normalizer = PcmNormalizer::new(config.sample_rate, channels, ASR_OUTPUT_SAMPLE_RATE);
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
@@ -668,9 +783,10 @@ fn build_f32_stream(
         outputs.silence_level_threshold,
     );
     let CaptureOutputs {
-        chunk_tx,
+        chunk_buffer,
         level_tx,
         silence_tx,
+        voice_activity,
         ..
     } = outputs;
     device
@@ -681,11 +797,17 @@ fn build_f32_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = rms_f32(data);
                 send_level(&level_tx, level);
+                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
-                if let Some(tx) = &chunk_tx {
-                    let emitted = normalizer.push_f32(data, &mut pending);
+                if let Some(buffer) = &chunk_buffer {
+                    normalized.clear();
+                    let emitted = normalizer.push_f32(data, &mut normalized);
                     counters.pcm_bytes.fetch_add(emitted, Ordering::Relaxed);
-                    send_segmented_bytes(tx, &mut pending, target_chunk_bytes);
+                    if !normalized.is_empty() {
+                        if let Ok(mut buffer) = buffer.lock() {
+                            buffer.push(&normalized);
+                        }
+                    }
                 }
             },
             err_fn,
@@ -696,7 +818,11 @@ fn build_f32_stream(
 
 #[cfg(test)]
 mod tests {
-    use super::{PcmNormalizer, SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE};
+    use super::{
+        PcmNormalizer, SegmentedAudioBuffer, SilenceAutoStopper, ASR_OUTPUT_CHANNELS,
+        ASR_OUTPUT_SAMPLE_RATE,
+    };
+    use std::sync::mpsc;
 
     fn pcm_bytes_to_i16(bytes: &[u8]) -> Vec<i16> {
         bytes
@@ -787,6 +913,19 @@ mod tests {
     }
 
     #[test]
+    fn pcm_normalizer_preserves_audio_when_stereo_channels_cancel_out() {
+        let mut normalizer = PcmNormalizer::new(48_000, 2, ASR_OUTPUT_SAMPLE_RATE);
+        let mut pending = Vec::new();
+        let phase_inverted_stereo = [
+            1200, -1200, 2400, -2400, 3600, -3600, 4800, -4800, 6000, -6000, 7200, -7200,
+        ];
+
+        normalizer.push_i16(&phase_inverted_stereo, &mut pending);
+
+        assert_eq!(pcm_bytes_to_i16(&pending), vec![2400, 6000]);
+    }
+
+    #[test]
     fn pcm_normalizer_keeps_resample_phase_across_callbacks() {
         let mut normalizer = PcmNormalizer::new(48_000, 1, ASR_OUTPUT_SAMPLE_RATE);
         let mut pending = Vec::new();
@@ -807,5 +946,21 @@ mod tests {
         normalizer.push_i16(&[123, -456], &mut pending);
 
         assert_eq!(pcm_bytes_to_i16(&pending), vec![123, 123, -456, -456]);
+    }
+
+    #[test]
+    fn segmented_audio_buffer_flushes_partial_tail() {
+        let (tx, rx) = mpsc::channel();
+        let mut buffer = SegmentedAudioBuffer::new(tx, 6);
+
+        buffer.push(&[1, 2, 3, 4]);
+        assert!(rx.try_recv().is_err());
+
+        buffer.push(&[5, 6, 7]);
+        assert_eq!(rx.try_recv().unwrap(), vec![1, 2, 3, 4, 5, 6]);
+        assert!(rx.try_recv().is_err());
+
+        buffer.flush();
+        assert_eq!(rx.try_recv().unwrap(), vec![7]);
     }
 }

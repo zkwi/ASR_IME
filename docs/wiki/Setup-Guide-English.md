@@ -251,6 +251,8 @@ silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
+`stop_grace_ms` is the requested minimum tail wait after stopping. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, and a short silence pad is sent before the end packet to help Doubao trigger the final two-pass endpoint.
+
 Triggers:
 
 ```toml

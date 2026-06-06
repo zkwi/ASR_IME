@@ -26,6 +26,8 @@ pub struct AsrFinalText {
 const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
 const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(220);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
+const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(900);
+const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 1_000;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
     "豆包 ASR 连接已结束，但未返回完整最终结果。请重试，或检查网络稳定性。";
@@ -428,6 +430,7 @@ async fn run_websocket_session(
     let mut definitive_segments = Vec::new();
     let mut partial_limiter = PartialTextLimiter::new();
     let mut connection_closed_before_final = false;
+    let mut final_packet_settle_started: Option<Instant> = None;
 
     loop {
         if !audio_finished {
@@ -443,6 +446,15 @@ async fn run_websocket_session(
                 }
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {
+                    for padding in final_audio_silence_chunks(&config) {
+                        websocket
+                            .send(Message::Binary(
+                                protocol::build_audio_request(seq, &padding, false)?.into(),
+                            ))
+                            .await
+                            .map_err(|err| format!("发送 ASR 尾部静音包失败: {}", err))?;
+                        seq += 1;
+                    }
                     websocket
                         .send(Message::Binary(
                             protocol::build_audio_request(seq, &[], true)?.into(),
@@ -476,14 +488,17 @@ async fn run_websocket_session(
                 }
                 let packet_text =
                     normalize_live_text(&asr::extract_display_text(parsed.payload_msg.as_ref()));
+                let settling_after_final = final_packet_settle_started.is_some();
                 if !packet_text.is_empty() && packet_text != display_text {
                     display_text = packet_text.clone();
                     if partial_limiter.should_emit(&display_text) {
                         emit_partial_text(&app, &display_text);
                     }
                 }
+                let mut final_update_seen = false;
                 for segment in asr::extract_definite_segments(parsed.payload_msg.as_ref()) {
                     if upsert_definite_segment(&mut definitive_segments, segment) {
+                        final_update_seen = true;
                         definitive_segments.sort_by_key(|item| (item.start_time, item.end_time));
                         let text = definitive_segments
                             .iter()
@@ -499,27 +514,43 @@ async fn run_websocket_session(
                         }
                     }
                 }
+                if settling_after_final {
+                    if !packet_text.is_empty() {
+                        final_packet_text = Some(packet_text.clone());
+                        final_update_seen = true;
+                    }
+                    if final_update_seen {
+                        final_packet_settle_started = Some(Instant::now());
+                    }
+                }
                 if parsed.is_last_package {
                     final_packet_text = Some(packet_text);
-                    break;
+                    final_packet_settle_started = Some(Instant::now());
                 }
             }
             Ok(Some(Ok(Message::Close(_)))) => {
-                connection_closed_before_final = true;
+                connection_closed_before_final = final_packet_text.is_none();
                 break;
             }
             Ok(Some(Ok(_))) | Err(_) => {}
             Ok(Some(Err(err))) => return Err(format!("接收 ASR 响应失败: {}", err)),
             Ok(None) => {
-                connection_closed_before_final = true;
+                connection_closed_before_final = final_packet_text.is_none();
                 break;
             }
         }
 
-        if let Some(started) = final_wait_started {
-            if started.elapsed() >= final_timeout {
-                return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
-            }
+        if should_timeout_waiting_final(
+            final_packet_text.is_some(),
+            final_wait_started.map(|started| started.elapsed()),
+            final_timeout,
+        ) {
+            return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
+        }
+        if should_finish_final_packet_settle(
+            final_packet_settle_started.map(|started| started.elapsed()),
+        ) {
+            break;
         }
     }
 
@@ -556,6 +587,46 @@ fn upsert_definite_segment(
     true
 }
 
+fn final_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
+    let padding_ms = config
+        .request
+        .end_window_size
+        .unwrap_or(FINAL_AUDIO_SILENCE_PADDING_MS)
+        .max(FINAL_AUDIO_SILENCE_PADDING_MS);
+    let total_bytes = asr_pcm_bytes_for_ms(padding_ms);
+    let chunk_bytes = asr_pcm_bytes_for_ms(config.audio.segment_ms.max(1)).max(2);
+    let mut chunks = Vec::new();
+    let mut remaining = total_bytes;
+    while remaining > 0 {
+        let bytes = remaining.min(chunk_bytes);
+        chunks.push(vec![0; bytes as usize]);
+        remaining -= bytes;
+    }
+    chunks
+}
+
+fn asr_pcm_bytes_for_ms(duration_ms: u64) -> u64 {
+    audio::ASR_OUTPUT_SAMPLE_RATE as u64
+        * audio::ASR_OUTPUT_CHANNELS as u64
+        * 2
+        * duration_ms.max(1)
+        / 1000
+}
+
+fn should_finish_final_packet_settle(elapsed: Option<Duration>) -> bool {
+    elapsed
+        .map(|elapsed| elapsed >= FINAL_PACKET_SETTLE)
+        .unwrap_or(false)
+}
+
+fn should_timeout_waiting_final(
+    final_packet_received: bool,
+    elapsed: Option<Duration>,
+    timeout: Duration,
+) -> bool {
+    !final_packet_received && elapsed.map(|elapsed| elapsed >= timeout).unwrap_or(false)
+}
+
 fn select_final_output_text(
     definitive_segments: &[asr::DefiniteSegment],
     final_packet_text: Option<&str>,
@@ -566,6 +637,7 @@ fn select_final_output_text(
         return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
     };
 
+    let final_text = asr::normalize_final_text(text, remove_trailing_period);
     if !definitive_segments.is_empty() {
         let mut segments = definitive_segments.to_vec();
         segments.sort_by_key(|item| (item.start_time, item.end_time));
@@ -574,15 +646,57 @@ fn select_final_output_text(
             .map(|item| item.text)
             .collect::<Vec<_>>()
             .join("");
-        return Ok(asr::normalize_final_text(&text, remove_trailing_period));
+        let definitive_text = asr::normalize_final_text(&text, remove_trailing_period);
+        if final_text_extends_definitive_text(&final_text, &definitive_text) {
+            return Ok(final_text);
+        }
+        return Ok(definitive_text);
     }
 
-    let final_text = asr::normalize_final_text(text, remove_trailing_period);
-    if final_text.is_empty() {
-        Ok(String::new())
-    } else {
-        Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string())
+    Ok(final_text)
+}
+
+fn final_text_extends_definitive_text(final_text: &str, definitive_text: &str) -> bool {
+    if final_text.is_empty()
+        || definitive_text.is_empty()
+        || final_text.len() <= definitive_text.len()
+    {
+        return false;
     }
+    let compact_final = compact_for_final_prefix(final_text);
+    let compact_definitive = compact_for_final_prefix(definitive_text);
+    !compact_final.is_empty()
+        && !compact_definitive.is_empty()
+        && compact_final.len() > compact_definitive.len()
+        && compact_final.starts_with(&compact_definitive)
+}
+
+fn compact_for_final_prefix(text: &str) -> String {
+    text.chars()
+        .filter(|ch| !ch.is_whitespace() && !ch.is_ascii_punctuation() && !is_cjk_punctuation(*ch))
+        .collect()
+}
+
+fn is_cjk_punctuation(ch: char) -> bool {
+    matches!(
+        ch,
+        '。' | '，'
+            | '、'
+            | '；'
+            | '：'
+            | '？'
+            | '！'
+            | '“'
+            | '”'
+            | '‘'
+            | '’'
+            | '（'
+            | '）'
+            | '《'
+            | '》'
+            | '【'
+            | '】'
+    )
 }
 
 fn emit_partial_text(app: &AppHandle, text: &str) {
@@ -806,12 +920,14 @@ fn friendly_asr_service_error(code: i32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        finish_output_sent_session, friendly_asr_connection_error, friendly_asr_service_error,
-        is_success_code, select_final_output_text, should_hold_overlay_for_output_warning,
-        silent_test_audio, upsert_definite_segment,
+        final_audio_silence_chunks, finish_output_sent_session, friendly_asr_connection_error,
+        friendly_asr_service_error, is_success_code, select_final_output_text,
+        should_finish_final_packet_settle, should_hold_overlay_for_output_warning,
+        should_timeout_waiting_final, silent_test_audio, upsert_definite_segment,
     };
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
     use crate::{asr::DefiniteSegment, config::AppConfig};
+    use std::time::Duration;
 
     #[test]
     fn accepts_doubao_success_codes() {
@@ -849,6 +965,44 @@ mod tests {
             select_final_output_text(&segments, Some("初步结果。"), "初步结果。", true).unwrap();
 
         assert_eq!(text, "二遍完整结果");
+    }
+
+    #[test]
+    fn final_output_uses_last_package_text_when_it_extends_definite_segments() {
+        let segments = vec![DefiniteSegment {
+            text: "按下结束键之后，最后说话".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(
+            &segments,
+            Some("按下结束键之后，最后说话还是没有被识别下来。"),
+            "按下结束键之后，最后说话还是没有被识别下来。",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(text, "按下结束键之后，最后说话还是没有被识别下来");
+    }
+
+    #[test]
+    fn final_output_uses_last_package_text_when_punctuation_differs() {
+        let segments = vec![DefiniteSegment {
+            text: "按下结束键之后，最后说话".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(
+            &segments,
+            Some("按下结束键之后最后说话还是没有被识别下来。"),
+            "按下结束键之后最后说话还是没有被识别下来。",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(text, "按下结束键之后最后说话还是没有被识别下来");
     }
 
     #[test]
@@ -893,10 +1047,52 @@ mod tests {
     }
 
     #[test]
-    fn final_output_rejects_nonempty_last_package_without_definite_segments() {
-        let err = select_final_output_text(&[], Some("初步结果"), "初步结果", false).unwrap_err();
+    fn final_output_uses_last_package_text_without_definite_segments() {
+        let text = select_final_output_text(&[], Some("最终结果"), "最终结果", false).unwrap();
 
-        assert!(err.contains("最终结果"));
+        assert_eq!(text, "最终结果");
+    }
+
+    #[test]
+    fn final_audio_silence_chunks_use_asr_pcm_format_and_configured_segment_size() {
+        let mut config = AppConfig::default();
+        config.request.end_window_size = Some(800);
+        config.audio.segment_ms = 200;
+        let chunks = final_audio_silence_chunks(&config);
+
+        assert_eq!(chunks.len(), 5);
+        assert!(chunks.iter().all(|chunk| chunk.len() == 6_400));
+        assert!(chunks.iter().flatten().all(|byte| *byte == 0));
+    }
+
+    #[test]
+    fn final_packet_settle_waits_before_finishing() {
+        assert!(!should_finish_final_packet_settle(Some(
+            Duration::from_millis(500)
+        )));
+        assert!(should_finish_final_packet_settle(Some(
+            Duration::from_millis(900)
+        )));
+        assert!(!should_finish_final_packet_settle(None));
+    }
+
+    #[test]
+    fn final_timeout_only_applies_before_last_package_arrives() {
+        assert!(should_timeout_waiting_final(
+            false,
+            Some(Duration::from_millis(600)),
+            Duration::from_millis(500),
+        ));
+        assert!(!should_timeout_waiting_final(
+            true,
+            Some(Duration::from_millis(600)),
+            Duration::from_millis(500),
+        ));
+        assert!(!should_timeout_waiting_final(
+            false,
+            None,
+            Duration::from_millis(500),
+        ));
     }
 
     #[test]
