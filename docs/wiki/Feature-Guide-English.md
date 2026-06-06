@@ -69,7 +69,7 @@ Tips:
 
 VoxType uses Doubao `bigmodel_async` WebSocket by default.
 
-It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use the final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is enabled by default for faster captions, while DDC semantic smoothing is newly disabled by default to reduce readability-oriented rewrites.
+It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is enabled by default for faster captions, while DDC semantic smoothing is newly disabled by default to reduce readability-oriented rewrites.
 
 Quality and latency factors:
 

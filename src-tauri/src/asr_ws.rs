@@ -829,18 +829,44 @@ fn select_final_output_text(
 }
 
 fn final_text_covers_definitive_text(final_text: &str, definitive_text: &str) -> bool {
-    if final_text.is_empty()
-        || definitive_text.is_empty()
-        || final_text.len() <= definitive_text.len()
-    {
-        return false;
-    }
     let compact_final = compact_for_final_prefix(final_text);
     let compact_definitive = compact_for_final_prefix(definitive_text);
-    !compact_final.is_empty()
-        && !compact_definitive.is_empty()
-        && compact_final.len() > compact_definitive.len()
-        && compact_final.contains(&compact_definitive)
+    if compact_final.is_empty() || compact_definitive.is_empty() {
+        return false;
+    }
+
+    let final_len = compact_final.chars().count();
+    let definitive_len = compact_definitive.chars().count();
+    if final_len <= definitive_len {
+        return false;
+    }
+    if compact_final.contains(&compact_definitive) {
+        return true;
+    }
+
+    // 豆包 final 包可能补尾字的同时轻微改写前文；高重合且更长时应信任 final 包。
+    common_subsequence_len(&compact_final, &compact_definitive) * 100 >= definitive_len * 75
+}
+
+fn common_subsequence_len(left: &str, right: &str) -> usize {
+    let right_chars: Vec<char> = right.chars().collect();
+    if right_chars.is_empty() {
+        return 0;
+    }
+    let mut dp = vec![0; right_chars.len() + 1];
+    for left_char in left.chars() {
+        let mut previous = 0;
+        for (index, right_char) in right_chars.iter().enumerate() {
+            let saved = dp[index + 1];
+            dp[index + 1] = if left_char == *right_char {
+                previous + 1
+            } else {
+                dp[index + 1].max(dp[index])
+            };
+            previous = saved;
+        }
+    }
+    dp[right_chars.len()]
 }
 
 fn compact_for_final_prefix(text: &str) -> String {
@@ -1220,6 +1246,25 @@ mod tests {
     }
 
     #[test]
+    fn final_output_uses_last_package_text_when_tail_is_added_after_minor_rewrite() {
+        let segments = vec![DefiniteSegment {
+            text: "我觉得这个配置可以".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(
+            &segments,
+            Some("我觉得这项配置可以生效。"),
+            "我觉得这项配置可以生效。",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(text, "我觉得这项配置可以生效");
+    }
+
+    #[test]
     fn final_output_keeps_definite_segments_when_last_package_does_not_cover_them() {
         let segments = vec![DefiniteSegment {
             text: "完整的二遍分句".to_string(),
@@ -1229,6 +1274,25 @@ mod tests {
 
         let text = select_final_output_text(&segments, Some("不相关最终包"), "不相关最终包", false)
             .unwrap();
+
+        assert_eq!(text, "完整的二遍分句");
+    }
+
+    #[test]
+    fn final_output_keeps_definite_segments_when_longer_last_package_is_unrelated() {
+        let segments = vec![DefiniteSegment {
+            text: "完整的二遍分句".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(
+            &segments,
+            Some("这是一个完全不相关但是更长的最终包"),
+            "这是一个完全不相关但是更长的最终包",
+            false,
+        )
+        .unwrap();
 
         assert_eq!(text, "完整的二遍分句");
     }
