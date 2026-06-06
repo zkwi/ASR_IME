@@ -44,7 +44,7 @@ API Config starts with a setup health check instead of a generic status header. 
 
 - Global trigger: `Ctrl + Q` is enabled by default. Right Alt and middle mouse can be enabled manually.
 - Microphone capture: PCM audio capture through Rust `cpal`; input device can be selected.
-- Real-time speech recognition: Doubao `bigmodel_async` WebSocket with two-pass recognition enabled by default. Live captions are feedback only; pasted output waits for Doubao's final package and uses only final `definite=true` utterances.
+- Real-time speech recognition: Doubao `bigmodel_async` WebSocket with two-pass recognition and `full` cumulative results enabled by default. Live captions are feedback only; pasted output waits for Doubao's final package, prefers final two-pass utterances, and can use the final full text to recover missing head or tail words.
 - Local silence fallback: local low-volume auto-stop defaults to 30 seconds with a `0.03` threshold, less aggressive than the old 10-second / `0.04` default, so long dictation and quiet speech are less likely to be cut off. You can adjust it in Options.
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions show text, processing state, and errors only.
 - Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`; clipboard-only mode is also available. VoxType then tries to restore the previous clipboard.
@@ -203,7 +203,7 @@ silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
-VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them.
+VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them. Before the first real audio packet, VoxType sends a short leading silence to help Doubao stabilize initial speech recognition.
 
 When stopping recording, `stop_grace_ms` is the requested minimum tail wait. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, and a short silence pad is sent before the end packet to help Doubao trigger the final two-pass endpoint.
 

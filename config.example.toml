@@ -46,8 +46,8 @@ enable_itn = true
 enable_punc = true
 enable_ddc = true
 show_utterances = true
-# single 只返回当前增量分句，减少重复中间结果；最终输出只在收到最终包后使用 definite=true 的二遍分句
-result_type = "single"
+# full 返回累计结果，最终包可兜底补齐开头或尾部分句；中间结果只用于字幕反馈
+result_type = "full"
 # 加速文本主链路强制关闭，避免使用低可信中间文本
 enable_accelerate_text = false
 accelerate_score = 0

@@ -27,6 +27,7 @@ const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
 const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(220);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(900);
+const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 400;
 const FINAL_AUDIO_SILENCE_PADDING_MS: u64 = 1_000;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
@@ -421,6 +422,18 @@ async fn run_websocket_session(
     app_log::info("ASR 首包已发送");
 
     let mut seq = 2;
+    let mut audio_pacer = AudioSendPacer::new(config.audio.segment_ms);
+    for padding in initial_audio_silence_chunks(&config) {
+        audio_pacer.wait_before_send().await;
+        websocket
+            .send(Message::Binary(
+                protocol::build_audio_request(seq, &padding, false)?.into(),
+            ))
+            .await
+            .map_err(|err| format!("发送 ASR 头部静音包失败: {}", err))?;
+        audio_pacer.mark_sent();
+        seq += 1;
+    }
     let mut audio_finished = false;
     let mut final_wait_started: Option<Instant> = None;
     let final_timeout =
@@ -436,25 +449,30 @@ async fn run_websocket_session(
         if !audio_finished {
             match audio_rx.try_recv() {
                 Ok(chunk) => {
+                    audio_pacer.wait_before_send().await;
                     websocket
                         .send(Message::Binary(
                             protocol::build_audio_request(seq, &chunk, false)?.into(),
                         ))
                         .await
                         .map_err(|err| format!("发送 ASR 音频包失败: {}", err))?;
+                    audio_pacer.mark_sent();
                     seq += 1;
                 }
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {
                     for padding in final_audio_silence_chunks(&config) {
+                        audio_pacer.wait_before_send().await;
                         websocket
                             .send(Message::Binary(
                                 protocol::build_audio_request(seq, &padding, false)?.into(),
                             ))
                             .await
                             .map_err(|err| format!("发送 ASR 尾部静音包失败: {}", err))?;
+                        audio_pacer.mark_sent();
                         seq += 1;
                     }
+                    audio_pacer.wait_before_send().await;
                     websocket
                         .send(Message::Binary(
                             protocol::build_audio_request(seq, &[], true)?.into(),
@@ -587,14 +605,53 @@ fn upsert_definite_segment(
     true
 }
 
+struct AudioSendPacer {
+    interval: Duration,
+    next_send_at: Option<Instant>,
+}
+
+impl AudioSendPacer {
+    fn new(segment_ms: u64) -> Self {
+        Self {
+            interval: Self::interval_for_segment_ms(segment_ms),
+            next_send_at: None,
+        }
+    }
+
+    fn interval_for_segment_ms(segment_ms: u64) -> Duration {
+        Duration::from_millis(segment_ms.clamp(100, 200))
+    }
+
+    async fn wait_before_send(&mut self) {
+        let Some(next_send_at) = self.next_send_at else {
+            return;
+        };
+        if let Some(wait) = next_send_at.checked_duration_since(Instant::now()) {
+            tokio::time::sleep(wait).await;
+        }
+    }
+
+    fn mark_sent(&mut self) {
+        self.next_send_at = Some(Instant::now() + self.interval);
+    }
+}
+
+fn initial_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
+    silence_chunks_for_ms(INITIAL_AUDIO_SILENCE_PADDING_MS, config.audio.segment_ms)
+}
+
 fn final_audio_silence_chunks(config: &AppConfig) -> Vec<Vec<u8>> {
     let padding_ms = config
         .request
         .end_window_size
         .unwrap_or(FINAL_AUDIO_SILENCE_PADDING_MS)
         .max(FINAL_AUDIO_SILENCE_PADDING_MS);
+    silence_chunks_for_ms(padding_ms, config.audio.segment_ms)
+}
+
+fn silence_chunks_for_ms(padding_ms: u64, segment_ms: u64) -> Vec<Vec<u8>> {
     let total_bytes = asr_pcm_bytes_for_ms(padding_ms);
-    let chunk_bytes = asr_pcm_bytes_for_ms(config.audio.segment_ms.max(1)).max(2);
+    let chunk_bytes = asr_pcm_bytes_for_ms(segment_ms.max(1)).max(2);
     let mut chunks = Vec::new();
     let mut remaining = total_bytes;
     while remaining > 0 {
@@ -647,7 +704,7 @@ fn select_final_output_text(
             .collect::<Vec<_>>()
             .join("");
         let definitive_text = asr::normalize_final_text(&text, remove_trailing_period);
-        if final_text_extends_definitive_text(&final_text, &definitive_text) {
+        if final_text_covers_definitive_text(&final_text, &definitive_text) {
             return Ok(final_text);
         }
         return Ok(definitive_text);
@@ -656,7 +713,7 @@ fn select_final_output_text(
     Ok(final_text)
 }
 
-fn final_text_extends_definitive_text(final_text: &str, definitive_text: &str) -> bool {
+fn final_text_covers_definitive_text(final_text: &str, definitive_text: &str) -> bool {
     if final_text.is_empty()
         || definitive_text.is_empty()
         || final_text.len() <= definitive_text.len()
@@ -668,7 +725,7 @@ fn final_text_extends_definitive_text(final_text: &str, definitive_text: &str) -
     !compact_final.is_empty()
         && !compact_definitive.is_empty()
         && compact_final.len() > compact_definitive.len()
-        && compact_final.starts_with(&compact_definitive)
+        && compact_final.contains(&compact_definitive)
 }
 
 fn compact_for_final_prefix(text: &str) -> String {
@@ -921,9 +978,10 @@ fn friendly_asr_service_error(code: i32) -> String {
 mod tests {
     use super::{
         final_audio_silence_chunks, finish_output_sent_session, friendly_asr_connection_error,
-        friendly_asr_service_error, is_success_code, select_final_output_text,
-        should_finish_final_packet_settle, should_hold_overlay_for_output_warning,
-        should_timeout_waiting_final, silent_test_audio, upsert_definite_segment,
+        friendly_asr_service_error, initial_audio_silence_chunks, is_success_code,
+        select_final_output_text, should_finish_final_packet_settle,
+        should_hold_overlay_for_output_warning, should_timeout_waiting_final, silent_test_audio,
+        upsert_definite_segment, AudioSendPacer,
     };
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
     use crate::{asr::DefiniteSegment, config::AppConfig};
@@ -987,6 +1045,25 @@ mod tests {
     }
 
     #[test]
+    fn final_output_uses_last_package_text_when_it_adds_missing_head() {
+        let segments = vec![DefiniteSegment {
+            text: "头两个字可能被截断".to_string(),
+            start_time: 200,
+            end_time: 1200,
+        }];
+
+        let text = select_final_output_text(
+            &segments,
+            Some("开头的头两个字可能被截断。"),
+            "开头的头两个字可能被截断。",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(text, "开头的头两个字可能被截断");
+    }
+
+    #[test]
     fn final_output_uses_last_package_text_when_punctuation_differs() {
         let segments = vec![DefiniteSegment {
             text: "按下结束键之后，最后说话".to_string(),
@@ -1003,6 +1080,20 @@ mod tests {
         .unwrap();
 
         assert_eq!(text, "按下结束键之后最后说话还是没有被识别下来");
+    }
+
+    #[test]
+    fn final_output_keeps_definite_segments_when_last_package_does_not_cover_them() {
+        let segments = vec![DefiniteSegment {
+            text: "完整的二遍分句".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(&segments, Some("不相关最终包"), "不相关最终包", false)
+            .unwrap();
+
+        assert_eq!(text, "完整的二遍分句");
     }
 
     #[test]
@@ -1063,6 +1154,34 @@ mod tests {
         assert_eq!(chunks.len(), 5);
         assert!(chunks.iter().all(|chunk| chunk.len() == 6_400));
         assert!(chunks.iter().flatten().all(|byte| *byte == 0));
+    }
+
+    #[test]
+    fn initial_audio_silence_chunks_prime_asr_before_first_real_audio() {
+        let mut config = AppConfig::default();
+        config.audio.segment_ms = 200;
+
+        let chunks = initial_audio_silence_chunks(&config);
+
+        assert_eq!(chunks.len(), 2);
+        assert!(chunks.iter().all(|chunk| chunk.len() == 6_400));
+        assert!(chunks.iter().flatten().all(|byte| *byte == 0));
+    }
+
+    #[test]
+    fn audio_send_pacer_keeps_documented_packet_interval_bounds() {
+        assert_eq!(
+            AudioSendPacer::interval_for_segment_ms(20),
+            Duration::from_millis(100)
+        );
+        assert_eq!(
+            AudioSendPacer::interval_for_segment_ms(160),
+            Duration::from_millis(160)
+        );
+        assert_eq!(
+            AudioSendPacer::interval_for_segment_ms(500),
+            Duration::from_millis(200)
+        );
     }
 
     #[test]

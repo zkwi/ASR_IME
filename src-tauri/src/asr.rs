@@ -56,7 +56,7 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     request.insert("enable_punc".to_string(), json!(config.request.enable_punc));
     request.insert("enable_ddc".to_string(), json!(config.request.enable_ddc));
     request.insert("show_utterances".to_string(), json!(true));
-    request.insert("result_type".to_string(), json!("single"));
+    request.insert("result_type".to_string(), json!("full"));
 
     request.insert("enable_accelerate_text".to_string(), json!(false));
     if let Some(value) = config.request.end_window_size {
@@ -260,14 +260,14 @@ mod tests {
         let mut config = AppConfig::default();
         config.request.enable_nonstream = false;
         config.request.show_utterances = false;
-        config.request.result_type = "full".to_string();
+        config.request.result_type = "single".to_string();
         config.request.enable_accelerate_text = Some(true);
 
         let payload = build_request_payload(&config, None);
 
         assert_eq!(payload["request"]["enable_nonstream"], true);
         assert_eq!(payload["request"]["show_utterances"], true);
-        assert_eq!(payload["request"]["result_type"], "single");
+        assert_eq!(payload["request"]["result_type"], "full");
         assert_eq!(payload["request"]["enable_accelerate_text"], false);
     }
 

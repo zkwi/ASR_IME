@@ -6,7 +6,7 @@ const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 10_000;
 const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
 const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
-const LEGACY_RESULT_TYPE_DEFAULT: &str = "full";
+const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 
 use crate::config_validation::format_validation_errors;
@@ -795,7 +795,7 @@ fn default_asr_language() -> String {
     "zh-CN".to_string()
 }
 fn default_result_type() -> String {
-    "single".to_string()
+    "full".to_string()
 }
 fn default_final_timeout() -> f64 {
     15.0
@@ -951,7 +951,7 @@ mod tests {
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.request.end_window_size, Some(800));
         assert_eq!(config.request.language, "zh-CN");
-        assert_eq!(config.request.result_type, "single");
+        assert_eq!(config.request.result_type, "full");
         assert!(config.request.enable_nonstream);
         assert!(config.request.show_utterances);
         assert!(!config.context.enable_recent_context);
@@ -1238,10 +1238,10 @@ mod tests {
     #[test]
     fn migrates_legacy_result_type_default() {
         let mut config = AppConfig::default();
-        config.request.result_type = "full".to_string();
+        config.request.result_type = "single".to_string();
 
         assert!(migrate_result_type_default(&mut config));
-        assert_eq!(config.request.result_type, "single");
+        assert_eq!(config.request.result_type, "full");
         assert!(!migrate_result_type_default(&mut config));
     }
 

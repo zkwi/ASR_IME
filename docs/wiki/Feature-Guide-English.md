@@ -66,7 +66,7 @@ Tips:
 
 VoxType uses Doubao `bigmodel_async` WebSocket by default.
 
-It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package and uses only final `definite=true` utterances. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, `single` result delivery, and accelerated text off; ITN, punctuation, DDC, language, and endpointing remain configurable in `config.toml`.
+It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use the final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, `full` cumulative result delivery, and accelerated text off; ITN, punctuation, DDC, language, and endpointing remain configurable in `config.toml`.
 
 Quality and latency factors:
 
@@ -74,7 +74,7 @@ Quality and latency factors:
 | --- | --- |
 | Audio segment | Keep the internal default 200ms |
 | Server endpointing | `end_window_size` defaults to 800ms; existing manual config is preserved |
-| Result type | The main workflow forces `single` to reduce repeated interim text; final output still comes from two-pass utterances |
+| Result type | The main workflow forces `full` so the final package contains the complete cumulative text; interim captions are feedback only |
 | Local silence fallback | Continuous low volume follows the manual-stop flow after 30 seconds by default |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
 | Hotwords | Important for proper nouns and product names |

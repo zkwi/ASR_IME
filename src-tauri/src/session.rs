@@ -152,8 +152,6 @@ impl SessionController {
         } else {
             None
         };
-        let started_at = Instant::now();
-        let screen_context_rx = screen_context::spawn_capture(&loaded.data.screen_context);
         app_log::info(format!(
             "录音启动请求: max_seconds={}, stop_grace_ms={}, silence_auto_stop_seconds={}, silence_level_threshold={}, mute_system_volume={}",
             max_seconds,
@@ -163,7 +161,6 @@ impl SessionController {
             loaded.data.audio.mute_system_volume_while_recording
         ));
         if let Some(app) = app.as_ref() {
-            overlay::show_for_recording(app, &loaded.data.ui);
             let starting = SessionState {
                 recording: true,
                 phase: SessionPhase::Starting,
@@ -172,11 +169,6 @@ impl SessionController {
             };
             emit_state(Some(app), &starting);
         }
-        let volume_state = if loaded.data.audio.mute_system_volume_while_recording {
-            system_audio::safe_mute_and_save()
-        } else {
-            None
-        };
         let audio_capture =
             match audio::start_capture(&loaded.data.audio, Some(audio_tx), level_tx, silence_tx) {
                 Ok(capture) => capture,
@@ -189,7 +181,6 @@ impl SessionController {
                     } else {
                         "MIC_START_FAILED"
                     };
-                    system_audio::safe_restore(volume_state);
                     let state = self.force_stop_generation(
                         generation,
                         SessionPhase::Failed,
@@ -197,8 +188,6 @@ impl SessionController {
                         Some(error_code),
                     );
                     if let Some(app) = app.as_ref() {
-                        overlay::update_text(app, format!("启动录音失败: {}", err));
-                        overlay::hide(app);
                         emit_state(
                             Some(app),
                             &state.unwrap_or(SessionState {
@@ -213,11 +202,21 @@ impl SessionController {
                     return Err(err);
                 }
             };
+        let started_at = Instant::now();
+        let volume_state = if loaded.data.audio.mute_system_volume_while_recording {
+            system_audio::safe_mute_and_save()
+        } else {
+            None
+        };
+        let screen_context_rx = screen_context::spawn_capture(&loaded.data.screen_context);
         let audio_info = audio_capture.info();
         app_log::info(format!(
             "麦克风采集已启动: device=\"{}\", rate={}Hz, channels={}",
             audio_info.device_name, audio_info.sample_rate, audio_info.channels
         ));
+        if let Some(app) = app.as_ref() {
+            overlay::show_for_recording(app, &loaded.data.ui);
+        }
         if let (Some(app_for_level), Some(level_rx)) = (app.clone(), level_rx) {
             spawn_audio_level_emitter(app_for_level, level_rx);
         }
