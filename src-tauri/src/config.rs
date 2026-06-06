@@ -6,8 +6,11 @@ const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 10_000;
 const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
 const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
+const LEGACY_STOP_GRACE_MS: u64 = 800;
 const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
+pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = true;
+pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 8;
 
 use crate::config_validation::format_validation_errors;
 pub use crate::config_validation::validate_config;
@@ -96,7 +99,7 @@ pub struct RequestConfig {
     pub enable_itn: bool,
     #[serde(default = "default_true")]
     pub enable_punc: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub enable_ddc: bool,
     #[serde(default = "default_true")]
     pub show_utterances: bool,
@@ -337,11 +340,11 @@ impl Default for RequestConfig {
             enable_nonstream: true,
             enable_itn: true,
             enable_punc: true,
-            enable_ddc: true,
+            enable_ddc: default_false(),
             show_utterances: true,
             result_type: default_result_type(),
-            enable_accelerate_text: None,
-            accelerate_score: None,
+            enable_accelerate_text: Some(DEFAULT_ENABLE_ACCELERATE_TEXT),
+            accelerate_score: Some(DEFAULT_ACCELERATE_SCORE),
             end_window_size: default_end_window_size(),
             force_to_speech_time: None,
             final_result_timeout_seconds: default_final_timeout(),
@@ -540,11 +543,13 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_auto_hotword_limit = migrate_auto_hotword_history_default(&mut data);
     let migrated_silence_auto_stop = migrate_silence_auto_stop_default(&mut data);
     let migrated_silence_level_threshold = migrate_silence_level_threshold_default(&mut data);
+    let migrated_stop_grace = migrate_stop_grace_default(&mut data);
     let migrated_result_type = migrate_result_type_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
         || migrated_silence_auto_stop
         || migrated_silence_level_threshold
+        || migrated_stop_grace
         || migrated_result_type
     {
         let mut cleaned = data.clone();
@@ -644,6 +649,14 @@ fn migrate_silence_level_threshold_default(config: &mut AppConfig) -> bool {
         <= SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON
     {
         config.audio.silence_level_threshold = default_silence_level_threshold();
+        return true;
+    }
+    false
+}
+
+fn migrate_stop_grace_default(config: &mut AppConfig) -> bool {
+    if config.audio.stop_grace_ms == LEGACY_STOP_GRACE_MS {
+        config.audio.stop_grace_ms = default_stop_grace_ms();
         return true;
     }
     false
@@ -774,7 +787,7 @@ fn default_max_record_seconds() -> u64 {
     300
 }
 fn default_stop_grace_ms() -> u64 {
-    800
+    200
 }
 fn default_silence_auto_stop_seconds() -> u64 {
     30
@@ -790,6 +803,9 @@ fn default_end_window_size() -> Option<u64> {
 }
 fn default_true() -> bool {
     true
+}
+fn default_false() -> bool {
+    false
 }
 fn default_ws_url() -> String {
     "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async".to_string()
@@ -942,7 +958,8 @@ mod tests {
     use super::{
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
         migrate_result_type_default, migrate_silence_auto_stop_default,
-        migrate_silence_level_threshold_default, validate_config, AppConfig, TextContext,
+        migrate_silence_level_threshold_default, migrate_stop_grace_default, validate_config,
+        AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
 
     #[test]
@@ -952,14 +969,23 @@ mod tests {
         assert!(!config.triggers.middle_mouse_enabled);
         assert!(!config.triggers.right_alt_enabled);
         assert!(!config.audio.mute_system_volume_while_recording);
-        assert_eq!(config.audio.stop_grace_ms, 800);
+        assert_eq!(config.audio.stop_grace_ms, 200);
         assert_eq!(config.audio.silence_auto_stop_seconds, 30);
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.audio.input_gain_db, 0.0);
         assert_eq!(config.request.end_window_size, Some(800));
         assert!(config.request.language.is_empty());
         assert_eq!(config.request.result_type, "full");
+        assert_eq!(
+            config.request.enable_accelerate_text,
+            Some(DEFAULT_ENABLE_ACCELERATE_TEXT)
+        );
+        assert_eq!(
+            config.request.accelerate_score,
+            Some(DEFAULT_ACCELERATE_SCORE)
+        );
         assert!(config.request.enable_nonstream);
+        assert!(!config.request.enable_ddc);
         assert!(config.request.show_utterances);
         assert!(!config.context.enable_recent_context);
         assert!(!config.llm_post_edit.use_recent_context);
@@ -977,6 +1003,15 @@ mod tests {
         assert_eq!(config.typing.clipboard_open_retry_interval_ms, 50);
         assert_eq!(config.typing.clipboard_restore_delay_ms, 800);
         assert_eq!(config.typing.clipboard_snapshot_max_bytes, 8 * 1024 * 1024);
+    }
+
+    #[test]
+    fn request_ddc_defaults_to_false_but_preserves_explicit_true() {
+        let missing: AppConfig = toml::from_str("[request]\n").unwrap();
+        assert!(!missing.request.enable_ddc);
+
+        let explicit: AppConfig = toml::from_str("[request]\nenable_ddc = true\n").unwrap();
+        assert!(explicit.request.enable_ddc);
     }
 
     #[test]
@@ -1118,6 +1153,7 @@ mod tests {
         config.audio.input_gain_db = 25.0;
         config.typing.paste_delay_ms = 9_999;
         config.request.final_result_timeout_seconds = 0.0;
+        config.request.accelerate_score = Some(21);
         config.ui.opacity = 2.0;
         config.ui.background_color = "blue".to_string();
         config.ui.text_color = "#fff".to_string();
@@ -1145,6 +1181,7 @@ mod tests {
         assert!(fields.contains(&"audio.input_gain_db"));
         assert!(fields.contains(&"typing.paste_delay_ms"));
         assert!(fields.contains(&"request.final_result_timeout_seconds"));
+        assert!(fields.contains(&"request.accelerate_score"));
         assert!(fields.contains(&"ui.opacity"));
         assert!(fields.contains(&"ui.background_color"));
         assert!(fields.contains(&"ui.text_color"));
@@ -1283,5 +1320,19 @@ mod tests {
         config.audio.silence_level_threshold = 0.02;
         assert!(!migrate_silence_level_threshold_default(&mut config));
         assert_eq!(config.audio.silence_level_threshold, 0.02);
+    }
+
+    #[test]
+    fn migrates_legacy_stop_grace_default() {
+        let mut config = AppConfig::default();
+        config.audio.stop_grace_ms = 800;
+
+        assert!(migrate_stop_grace_default(&mut config));
+        assert_eq!(config.audio.stop_grace_ms, 200);
+        assert!(!migrate_stop_grace_default(&mut config));
+
+        config.audio.stop_grace_ms = 500;
+        assert!(!migrate_stop_grace_default(&mut config));
+        assert_eq!(config.audio.stop_grace_ms, 500);
     }
 }

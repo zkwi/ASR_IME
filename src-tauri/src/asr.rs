@@ -1,9 +1,13 @@
 use crate::audio::{ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE};
-use crate::config::{effective_hotwords, AppConfig};
+use crate::config::{
+    effective_hotwords, AppConfig, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use uuid::Uuid;
+
+const ASR_DIRECT_HOTWORD_LIMIT: usize = 100;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AsrRequestPreview {
@@ -58,7 +62,24 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     request.insert("show_utterances".to_string(), json!(true));
     request.insert("result_type".to_string(), json!("full"));
 
-    request.insert("enable_accelerate_text".to_string(), json!(false));
+    let enable_accelerate_text = config
+        .request
+        .enable_accelerate_text
+        .unwrap_or(DEFAULT_ENABLE_ACCELERATE_TEXT);
+    request.insert(
+        "enable_accelerate_text".to_string(),
+        json!(enable_accelerate_text),
+    );
+    if enable_accelerate_text {
+        request.insert(
+            "accelerate_score".to_string(),
+            json!(config
+                .request
+                .accelerate_score
+                .unwrap_or(DEFAULT_ACCELERATE_SCORE)
+                .clamp(0, 20)),
+        );
+    }
     if let Some(value) = config.request.end_window_size {
         request.insert("end_window_size".to_string(), json!(value));
     }
@@ -92,6 +113,7 @@ pub fn build_context_payload(config: &AppConfig, screen_context: Option<&str>) -
     let mut payload = serde_json::Map::new();
     let hotwords: Vec<Value> = effective_hotwords(config)
         .into_iter()
+        .take(ASR_DIRECT_HOTWORD_LIMIT)
         .filter_map(|word| {
             let word = word.trim().to_string();
             if word.is_empty() {
@@ -163,11 +185,7 @@ pub fn extract_display_text(payload_msg: Option<&Value>) -> String {
         .and_then(Value::as_str)
         .unwrap_or("")
         .trim();
-    if !direct_text.is_empty() {
-        return direct_text.to_string();
-    }
-
-    result
+    let utterance_text = result
         .get("utterances")
         .and_then(Value::as_array)
         .map(|utterances| {
@@ -179,7 +197,17 @@ pub fn extract_display_text(payload_msg: Option<&Value>) -> String {
                 .collect::<Vec<_>>()
                 .join("")
         })
-        .unwrap_or_default()
+        .unwrap_or_default();
+
+    if text_signal_len(&utterance_text) > text_signal_len(direct_text) {
+        return utterance_text;
+    }
+
+    direct_text.to_string()
+}
+
+fn text_signal_len(text: &str) -> usize {
+    text.chars().filter(|ch| !ch.is_whitespace()).count()
 }
 
 pub fn extract_definite_segments(payload_msg: Option<&Value>) -> Vec<DefiniteSegment> {
@@ -247,6 +275,22 @@ mod tests {
     }
 
     #[test]
+    fn context_payload_limits_direct_hotwords_for_streaming_asr() {
+        let mut config = AppConfig::default();
+        config.context.hotwords = (0..120).map(|index| format!("手动热词{index}")).collect();
+        config.auto_hotwords.accepted_hotwords =
+            (0..10).map(|index| format!("自动热词{index}")).collect();
+
+        let context = build_context_payload(&config, None).unwrap();
+        let value: Value = serde_json::from_str(&context).unwrap();
+        let hotwords = value["hotwords"].as_array().unwrap();
+
+        assert_eq!(hotwords.len(), ASR_DIRECT_HOTWORD_LIMIT);
+        assert_eq!(hotwords[0]["word"], "手动热词0");
+        assert_eq!(hotwords[99]["word"], "手动热词99");
+    }
+
+    #[test]
     fn request_payload_includes_configured_audio_language() {
         let mut config = AppConfig::default();
         config.request.language = "en-US".to_string();
@@ -281,14 +325,39 @@ mod tests {
         config.request.enable_nonstream = false;
         config.request.show_utterances = false;
         config.request.result_type = "single".to_string();
-        config.request.enable_accelerate_text = Some(true);
 
         let payload = build_request_payload(&config, None);
 
         assert_eq!(payload["request"]["enable_nonstream"], true);
         assert_eq!(payload["request"]["show_utterances"], true);
         assert_eq!(payload["request"]["result_type"], "full");
+        assert_eq!(payload["request"]["enable_ddc"], false);
+        assert_eq!(payload["request"]["enable_accelerate_text"], true);
+        assert_eq!(payload["request"]["accelerate_score"], 8);
+    }
+
+    #[test]
+    fn request_payload_allows_disabling_first_word_acceleration() {
+        let mut config = AppConfig::default();
+        config.request.enable_accelerate_text = Some(false);
+        config.request.accelerate_score = Some(12);
+
+        let payload = build_request_payload(&config, None);
+
         assert_eq!(payload["request"]["enable_accelerate_text"], false);
+        assert!(payload["request"].get("accelerate_score").is_none());
+    }
+
+    #[test]
+    fn request_payload_uses_configured_accelerate_score() {
+        let mut config = AppConfig::default();
+        config.request.enable_accelerate_text = Some(true);
+        config.request.accelerate_score = Some(12);
+
+        let payload = build_request_payload(&config, None);
+
+        assert_eq!(payload["request"]["enable_accelerate_text"], true);
+        assert_eq!(payload["request"]["accelerate_score"], 12);
     }
 
     #[test]
@@ -377,6 +446,35 @@ mod tests {
             }
         });
         assert_eq!(extract_display_text(Some(&payload)), "实时字幕");
+    }
+
+    #[test]
+    fn display_text_prefers_more_complete_utterances_for_live_caption() {
+        let payload = json!({
+            "result": {
+                "text": "实时",
+                "utterances": [
+                    {"definite": true, "text": "实时"},
+                    {"definite": false, "text": "字幕更新"}
+                ]
+            }
+        });
+
+        assert_eq!(extract_display_text(Some(&payload)), "实时字幕更新");
+    }
+
+    #[test]
+    fn display_text_keeps_direct_text_when_utterances_do_not_add_content() {
+        let payload = json!({
+            "result": {
+                "text": "实时字幕。",
+                "utterances": [
+                    {"definite": false, "text": "实时字幕"}
+                ]
+            }
+        });
+
+        assert_eq!(extract_display_text(Some(&payload)), "实时字幕。");
     }
 
     #[test]

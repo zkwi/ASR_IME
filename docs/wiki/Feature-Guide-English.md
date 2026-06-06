@@ -69,7 +69,7 @@ Tips:
 
 VoxType uses Doubao `bigmodel_async` WebSocket by default.
 
-It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use the final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, `full` cumulative result delivery, and accelerated text off; ITN, punctuation, DDC, language, and endpointing remain configurable in `config.toml`.
+It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use the final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is enabled by default for faster captions, while DDC semantic smoothing is newly disabled by default to reduce readability-oriented rewrites.
 
 Quality and latency factors:
 
@@ -78,6 +78,8 @@ Quality and latency factors:
 | Audio segment | Keep the internal default 200ms |
 | Microphone input gain | Default 0 dB; quiet but clear mics can try +6 dB to +12 dB |
 | Server endpointing | `end_window_size` defaults to 800ms; existing manual config is preserved |
+| First-word return | `enable_accelerate_text` defaults to on with `accelerate_score = 8`; turn it off or lower it to 0 if the first word becomes less accurate |
+| Semantic smoothing | `enable_ddc` is newly off by default; enable it manually when smoother long-form prose matters more |
 | Result type | The main workflow forces `full` so the final package contains the complete cumulative text; interim captions are feedback only |
 | Local silence fallback | Continuous low volume follows the manual-stop flow after 30 seconds by default |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
@@ -139,6 +141,8 @@ Doubao ASR
 Project code names
 Product names
 ```
+
+Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests. Keep frequent proper nouns and remove stale or rarely used terms.
 
 Use scene notes for long-term style and context:
 

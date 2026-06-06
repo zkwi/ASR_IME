@@ -193,6 +193,16 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         120.0,
         "最终结果等待时间需在 1 到 120 秒之间。",
     );
+    if let Some(value) = config.request.accelerate_score {
+        validate_i64_range(
+            &mut errors,
+            "request.accelerate_score",
+            value,
+            0,
+            20,
+            "首字返回加速率需在 0 到 20 之间。",
+        );
+    }
     validate_f64_range(
         &mut errors,
         "ui.opacity",
@@ -376,6 +386,19 @@ fn validate_usize_range(
     value: usize,
     min: usize,
     max: usize,
+    message: &str,
+) {
+    if value < min || value > max {
+        push_validation_error(errors, field, message);
+    }
+}
+
+fn validate_i64_range(
+    errors: &mut Vec<ConfigValidationError>,
+    field: &str,
+    value: i64,
+    min: i64,
+    max: i64,
     message: &str,
 ) {
     if value < min || value > max {

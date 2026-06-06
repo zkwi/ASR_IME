@@ -144,7 +144,7 @@ Use one item per line. Good hotwords include:
 - Project names, abbreviations, code names.
 - Technical terms that ASR often misrecognizes.
 
-Do not add passwords, ID numbers, phone numbers, customer data, or other sensitive information.
+Do not add passwords, ID numbers, phone numbers, customer data, or other sensitive information. Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests.
 
 ### Writing Context
 
@@ -245,14 +245,18 @@ Recording:
 ```toml
 [audio]
 max_record_seconds = 300
-stop_grace_ms = 800
+stop_grace_ms = 200
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
 ```
 
-VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet, making the first packet about `150ms` and later packets default to `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. When the microphone is quiet but clear, set `input_gain_db` in recording troubleshooting; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet. Interim Doubao text is shown in the floating caption as quickly as possible, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. When the microphone is quiet but clear, set `input_gain_db` in recording troubleshooting; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet. Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. `stop_grace_ms` is the requested minimum tail wait after stopping, defaulting to about `200ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `400ms` so noise cannot keep recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+
+First-word acceleration is enabled by default with a moderate `accelerate_score` of `8` so captions start sooner. If the first word becomes noticeably less accurate, set `enable_accelerate_text = false` in `config.toml`, or lower `accelerate_score` to `0`.
+
+Semantic smoothing `enable_ddc` is newly disabled by default to match Doubao's documented default and avoid readability-oriented rewrites of proper nouns, short commands, or punctuation-sensitive dictation. Existing explicit values in `config.toml` are preserved; enable it manually if smoother long-form prose matters more.
 
 Triggers:
 

@@ -53,7 +53,7 @@ API Config starts with a setup health check instead of a generic status header. 
 - Optional LLM polishing: OpenAI-compatible API support for light text cleanup, style control, and an explicit "use recent context for polishing" switch.
 - Screen OCR context: on by default. When recording starts, VoxType captures the current display by default, with an option to switch to the current window only. It runs Windows OCR locally, lightly merges extra spaces between adjacent CJK characters, and sends the temporary text context to Doubao ASR and the optional LLM to improve names, filenames, code identifiers, and UI terms. Timeout or OCR failure is skipped automatically.
 - Prompts and terms: maintain recognition terms, scene notes, and AI prompts.
-- Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count in `config.toml` and retry.
+- Automatic hotword candidates: optional local history and manual LLM candidate generation; candidates must be confirmed before joining hotwords. The default history limit is 5000 characters; the old 10000-character default is migrated to 5000 on config load. Candidate generation uses a larger output and timeout budget than normal polishing; if the full history response is incomplete or times out, VoxType retries once with a smaller recent-history window and fewer candidates. If it still fails, reduce the history text limit or candidate count in `config.toml` and retry. Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests.
 - Tray resident mode: closing the main window hides it to the tray by default. During input and processing, the tray icon switches to an active state. Single-click the tray icon to open the main window; the tray menu can open config, open logs, report an issue, check updates, restart the app, or exit.
 - Updates: the Options page and tray menu can check GitHub Releases. When a new version is found, the UI shows an "Update now" action.
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
@@ -197,20 +197,24 @@ Recording defaults:
 ```toml
 [audio]
 max_record_seconds = 300
-stop_grace_ms = 800
+stop_grace_ms = 200
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
 ```
 
-VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them. Actual ASR packets are kept within Doubao's recommended `100-200ms` range, defaulting to `200ms`. VoxType merges about `50ms` of leading silence into the first real-audio packet, making the first packet about `150ms` and later packets default to `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. Interim Doubao text is shown in the floating caption as quickly as possible, while final paste still waits for Doubao's final package.
+VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them. Actual ASR packets are kept within Doubao's recommended `100-200ms` range, defaulting to `200ms`. VoxType merges about `50ms` of leading silence into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for Doubao's final package.
+
+First-word acceleration is enabled by default with a moderate `accelerate_score` of `8` so captions start sooner. If the first word becomes noticeably less accurate, set `enable_accelerate_text = false` in `config.toml`, or lower `accelerate_score` to `0`.
+
+Semantic smoothing `enable_ddc` is newly disabled by default to match Doubao's documented default and avoid readability-oriented rewrites of proper nouns, short commands, or punctuation-sensitive dictation. Existing explicit values in `config.toml` are preserved; enable it manually if smoother long-form prose matters more.
 
 Doubao's documentation does not require client-side automatic gain control and does not define a separate gain request parameter. When the microphone is quiet but clear, set `input_gain_db` in VoxType's recording troubleshooting settings; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet, because excessive gain can clip speech and amplify room noise.
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 
-When stopping recording, `stop_grace_ms` is the requested minimum tail wait. VoxType also applies an internal floor so clicking stop does not immediately cut off the last syllables. If voice is still detected during the tail window, it keeps recording until the tail becomes quiet or an internal upper bound is reached. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+When stopping recording, `stop_grace_ms` is the requested minimum tail wait, defaulting to about `200ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `400ms` so noise cannot keep recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
 
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 

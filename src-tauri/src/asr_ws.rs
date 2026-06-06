@@ -25,9 +25,10 @@ pub struct AsrFinalText {
 }
 
 const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
-const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(80);
+const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(50);
+const RESPONSE_POLL_TIMEOUT: Duration = Duration::from_millis(20);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
-const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(900);
+const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(300);
 const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
@@ -514,11 +515,8 @@ async fn run_websocket_session(
             }
         }
 
-        let response_poll_timeout = websocket_response_poll_timeout(
-            audio_finished,
-            &audio_pacer,
-            Duration::from_millis(40),
-        );
+        let response_poll_timeout =
+            websocket_response_poll_timeout(audio_finished, &audio_pacer, RESPONSE_POLL_TIMEOUT);
         match tokio::time::timeout(response_poll_timeout, websocket.next()).await {
             Ok(Some(Ok(Message::Binary(data)))) => {
                 let parsed = protocol::parse_response(&data)?;
@@ -531,8 +529,8 @@ async fn run_websocket_session(
                 let live_packet_text_seen = !packet_text.is_empty();
                 if live_packet_text_seen && packet_text != display_text {
                     display_text = packet_text.clone();
-                    if partial_limiter.should_emit(&display_text) {
-                        emit_partial_text(&app, &display_text);
+                    if let Some(text) = partial_limiter.emit_or_defer(&display_text) {
+                        emit_partial_text(&app, &text);
                     }
                 }
                 let mut final_update_seen = false;
@@ -548,8 +546,8 @@ async fn run_websocket_session(
                         if !live_packet_text_seen && !text.trim().is_empty() {
                             let normalized =
                                 asr::normalize_final_text(&text, remove_trailing_period);
-                            if partial_limiter.should_emit(&normalized) {
-                                emit_partial_text(&app, &normalized);
+                            if let Some(text) = partial_limiter.emit_or_defer(&normalized) {
+                                emit_partial_text(&app, &text);
                             }
                         }
                     }
@@ -578,6 +576,9 @@ async fn run_websocket_session(
                 connection_closed_before_final = final_packet_text.is_none();
                 break;
             }
+        }
+        if let Some(text) = partial_limiter.emit_pending_if_ready() {
+            emit_partial_text(&app, &text);
         }
 
         if should_timeout_waiting_final(
@@ -647,9 +648,7 @@ impl AsrAudioQueue {
         let regular_packet_bytes =
             asr_pcm_bytes_for_ms(audio::effective_asr_segment_ms(config.audio.segment_ms)).max(2)
                 as usize;
-        let first_packet_bytes =
-            asr_pcm_bytes_for_ms(INITIAL_AUDIO_SILENCE_PADDING_MS + audio::ASR_MIN_SEGMENT_MS)
-                .max(2) as usize;
+        let first_packet_bytes = regular_packet_bytes;
         Self {
             pending_packets: VecDeque::new(),
             buffered: Vec::new(),
@@ -937,6 +936,7 @@ fn should_hold_overlay_for_output_warning(
 struct PartialTextLimiter {
     last_emit_at: Option<Instant>,
     last_text: String,
+    pending_text: Option<String>,
 }
 
 impl PartialTextLimiter {
@@ -944,24 +944,44 @@ impl PartialTextLimiter {
         Self {
             last_emit_at: None,
             last_text: String::new(),
+            pending_text: None,
         }
     }
 
-    fn should_emit(&mut self, text: &str) -> bool {
+    fn emit_or_defer(&mut self, text: &str) -> Option<String> {
+        let text = text.trim();
+        if text.is_empty() || text == self.last_text {
+            return None;
+        }
+        if self.can_emit_now() {
+            return Some(self.mark_emitted(text.to_string()));
+        }
+        self.pending_text = Some(text.to_string());
+        None
+    }
+
+    fn emit_pending_if_ready(&mut self) -> Option<String> {
+        if !self.can_emit_now() {
+            return None;
+        }
+        let text = self.pending_text.take()?;
         if text.trim().is_empty() || text == self.last_text {
-            return false;
+            return None;
         }
-        let now = Instant::now();
-        let enough_time = self
-            .last_emit_at
+        Some(self.mark_emitted(text))
+    }
+
+    fn can_emit_now(&self) -> bool {
+        self.last_emit_at
             .map(|last| last.elapsed() >= PARTIAL_TEXT_MIN_INTERVAL)
-            .unwrap_or(true);
-        if !enough_time {
-            return false;
-        }
-        self.last_emit_at = Some(now);
-        self.last_text = text.to_string();
-        true
+            .unwrap_or(true)
+    }
+
+    fn mark_emitted(&mut self, text: String) -> String {
+        self.last_emit_at = Some(Instant::now());
+        self.last_text = text.clone();
+        self.pending_text = None;
+        text
     }
 }
 
@@ -1098,7 +1118,7 @@ mod tests {
         should_finish_final_packet_settle, should_hold_overlay_for_output_warning,
         should_timeout_waiting_final, silent_test_audio, upsert_definite_segment,
         websocket_response_poll_timeout, AsrAudioQueue, AudioSendPacer, PartialTextLimiter,
-        PARTIAL_TEXT_MIN_INTERVAL,
+        PARTIAL_TEXT_MIN_INTERVAL, RESPONSE_POLL_TIMEOUT,
     };
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
     use crate::{asr::DefiniteSegment, config::AppConfig};
@@ -1262,7 +1282,7 @@ mod tests {
     }
 
     #[test]
-    fn initial_audio_padding_is_merged_into_first_real_packet() {
+    fn initial_audio_padding_keeps_first_packet_at_configured_segment_size() {
         let mut config = AppConfig::default();
         config.audio.segment_ms = 200;
         let real_audio = vec![7; asr_pcm_bytes_for_ms(200) as usize];
@@ -1273,14 +1293,14 @@ mod tests {
         queue.close_input();
         let tail = queue.pop_front().unwrap();
 
-        assert_eq!(first.len(), asr_pcm_bytes_for_ms(150) as usize);
+        assert_eq!(first.len(), asr_pcm_bytes_for_ms(200) as usize);
         assert!(first[..asr_pcm_bytes_for_ms(50) as usize]
             .iter()
             .all(|byte| *byte == 0));
         assert!(first[asr_pcm_bytes_for_ms(50) as usize..]
             .iter()
             .all(|byte| *byte == 7));
-        assert_eq!(tail.len(), asr_pcm_bytes_for_ms(100) as usize);
+        assert_eq!(tail.len(), asr_pcm_bytes_for_ms(50) as usize);
         assert!(tail.iter().all(|byte| *byte == 7));
         assert!(queue.pop_front().is_none());
     }
@@ -1297,9 +1317,9 @@ mod tests {
         queue.close_input();
         let tail = queue.pop_front().unwrap();
 
-        assert_eq!(first.len(), asr_pcm_bytes_for_ms(150) as usize);
+        assert_eq!(first.len(), asr_pcm_bytes_for_ms(200) as usize);
         assert_eq!(second.len(), asr_pcm_bytes_for_ms(200) as usize);
-        assert_eq!(tail.len(), asr_pcm_bytes_for_ms(100) as usize);
+        assert_eq!(tail.len(), asr_pcm_bytes_for_ms(50) as usize);
         assert!(first[..asr_pcm_bytes_for_ms(50) as usize]
             .iter()
             .all(|byte| *byte == 0));
@@ -1343,16 +1363,14 @@ mod tests {
 
         assert!(pacer.ready_to_send());
         assert_eq!(
-            pacer.response_poll_timeout(Duration::from_millis(40)),
-            Duration::from_millis(40)
+            pacer.response_poll_timeout(RESPONSE_POLL_TIMEOUT),
+            RESPONSE_POLL_TIMEOUT
         );
 
         pacer.mark_sent_bytes(3_200);
 
         assert!(!pacer.ready_to_send());
-        assert!(
-            pacer.response_poll_timeout(Duration::from_millis(40)) <= Duration::from_millis(40)
-        );
+        assert!(pacer.response_poll_timeout(RESPONSE_POLL_TIMEOUT) <= RESPONSE_POLL_TIMEOUT);
     }
 
     #[test]
@@ -1362,12 +1380,12 @@ mod tests {
         };
 
         assert_eq!(
-            pacer.response_poll_timeout(Duration::from_millis(40)),
+            pacer.response_poll_timeout(RESPONSE_POLL_TIMEOUT),
             Duration::from_millis(1)
         );
         assert_eq!(
-            websocket_response_poll_timeout(true, &pacer, Duration::from_millis(40)),
-            Duration::from_millis(40)
+            websocket_response_poll_timeout(true, &pacer, RESPONSE_POLL_TIMEOUT),
+            RESPONSE_POLL_TIMEOUT
         );
     }
 
@@ -1375,19 +1393,50 @@ mod tests {
     fn partial_text_limiter_allows_faster_live_caption_updates() {
         let mut limiter = PartialTextLimiter::new();
 
-        assert_eq!(PARTIAL_TEXT_MIN_INTERVAL, Duration::from_millis(80));
-        assert!(limiter.should_emit("第一段"));
-        assert!(!limiter.should_emit("第一段"));
-        assert!(!limiter.should_emit(""));
+        assert_eq!(PARTIAL_TEXT_MIN_INTERVAL, Duration::from_millis(50));
+        assert_eq!(limiter.emit_or_defer("第一段").as_deref(), Some("第一段"));
+        assert!(limiter.emit_or_defer("第一段").is_none());
+        assert!(limiter.emit_or_defer("").is_none());
+    }
+
+    #[test]
+    fn partial_text_limiter_coalesces_fast_updates_instead_of_dropping_them() {
+        let mut limiter = PartialTextLimiter::new();
+
+        assert_eq!(limiter.emit_or_defer("第一段").as_deref(), Some("第一段"));
+        assert!(limiter.emit_or_defer("第一段第二段").is_none());
+        assert_eq!(limiter.pending_text.as_deref(), Some("第一段第二段"));
+        limiter.last_emit_at = Some(Instant::now() - PARTIAL_TEXT_MIN_INTERVAL);
+
+        assert_eq!(
+            limiter.emit_pending_if_ready().as_deref(),
+            Some("第一段第二段")
+        );
+        assert!(limiter.pending_text.is_none());
+    }
+
+    #[test]
+    fn partial_text_limiter_keeps_latest_fast_update_for_live_caption() {
+        let mut limiter = PartialTextLimiter::new();
+
+        assert_eq!(limiter.emit_or_defer("第一段").as_deref(), Some("第一段"));
+        assert!(limiter.emit_or_defer("第一段第二段").is_none());
+        assert!(limiter.emit_or_defer("第一段第二段第三段").is_none());
+        limiter.last_emit_at = Some(Instant::now() - PARTIAL_TEXT_MIN_INTERVAL);
+
+        assert_eq!(
+            limiter.emit_pending_if_ready().as_deref(),
+            Some("第一段第二段第三段")
+        );
     }
 
     #[test]
     fn final_packet_settle_waits_before_finishing() {
         assert!(!should_finish_final_packet_settle(Some(
-            Duration::from_millis(500)
+            Duration::from_millis(250)
         )));
         assert!(should_finish_final_packet_settle(Some(
-            Duration::from_millis(900)
+            Duration::from_millis(300)
         )));
         assert!(!should_finish_final_packet_settle(None));
     }
