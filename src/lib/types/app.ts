@@ -190,6 +190,7 @@ export type AppConfig = {
     stop_grace_ms: number;
     silence_auto_stop_seconds: number;
     silence_level_threshold: number;
+    input_gain_db: number;
     mute_system_volume_while_recording: boolean;
     input_device: number | null;
   };

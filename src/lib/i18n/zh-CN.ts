@@ -402,6 +402,7 @@ export const zhCN = {
   "maxSeconds": "最长秒数",
   "stopGraceMs": "尾音保留毫秒",
   "silenceAutoStopSeconds": "静音自动停止秒数",
+  "inputGainDb": "麦克风输入增益 dB",
   "inputDevice": "输入设备",
   "defaultInputDevice": "默认输入设备",
   "noAudioDevices": "未发现输入设备",
@@ -475,6 +476,7 @@ export const zhCN = {
   "hotkeyUnsupported": "暂不支持这个按键，请使用 A-Z、0-9、Space、F1-F12 或 Enter。",
   "triggerConflictHint": "鼠标中键开启后，会占用浏览器、编辑器、文件管理器等软件的中键操作；右 Alt 也可能和输入法或快捷键冲突。",
   "silenceAutoStopHint": "连续低音量达到该时长后会按手动停止流程结束本次录音；默认 30 秒，长句口述不易被短暂停顿截断。",
+  "inputGainHint": "麦克风声音偏小但清晰时再调高；先试 +6 dB，仍偏小时再试 +12 dB。过高会削波并放大环境噪声。",
   "recentContextHint": "最近上下文会在单独的本地文件保存最近识别片段，用于改善连续识别；默认关闭，默认保留最近 5 轮。",
   "recentContextForLlmHint": "大模型最近上下文默认关闭；开启后仅在最近上下文已启用且润色实际触发时，把最近几段中最多约 600 字作为参考信息发送给大模型。",
   "recentContextForLlmNeedsRecentContext": "需要同时开启“使用最近上下文”，否则不会有前文可发送给大模型。",
@@ -482,7 +484,7 @@ export const zhCN = {
   "recentContextEnabledNotice": "最近上下文已开启，识别片段仅保存在本地，可随时关闭。",
   "launchOnStartup": "开机自动启动",
   "recordingTroubleshooting": "低频录音排障",
-  "recordingTroubleshootingDescription": "只有在录音经常被过早停止时再调整。",
+  "recordingTroubleshootingDescription": "只有在音量偏小、识别为空或录音经常被过早停止时再调整。",
   "softwareUpdate": "软件更新",
   "softwareUpdateDescription": "通过 GitHub Release 检查最新版，并自动启动 Windows 安装包。",
   "autoCheckUpdates": "启动时自动检查更新",
@@ -605,7 +607,7 @@ export const zhCNUserErrorDetails = {
   "EMPTY_TRANSCRIPT": {
     "title": "没有识别到文字",
     "cause": "麦克风音量过低、说话距离较远，或本次录音没有有效语音。",
-    "action": "请确认麦克风有声音，靠近一点后再试一次。"
+    "action": "请确认麦克风有声音，靠近一点后再试一次；如果声音偏小但清晰，可在选项页录音排障里把麦克风输入增益调到 +6 dB。"
   },
   "MIC_DEVICE_NOT_FOUND": {
     "title": "未找到麦克风",

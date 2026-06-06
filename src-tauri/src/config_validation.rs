@@ -65,6 +65,14 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         0.5,
         "静音音量阈值需在 0.001 到 0.5 之间。",
     );
+    validate_f32_range(
+        &mut errors,
+        "audio.input_gain_db",
+        config.audio.input_gain_db,
+        -12.0,
+        24.0,
+        "麦克风输入增益需在 -12 到 24 dB 之间。",
+    );
     validate_u64_range(
         &mut errors,
         "typing.paste_delay_ms",

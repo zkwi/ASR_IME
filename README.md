@@ -199,10 +199,13 @@ max_record_seconds = 300
 stop_grace_ms = 800
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
+input_gain_db = 0.0
 mute_system_volume_while_recording = false
 ```
 
 VoxType 会把麦克风实际采集到的 PCM 音频统一转换为豆包大模型流式 ASR 支持的 `16000Hz`、单声道、16-bit PCM 后再发送；`sample_rate` 和 `channels` 只作为底层采集偏好，普通用户不需要修改。ASR 实际发送分片会限制在豆包建议的 `100-200ms`，默认 `200ms`。
+
+豆包文档没有要求客户端必须开启自动增益，也没有单独的增益请求参数；当麦克风声音偏小但清晰时，可以在 VoxType 的录音排障中设置 `input_gain_db`，由客户端在发送 ASR 前放大 16-bit PCM。建议先试 `+6 dB`，仍偏小时再试 `+12 dB`，避免过高增益造成削波或放大环境噪声。
 
 VoxType 会把约 `50ms` 头部静音并入第一包真实音频，第一包约 `150ms`，后续默认 `200ms`，帮助豆包稳定起始识别，同时避免发送独立 50ms 小包；如果没有采集到真实音频，则不会额外发送静音包。豆包返回的中间识别文本会尽快显示在悬浮字幕中，但最终粘贴仍必须等待豆包最终包。
 

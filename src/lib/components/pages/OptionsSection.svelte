@@ -175,8 +175,14 @@
             <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
             {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
           </label>
+          <label class:field-invalid={Boolean(fieldError("audio.input_gain_db"))}>
+            <span>{t("inputGainDb")}</span>
+            <input type="number" min="-12" max="24" step="1" bind:value={config.audio.input_gain_db} />
+            {#if fieldError("audio.input_gain_db")}<small class="field-error">{fieldError("audio.input_gain_db")}</small>{/if}
+          </label>
         </div>
         <p class="field-hint">{t("silenceAutoStopHint")}</p>
+        <p class="field-hint">{t("inputGainHint")}</p>
       </div>
     </div>
     <div id="settings-basic-output" class="form-panel">

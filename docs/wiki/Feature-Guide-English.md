@@ -52,6 +52,7 @@ Defaults. These are low-level parameters, so most users do not need to change th
 - Segment size: `200ms`
 - Max recording duration: `300s`
 - Local low-volume auto-stop: `30s`, threshold `0.03`
+- Microphone input gain: `0 dB`
 
 VoxType normalizes the actual microphone input to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are capture preferences, not the final wire format.
 
@@ -59,6 +60,7 @@ Tips:
 
 - Select a fixed input device if you have multiple microphones.
 - Low volume, long distance, noisy rooms, and disabled Windows microphone permission can cause empty recognition.
+- If the microphone is quiet but clear, raise input gain in recording troubleshooting. Try `+6 dB` first, then `+12 dB`; excessive gain clips speech and amplifies room noise.
 - A microphone input-stream error fails the current session immediately, so incomplete audio is not polished, pasted, or counted as success.
 - If a recording contains no useful speech, VoxType uses the local silence fallback to stop recording instead of waiting for the maximum duration.
 - System-volume mute while recording is off by default; enable it only if echo affects recognition.
@@ -74,6 +76,7 @@ Quality and latency factors:
 | Factor | Recommendation |
 | --- | --- |
 | Audio segment | Keep the internal default 200ms |
+| Microphone input gain | Default 0 dB; quiet but clear mics can try +6 dB to +12 dB |
 | Server endpointing | `end_window_size` defaults to 800ms; existing manual config is preserved |
 | Result type | The main workflow forces `full` so the final package contains the complete cumulative text; interim captions are feedback only |
 | Local silence fallback | Continuous low volume follows the manual-stop flow after 30 seconds by default |

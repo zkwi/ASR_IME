@@ -1,6 +1,6 @@
 {
   "name": "voxtype-desktop",
-  "version": "0.1.98",
+  "version": "0.1.99",
   "description": "VoxType desktop speech input app built with Tauri, Rust, and Svelte",
   "type": "module",
   "scripts": {

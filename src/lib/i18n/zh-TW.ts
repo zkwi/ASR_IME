@@ -403,6 +403,7 @@ export const zhTW = {
   "maxSeconds": "最長秒數",
   "stopGraceMs": "尾音保留毫秒",
   "silenceAutoStopSeconds": "靜音自動停止秒數",
+  "inputGainDb": "麥克風輸入增益 dB",
   "inputDevice": "輸入裝置",
   "defaultInputDevice": "預設輸入裝置",
   "noAudioDevices": "未發現輸入裝置",
@@ -476,6 +477,7 @@ export const zhTW = {
   "hotkeyUnsupported": "暫不支援這個按鍵，請使用 A-Z、0-9、Space、F1-F12 或 Enter。",
   "triggerConflictHint": "滑鼠中鍵開啟後，會占用瀏覽器、編輯器、檔案管理器等軟體的中鍵操作；右 Alt 也可能和輸入法或快捷鍵衝突。",
   "silenceAutoStopHint": "連續低音量達到該時長後會按手動停止流程結束本次錄音；預設 30 秒，長句口述較不易被短暫停頓截斷。",
+  "inputGainHint": "麥克風聲音偏小但清晰時再調高；先試 +6 dB，仍偏小時再試 +12 dB。過高會削波並放大環境噪音。",
   "recentContextHint": "最近上下文會在單獨的本地檔案保存最近識別片段，用於改善連續識別；預設關閉，預設保留最近 5 輪。",
   "recentContextForLlmHint": "大模型最近上下文預設關閉；開啟後僅在最近上下文已啟用且潤飾實際觸發時，把最近幾段中最多約 600 字作為參考資訊送給大模型。",
   "recentContextForLlmNeedsRecentContext": "需要同時開啟「使用最近上下文」，否則不會有前文可送給大模型。",
@@ -483,7 +485,7 @@ export const zhTW = {
   "recentContextEnabledNotice": "最近上下文已開啟，識別片段僅保存在本地，可隨時關閉。",
   "launchOnStartup": "開機自動啟動",
   "recordingTroubleshooting": "低頻錄音排障",
-  "recordingTroubleshootingDescription": "只有在錄音經常被過早停止時再調整。",
+  "recordingTroubleshootingDescription": "只有在音量偏小、辨識為空或錄音經常被過早停止時再調整。",
   "softwareUpdate": "軟體更新",
   "softwareUpdateDescription": "透過 GitHub Release 檢查最新版，並自動啟動 Windows 安裝包。",
   "autoCheckUpdates": "啟動時自動檢查更新",
@@ -606,7 +608,7 @@ export const zhTWUserErrorDetails = {
   "EMPTY_TRANSCRIPT": {
     "title": "沒有識別到文字",
     "cause": "麥克風音量過低、說話距離較遠，或本次錄音沒有有效語音。",
-    "action": "請確認麥克風有聲音，靠近一點後再試一次。"
+    "action": "請確認麥克風有聲音，靠近一點後再試一次；如果聲音偏小但清晰，可在選項頁錄音排障裡把麥克風輸入增益調到 +6 dB。"
   },
   "MIC_DEVICE_NOT_FOUND": {
     "title": "未找到麥克風",

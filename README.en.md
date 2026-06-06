@@ -200,10 +200,13 @@ max_record_seconds = 300
 stop_grace_ms = 800
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
+input_gain_db = 0.0
 mute_system_volume_while_recording = false
 ```
 
 VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them. Actual ASR packets are kept within Doubao's recommended `100-200ms` range, defaulting to `200ms`. VoxType merges about `50ms` of leading silence into the first real-audio packet, making the first packet about `150ms` and later packets default to `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. Interim Doubao text is shown in the floating caption as quickly as possible, while final paste still waits for Doubao's final package.
+
+Doubao's documentation does not require client-side automatic gain control and does not define a separate gain request parameter. When the microphone is quiet but clear, set `input_gain_db` in VoxType's recording troubleshooting settings; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet, because excessive gain can clip speech and amplify room noise.
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 

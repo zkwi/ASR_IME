@@ -27,6 +27,8 @@ stop_grace_ms = 800
 silence_auto_stop_seconds = 30
 # 静音判定音量阈值；短促噪声不会立即重置计时，普通用户不需要修改
 silence_level_threshold = 0.03
+# 麦克风输入增益 dB；默认 0 不改变音频。声音偏小但清晰时可先试 6，仍偏小再试 12，范围 -12 到 24
+input_gain_db = 0.0
 # 录音时是否自动静音系统音量；可减少回声，但可能影响会议、视频或系统提示音
 mute_system_volume_while_recording = false
 # 指定麦克风设备；不用时保持注释掉或留空

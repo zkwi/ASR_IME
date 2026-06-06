@@ -79,14 +79,16 @@ Fix:
 
 1. Allow desktop microphone access in Windows Settings.
 2. Select the correct input device in Options.
-3. Test Doubao ASR from API Config.
-4. Try again in a quieter environment.
-5. If VoxType reports a microphone capture error, reconnect or switch the input device and close apps that may exclusively use the microphone.
+3. If the microphone is quiet but clear, set microphone input gain in Options recording troubleshooting. Try `+6 dB` first, then `+12 dB` if it is still too quiet.
+4. Test Doubao ASR from API Config.
+5. Try again in a quieter environment.
+6. If VoxType reports a microphone capture error, reconnect or switch the input device and close apps that may exclusively use the microphone.
 
 Notes:
 
 - Empty recognition becomes a failure. It does not run polishing, paste, or successful statistics.
 - A microphone input-stream error also becomes a failure, so missing-frame audio does not produce low-quality recognized text.
+- Input gain only boosts the PCM sent to Doubao locally and does not save audio. Too much gain clips speech or amplifies room noise.
 - Continuous low volume follows the manual-stop flow after 30 seconds by default, so a server endpointing miss does not record until the maximum duration.
 - If you need long pauses, adjust or disable the local silence fallback in `config.toml`.
 

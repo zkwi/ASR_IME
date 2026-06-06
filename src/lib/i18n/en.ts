@@ -403,6 +403,7 @@ export const en = {
   "maxSeconds": "Max seconds",
   "stopGraceMs": "Stop grace ms",
   "silenceAutoStopSeconds": "Silence auto-stop seconds",
+  "inputGainDb": "Microphone input gain dB",
   "inputDevice": "Input device",
   "defaultInputDevice": "Default input device",
   "noAudioDevices": "No input devices found",
@@ -476,6 +477,7 @@ export const en = {
   "hotkeyUnsupported": "Unsupported key. Use A-Z, 0-9, Space, F1-F12, or Enter.",
   "triggerConflictHint": "Middle click takes over middle-click actions in browsers, editors, and file managers. Right Alt may conflict with IMEs or shortcuts.",
   "silenceAutoStopHint": "When low input volume lasts this long, VoxType ends the recording through the same path as manual stop. The default is 30 seconds to avoid cutting off brief pauses in long voice input.",
+  "inputGainHint": "Raise this only when the mic is quiet but clear. Try +6 dB first, then +12 dB if it is still too quiet. Too much gain clips speech and amplifies room noise.",
   "recentContextHint": "Recent context stores recent voice input snippets in a separate local file to improve continuous voice input. It is off by default and keeps the latest 5 rounds by default.",
   "recentContextForLlmHint": "AI recent context is off by default. When enabled, and only when local recent context is on and polishing actually runs, up to about 600 chars from recent snippets are sent to the AI service as reference information.",
   "recentContextForLlmNeedsRecentContext": "Turn on \"Use recent context\" too; otherwise there is no previous text to send to the AI service.",
@@ -483,7 +485,7 @@ export const en = {
   "recentContextEnabledNotice": "Recent context is enabled. Voice input snippets stay local and can be turned off anytime.",
   "launchOnStartup": "Launch at startup",
   "recordingTroubleshooting": "Recording troubleshooting",
-  "recordingTroubleshootingDescription": "Adjust only when recordings often stop too early.",
+  "recordingTroubleshootingDescription": "Adjust only when the mic is too quiet, recognition is empty, or recordings often stop too early.",
   "softwareUpdate": "Software update",
   "softwareUpdateDescription": "Check the latest GitHub Release and start the Windows installer automatically.",
   "autoCheckUpdates": "Check for updates on startup",
@@ -606,7 +608,7 @@ export const enUserErrorDetails = {
   "EMPTY_TRANSCRIPT": {
     "title": "No speech was recognized",
     "cause": "The mic level may be too low, you may be too far from the mic, or this recording had no valid speech.",
-    "action": "Check that the microphone has input, move closer, and try again."
+    "action": "Check that the microphone has input, move closer, and try again. If it is quiet but clear, set microphone input gain to +6 dB in Options recording troubleshooting."
   },
   "MIC_DEVICE_NOT_FOUND": {
     "title": "No microphone found",

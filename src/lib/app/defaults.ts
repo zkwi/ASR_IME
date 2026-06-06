@@ -67,6 +67,7 @@ export const fallbackConfig: AppConfig = {
     stop_grace_ms: 800,
     silence_auto_stop_seconds: 30,
     silence_level_threshold: 0.03,
+    input_gain_db: 0,
     mute_system_volume_while_recording: false,
     input_device: null,
   },

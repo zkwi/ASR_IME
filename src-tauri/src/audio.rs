@@ -41,6 +41,7 @@ struct CaptureOutputs {
     level_tx: Option<mpsc::Sender<f32>>,
     silence_tx: Option<mpsc::Sender<()>>,
     error_reporter: CaptureErrorReporter,
+    input_gain_factor: f32,
     silence_auto_stop_seconds: u64,
     silence_level_threshold: f32,
     voice_activity: VoiceActivity,
@@ -100,6 +101,7 @@ pub fn start_capture(
             level_tx,
             silence_tx,
             error_reporter: CaptureErrorReporter::new(error_tx),
+            input_gain_factor: input_gain_factor(audio.input_gain_db),
             silence_auto_stop_seconds: audio.silence_auto_stop_seconds,
             silence_level_threshold: audio.silence_level_threshold,
             voice_activity: worker_voice_activity,
@@ -267,6 +269,7 @@ fn start_capture_in_thread(
                 ASR_OUTPUT_CHANNELS,
                 audio.segment_ms,
             ),
+            audio.input_gain_db,
         )))
     });
     let pcm_sink = outputs.pcm_sink.clone();
@@ -390,6 +393,7 @@ struct PcmSink {
     normalizer: PcmNormalizer,
     buffer: SegmentedAudioBuffer,
     normalized: Vec<u8>,
+    gain_factor: f32,
 }
 
 impl PcmSink {
@@ -398,11 +402,13 @@ impl PcmSink {
         source_rate: u32,
         source_channels: usize,
         target_chunk_bytes: usize,
+        input_gain_db: f32,
     ) -> Self {
         Self {
             normalizer: PcmNormalizer::new(source_rate, source_channels, ASR_OUTPUT_SAMPLE_RATE),
             buffer: SegmentedAudioBuffer::new(tx, target_chunk_bytes),
             normalized: Vec::new(),
+            gain_factor: input_gain_factor(input_gain_db),
         }
     }
 
@@ -426,6 +432,7 @@ impl PcmSink {
         self.normalized.clear();
         let emitted = self.normalizer.flush(&mut self.normalized);
         if !self.normalized.is_empty() {
+            apply_input_gain_to_pcm(&mut self.normalized, self.gain_factor);
             self.buffer.push(&self.normalized);
         }
         self.buffer.flush();
@@ -436,9 +443,35 @@ impl PcmSink {
         self.normalized.clear();
         let emitted = push(&mut self.normalizer, &mut self.normalized);
         if !self.normalized.is_empty() {
+            apply_input_gain_to_pcm(&mut self.normalized, self.gain_factor);
             self.buffer.push(&self.normalized);
         }
         emitted
+    }
+}
+
+fn input_gain_factor(input_gain_db: f32) -> f32 {
+    if !input_gain_db.is_finite() {
+        return 1.0;
+    }
+    10.0_f32.powf(input_gain_db.clamp(-12.0, 24.0) / 20.0)
+}
+
+fn apply_level_gain(level: f32, gain_factor: f32) -> f32 {
+    if !gain_factor.is_finite() {
+        return level.clamp(0.0, 1.0);
+    }
+    (level * gain_factor).clamp(0.0, 1.0)
+}
+
+fn apply_input_gain_to_pcm(bytes: &mut [u8], gain_factor: f32) {
+    if (gain_factor - 1.0).abs() < f32::EPSILON || !gain_factor.is_finite() {
+        return;
+    }
+    for sample in bytes.chunks_exact_mut(2) {
+        let value = i16::from_le_bytes([sample[0], sample[1]]);
+        let boosted = ((value as f32) * gain_factor).round() as i32;
+        sample.copy_from_slice(&clamp_i32_to_i16(boosted).to_le_bytes());
     }
 }
 
@@ -771,6 +804,7 @@ fn build_i16_stream(
         silence_tx,
         voice_activity,
         error_reporter,
+        input_gain_factor,
         ..
     } = outputs;
     device
@@ -779,7 +813,7 @@ fn build_i16_stream(
             move |data: &[i16], _| {
                 let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
-                let level = rms_i16(data);
+                let level = apply_level_gain(rms_i16(data), input_gain_factor);
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
@@ -813,6 +847,7 @@ fn build_u16_stream(
         silence_tx,
         voice_activity,
         error_reporter,
+        input_gain_factor,
         ..
     } = outputs;
     device
@@ -821,7 +856,7 @@ fn build_u16_stream(
             move |data: &[u16], _| {
                 let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
-                let level = rms_u16(data);
+                let level = apply_level_gain(rms_u16(data), input_gain_factor);
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
@@ -855,6 +890,7 @@ fn build_u8_stream(
         silence_tx,
         voice_activity,
         error_reporter,
+        input_gain_factor,
         ..
     } = outputs;
     device
@@ -863,7 +899,7 @@ fn build_u8_stream(
             move |data: &[u8], _| {
                 let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
-                let level = rms_u8(data);
+                let level = apply_level_gain(rms_u8(data), input_gain_factor);
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
@@ -897,6 +933,7 @@ fn build_f32_stream(
         silence_tx,
         voice_activity,
         error_reporter,
+        input_gain_factor,
         ..
     } = outputs;
     device
@@ -905,7 +942,7 @@ fn build_f32_stream(
             move |data: &[f32], _| {
                 let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
-                let level = rms_f32(data);
+                let level = apply_level_gain(rms_f32(data), input_gain_factor);
                 send_level(&level_tx, level);
                 voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
@@ -922,8 +959,9 @@ fn build_f32_stream(
 #[cfg(test)]
 mod tests {
     use super::{
-        effective_asr_segment_ms, target_chunk_bytes, CaptureErrorReporter, PcmNormalizer, PcmSink,
-        SegmentedAudioBuffer, SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
+        apply_input_gain_to_pcm, apply_level_gain, effective_asr_segment_ms, input_gain_factor,
+        target_chunk_bytes, CaptureErrorReporter, PcmNormalizer, PcmSink, SegmentedAudioBuffer,
+        SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
     };
     use std::sync::mpsc;
 
@@ -1007,6 +1045,25 @@ mod tests {
 
         assert_eq!(rx.try_recv().unwrap(), "first audio error");
         assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn input_gain_factor_uses_db_scale() {
+        assert!((input_gain_factor(0.0) - 1.0).abs() < 0.001);
+        assert!((input_gain_factor(6.0) - 1.995).abs() < 0.01);
+        assert!((apply_level_gain(0.02, input_gain_factor(12.0)) - 0.079).abs() < 0.01);
+    }
+
+    #[test]
+    fn input_gain_boosts_pcm_with_saturation() {
+        let mut bytes = [10_000_i16, -20_000, 20_000]
+            .into_iter()
+            .flat_map(i16::to_le_bytes)
+            .collect::<Vec<_>>();
+
+        apply_input_gain_to_pcm(&mut bytes, input_gain_factor(6.0));
+
+        assert_eq!(pcm_bytes_to_i16(&bytes), vec![19_953, -32768, 32767]);
     }
 
     #[test]
@@ -1099,7 +1156,7 @@ mod tests {
     #[test]
     fn pcm_sink_flushes_normalizer_residual_and_segment_tail() {
         let (tx, rx) = mpsc::channel();
-        let mut sink = PcmSink::new(tx, 48_000, 1, 6);
+        let mut sink = PcmSink::new(tx, 48_000, 1, 6, 0.0);
 
         assert_eq!(sink.push_i16(&[100, 200]), 0);
         assert!(rx.try_recv().is_err());
