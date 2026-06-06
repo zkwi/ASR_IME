@@ -79,7 +79,7 @@ export const fallbackConfig: AppConfig = {
     enable_punc: true,
     enable_ddc: true,
     show_utterances: true,
-    result_type: "full",
+    result_type: "single",
     enable_accelerate_text: false,
     accelerate_score: 0,
     end_window_size: 800,

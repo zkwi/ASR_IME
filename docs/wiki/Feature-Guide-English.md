@@ -64,7 +64,7 @@ Tips:
 
 VoxType uses Doubao `bigmodel_async` WebSocket by default.
 
-It supports real-time partial text and final recognition. Low-level ASR request fields remain supported in `config.toml`, but ordinary users do not need to edit them.
+It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output uses the final `definite=true` utterances. The request defaults to incremental result delivery to reduce repeated interim text. Low-level ASR request fields remain supported in `config.toml`, but ordinary users do not need to edit them.
 
 Quality and latency factors:
 
@@ -72,6 +72,7 @@ Quality and latency factors:
 | --- | --- |
 | Audio segment | Keep the internal default 200ms |
 | Server endpointing | `end_window_size` defaults to 800ms; existing manual config is preserved |
+| Result type | `result_type` defaults to `single` to reduce repeated interim text; final output still comes from two-pass utterances |
 | Local silence fallback | Continuous low volume follows the manual-stop flow after 30 seconds by default |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
 | Hotwords | Important for proper nouns and product names |

@@ -6,6 +6,7 @@ const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 10_000;
 const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
 const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
+const LEGACY_RESULT_TYPE_DEFAULT: &str = "full";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 
 use crate::config_validation::format_validation_errors;
@@ -536,10 +537,12 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_auto_hotword_limit = migrate_auto_hotword_history_default(&mut data);
     let migrated_silence_auto_stop = migrate_silence_auto_stop_default(&mut data);
     let migrated_silence_level_threshold = migrate_silence_level_threshold_default(&mut data);
+    let migrated_result_type = migrate_result_type_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
         || migrated_silence_auto_stop
         || migrated_silence_level_threshold
+        || migrated_result_type
     {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
@@ -638,6 +641,14 @@ fn migrate_silence_level_threshold_default(config: &mut AppConfig) -> bool {
         <= SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON
     {
         config.audio.silence_level_threshold = default_silence_level_threshold();
+        return true;
+    }
+    false
+}
+
+fn migrate_result_type_default(config: &mut AppConfig) -> bool {
+    if config.request.result_type == LEGACY_RESULT_TYPE_DEFAULT {
+        config.request.result_type = default_result_type();
         return true;
     }
     false
@@ -784,7 +795,7 @@ fn default_asr_language() -> String {
     "zh-CN".to_string()
 }
 fn default_result_type() -> String {
-    "full".to_string()
+    "single".to_string()
 }
 fn default_final_timeout() -> f64 {
     15.0
@@ -924,8 +935,8 @@ fn default_close_behavior() -> String {
 mod tests {
     use super::{
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
-        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
-        validate_config, AppConfig, TextContext,
+        migrate_result_type_default, migrate_silence_auto_stop_default,
+        migrate_silence_level_threshold_default, validate_config, AppConfig, TextContext,
     };
 
     #[test]
@@ -940,6 +951,9 @@ mod tests {
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.request.end_window_size, Some(800));
         assert_eq!(config.request.language, "zh-CN");
+        assert_eq!(config.request.result_type, "single");
+        assert!(config.request.enable_nonstream);
+        assert!(config.request.show_utterances);
         assert!(!config.context.enable_recent_context);
         assert!(!config.llm_post_edit.use_recent_context);
         assert!(config.screen_context.enabled);
@@ -1219,6 +1233,16 @@ mod tests {
         config.auto_hotwords.max_history_chars = 12_000;
         assert!(!migrate_auto_hotword_history_default(&mut config));
         assert_eq!(config.auto_hotwords.max_history_chars, 12_000);
+    }
+
+    #[test]
+    fn migrates_legacy_result_type_default() {
+        let mut config = AppConfig::default();
+        config.request.result_type = "full".to_string();
+
+        assert!(migrate_result_type_default(&mut config));
+        assert_eq!(config.request.result_type, "single");
+        assert!(!migrate_result_type_default(&mut config));
     }
 
     #[test]

@@ -26,6 +26,7 @@ pub struct AsrFinalText {
 const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
 const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(220);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
+const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
 
 pub fn spawn_asr_worker(
     config: AppConfig,
@@ -420,6 +421,7 @@ async fn run_websocket_session(
     let final_timeout =
         Duration::from_secs_f64(config.request.final_result_timeout_seconds.max(0.5));
     let mut display_text = String::new();
+    let mut final_packet_text: Option<String> = None;
     let mut definitive_segments = Vec::new();
     let mut partial_limiter = PartialTextLimiter::new();
 
@@ -468,23 +470,16 @@ async fn run_websocket_session(
                 if !is_success_code(parsed.code) {
                     return Err(friendly_asr_service_error(parsed.code));
                 }
-                let partial =
+                let packet_text =
                     normalize_live_text(&asr::extract_display_text(parsed.payload_msg.as_ref()));
-                if !partial.is_empty() && partial != display_text {
-                    display_text = partial;
+                if !packet_text.is_empty() && packet_text != display_text {
+                    display_text = packet_text.clone();
                     if partial_limiter.should_emit(&display_text) {
                         emit_partial_text(&app, &display_text);
                     }
                 }
                 for segment in asr::extract_definite_segments(parsed.payload_msg.as_ref()) {
-                    if !definitive_segments
-                        .iter()
-                        .any(|item: &asr::DefiniteSegment| {
-                            item.start_time == segment.start_time
-                                && item.end_time == segment.end_time
-                        })
-                    {
-                        definitive_segments.push(segment);
+                    if upsert_definite_segment(&mut definitive_segments, segment) {
                         definitive_segments.sort_by_key(|item| (item.start_time, item.end_time));
                         let text = definitive_segments
                             .iter()
@@ -501,6 +496,7 @@ async fn run_websocket_session(
                     }
                 }
                 if parsed.is_last_package {
+                    final_packet_text = Some(packet_text);
                     break;
                 }
             }
@@ -512,31 +508,62 @@ async fn run_websocket_session(
 
         if let Some(started) = final_wait_started {
             if started.elapsed() >= final_timeout {
-                return Err("等待豆包 ASR 最终结果超时，请检查网络后重试。".to_string());
+                return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
             }
         }
     }
 
-    if definitive_segments.is_empty() {
-        return Ok(asr::normalize_final_text(
-            &display_text,
-            remove_trailing_period,
-        ));
+    select_final_output_text(
+        &definitive_segments,
+        final_packet_text.as_deref(),
+        &display_text,
+        remove_trailing_period,
+    )
+}
+
+fn upsert_definite_segment(
+    segments: &mut Vec<asr::DefiniteSegment>,
+    segment: asr::DefiniteSegment,
+) -> bool {
+    if let Some(existing) = segments
+        .iter_mut()
+        .find(|item| item.start_time == segment.start_time && item.end_time == segment.end_time)
+    {
+        let changed = existing.text != segment.text;
+        *existing = segment;
+        return changed;
     }
-    definitive_segments.sort_by_key(|item| (item.start_time, item.end_time));
-    let final_text = definitive_segments
-        .into_iter()
-        .map(|item| item.text)
-        .collect::<Vec<_>>()
-        .join("");
-    let final_text = asr::normalize_final_text(&final_text, remove_trailing_period);
+
+    segments.push(segment);
+    true
+}
+
+fn select_final_output_text(
+    definitive_segments: &[asr::DefiniteSegment],
+    final_packet_text: Option<&str>,
+    _live_caption_text: &str,
+    remove_trailing_period: bool,
+) -> Result<String, String> {
+    if !definitive_segments.is_empty() {
+        let mut segments = definitive_segments.to_vec();
+        segments.sort_by_key(|item| (item.start_time, item.end_time));
+        let text = segments
+            .into_iter()
+            .map(|item| item.text)
+            .collect::<Vec<_>>()
+            .join("");
+        return Ok(asr::normalize_final_text(&text, remove_trailing_period));
+    }
+
+    let Some(text) = final_packet_text else {
+        return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
+    };
+
+    let final_text = asr::normalize_final_text(text, remove_trailing_period);
     if final_text.is_empty() {
-        Ok(asr::normalize_final_text(
-            &display_text,
-            remove_trailing_period,
-        ))
+        Ok(String::new())
     } else {
-        Ok(final_text)
+        Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string())
     }
 }
 
@@ -762,10 +789,11 @@ fn friendly_asr_service_error(code: i32) -> String {
 mod tests {
     use super::{
         finish_output_sent_session, friendly_asr_connection_error, friendly_asr_service_error,
-        is_success_code, should_hold_overlay_for_output_warning, silent_test_audio,
+        is_success_code, select_final_output_text, should_hold_overlay_for_output_warning,
+        silent_test_audio, upsert_definite_segment,
     };
-    use crate::config::AppConfig;
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
+    use crate::{asr::DefiniteSegment, config::AppConfig};
 
     #[test]
     fn accepts_doubao_success_codes() {
@@ -789,6 +817,62 @@ mod tests {
         assert!(audio.len() >= 3_200);
         assert!(audio.len() <= 32_000);
         assert!(audio.iter().all(|value| *value == 0));
+    }
+
+    #[test]
+    fn final_output_uses_definite_segments() {
+        let segments = vec![DefiniteSegment {
+            text: "二遍完整结果。".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text =
+            select_final_output_text(&segments, Some("初步结果。"), "初步结果。", true).unwrap();
+
+        assert_eq!(text, "二遍完整结果");
+    }
+
+    #[test]
+    fn definite_segment_update_replaces_earlier_text_for_same_time_range() {
+        let mut segments = vec![DefiniteSegment {
+            text: "早期结果".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        assert!(upsert_definite_segment(
+            &mut segments,
+            DefiniteSegment {
+                text: "最终修正结果".to_string(),
+                start_time: 0,
+                end_time: 1000,
+            },
+        ));
+
+        let text = select_final_output_text(&segments, None, "", false).unwrap();
+        assert_eq!(text, "最终修正结果");
+    }
+
+    #[test]
+    fn final_output_rejects_interim_text_without_last_package() {
+        let err = select_final_output_text(&[], None, "初步结果", false).unwrap_err();
+
+        assert!(err.contains("最终结果"));
+    }
+
+    #[test]
+    fn final_output_rejects_nonempty_last_package_without_definite_segments() {
+        let err = select_final_output_text(&[], Some("初步结果"), "初步结果", false).unwrap_err();
+
+        assert!(err.contains("最终结果"));
+    }
+
+    #[test]
+    fn empty_last_package_stays_empty_for_failure_flow() {
+        let text = select_final_output_text(&[], Some("   "), "初步结果", false).unwrap();
+
+        assert_eq!(text, "");
     }
 
     #[test]
