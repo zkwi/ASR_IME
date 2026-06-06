@@ -13,9 +13,9 @@ resource_id = "volc.seedasr.sauc.duration"
 
 [audio]
 # 以下采样、声道、分片、尾音和静音阈值参数属于高级/内部参数；应用设置页不再展示，普通用户不需要修改
-# 录音采样率，豆包常用 16000；一般不建议改
+# 录音采样率偏好；发送豆包前会统一转换为 16000Hz 单声道 PCM
 sample_rate = 16000
-# 单声道即可
+# 录音声道偏好；发送豆包前会统一转换为单声道
 channels = 1
 # 每次发送到 ASR 的音频块时长，越小越实时
 segment_ms = 200
@@ -39,15 +39,16 @@ model_name = "bigmodel"
 # 指定 ASR 可识别的输入语言；留空表示使用服务默认/自动。常用：zh-CN / en-US / ja-JP / yue-CN
 # 注意：豆包文档提示该参数仅部分流式模式支持；若连接测试失败，可改为空字符串或检查接口模式
 language = "zh-CN"
-# 以下为 ASR 请求内部参数；应用设置页不再展示，可按需手动编辑
-# 是否开启二遍识别；通常建议开启
+# 以下为 ASR 请求内部参数；主链路会强制使用二遍最终结果所需组合
+# 是否开启二遍识别；主链路会强制开启
 enable_nonstream = true
 enable_itn = true
 enable_punc = true
 enable_ddc = true
 show_utterances = true
-# single 只返回当前增量分句，减少重复中间结果；最终输出仍只使用 definite=true 的二遍分句
+# single 只返回当前增量分句，减少重复中间结果；最终输出只在收到最终包后使用 definite=true 的二遍分句
 result_type = "single"
+# 加速文本主链路强制关闭，避免使用低可信中间文本
 enable_accelerate_text = false
 accelerate_score = 0
 end_window_size = 800

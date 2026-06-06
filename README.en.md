@@ -44,7 +44,7 @@ API Config starts with a setup health check instead of a generic status header. 
 
 - Global trigger: `Ctrl + Q` is enabled by default. Right Alt and middle mouse can be enabled manually.
 - Microphone capture: PCM audio capture through Rust `cpal`; input device can be selected.
-- Real-time speech recognition: Doubao `bigmodel_async` WebSocket with two-pass recognition enabled by default. Live captions are feedback only; pasted output uses the final `definite=true` utterances.
+- Real-time speech recognition: Doubao `bigmodel_async` WebSocket with two-pass recognition enabled by default. Live captions are feedback only; pasted output waits for Doubao's final package and uses only final `definite=true` utterances.
 - Local silence fallback: local low-volume auto-stop defaults to 30 seconds with a `0.03` threshold, less aggressive than the old 10-second / `0.04` default, so long dictation and quiet speech are less likely to be cut off. You can adjust it in Options.
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions show text, processing state, and errors only.
 - Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`; clipboard-only mode is also available. VoxType then tries to restore the previous clipboard.
@@ -203,6 +203,8 @@ silence_level_threshold = 0.03
 mute_system_volume_while_recording = false
 ```
 
+VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them.
+
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 
 ## First Use
@@ -215,7 +217,7 @@ mute_system_volume_while_recording = false
 6. Put the cursor in a target input field.
 7. Press `Ctrl + Q` to start recording.
 8. Press `Ctrl + Q` again to stop recording, or wait for the local low-volume fallback.
-9. Wait for final recognition and optional polishing.
+9. Wait for final recognition and optional polishing. If Doubao closes early or does not return a complete final result, the session fails instead of pasting interim text.
 10. If text does not appear in the target field, press `Ctrl + V` manually.
 
 ## FAQ

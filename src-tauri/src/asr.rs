@@ -1,3 +1,4 @@
+use crate::audio::{ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE};
 use crate::config::{effective_hotwords, AppConfig};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -50,25 +51,14 @@ pub fn build_headers(config: &AppConfig) -> BTreeMap<String, String> {
 pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>) -> Value {
     let mut request = serde_json::Map::new();
     request.insert("model_name".to_string(), json!(config.request.model_name));
-    request.insert(
-        "enable_nonstream".to_string(),
-        json!(config.request.enable_nonstream),
-    );
+    request.insert("enable_nonstream".to_string(), json!(true));
     request.insert("enable_itn".to_string(), json!(config.request.enable_itn));
     request.insert("enable_punc".to_string(), json!(config.request.enable_punc));
     request.insert("enable_ddc".to_string(), json!(config.request.enable_ddc));
-    request.insert(
-        "show_utterances".to_string(),
-        json!(config.request.show_utterances),
-    );
-    request.insert("result_type".to_string(), json!(config.request.result_type));
+    request.insert("show_utterances".to_string(), json!(true));
+    request.insert("result_type".to_string(), json!("single"));
 
-    if let Some(value) = config.request.enable_accelerate_text {
-        request.insert("enable_accelerate_text".to_string(), json!(value));
-    }
-    if let Some(value) = config.request.accelerate_score {
-        request.insert("accelerate_score".to_string(), json!(value));
-    }
+    request.insert("enable_accelerate_text".to_string(), json!(false));
     if let Some(value) = config.request.end_window_size {
         request.insert("end_window_size".to_string(), json!(value));
     }
@@ -81,9 +71,9 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     let mut audio = serde_json::Map::from_iter([
         ("format".to_string(), json!("pcm")),
         ("codec".to_string(), json!("raw")),
-        ("rate".to_string(), json!(config.audio.sample_rate)),
+        ("rate".to_string(), json!(ASR_OUTPUT_SAMPLE_RATE)),
         ("bits".to_string(), json!(16)),
-        ("channel".to_string(), json!(config.audio.channels)),
+        ("channel".to_string(), json!(ASR_OUTPUT_CHANNELS)),
     ]);
     let language = config.request.language.trim();
     if !language.is_empty() {
@@ -263,6 +253,22 @@ mod tests {
         let payload = build_request_payload(&config, None);
 
         assert_eq!(payload["audio"]["language"], "en-US");
+    }
+
+    #[test]
+    fn request_payload_forces_two_pass_final_result_parameters() {
+        let mut config = AppConfig::default();
+        config.request.enable_nonstream = false;
+        config.request.show_utterances = false;
+        config.request.result_type = "full".to_string();
+        config.request.enable_accelerate_text = Some(true);
+
+        let payload = build_request_payload(&config, None);
+
+        assert_eq!(payload["request"]["enable_nonstream"], true);
+        assert_eq!(payload["request"]["show_utterances"], true);
+        assert_eq!(payload["request"]["result_type"], "single");
+        assert_eq!(payload["request"]["enable_accelerate_text"], false);
     }
 
     #[test]

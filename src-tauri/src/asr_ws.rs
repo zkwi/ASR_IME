@@ -1,7 +1,7 @@
 use crate::session::{SessionController, SessionPhase};
 use crate::{
-    app_log, asr, config, config::AppConfig, hotword_history, llm_post_edit, overlay, protocol,
-    screen_context, stats, text_output,
+    app_log, asr, audio, config, config::AppConfig, hotword_history, llm_post_edit, overlay,
+    protocol, screen_context, stats, text_output,
 };
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
@@ -27,6 +27,8 @@ const ATTENTION_OVERLAY_HOLD: Duration = Duration::from_millis(1_800);
 const PARTIAL_TEXT_MIN_INTERVAL: Duration = Duration::from_millis(220);
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
+const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
+    "豆包 ASR 连接已结束，但未返回完整最终结果。请重试，或检查网络稳定性。";
 
 pub fn spawn_asr_worker(
     config: AppConfig,
@@ -368,7 +370,8 @@ async fn polish_with_delayed_status(
 }
 
 fn silent_test_audio(config: &AppConfig) -> Vec<u8> {
-    let bytes_per_second = config.audio.sample_rate as usize * config.audio.channels as usize * 2;
+    let bytes_per_second =
+        audio::ASR_OUTPUT_SAMPLE_RATE as usize * audio::ASR_OUTPUT_CHANNELS as usize * 2;
     let requested = bytes_per_second.saturating_mul(config.audio.segment_ms as usize) / 1000;
     let byte_len = requested.clamp(3_200, 32_000);
     vec![0; byte_len]
@@ -424,6 +427,7 @@ async fn run_websocket_session(
     let mut final_packet_text: Option<String> = None;
     let mut definitive_segments = Vec::new();
     let mut partial_limiter = PartialTextLimiter::new();
+    let mut connection_closed_before_final = false;
 
     loop {
         if !audio_finished {
@@ -500,10 +504,16 @@ async fn run_websocket_session(
                     break;
                 }
             }
-            Ok(Some(Ok(Message::Close(_)))) => break,
+            Ok(Some(Ok(Message::Close(_)))) => {
+                connection_closed_before_final = true;
+                break;
+            }
             Ok(Some(Ok(_))) | Err(_) => {}
             Ok(Some(Err(err))) => return Err(format!("接收 ASR 响应失败: {}", err)),
-            Ok(None) => break,
+            Ok(None) => {
+                connection_closed_before_final = true;
+                break;
+            }
         }
 
         if let Some(started) = final_wait_started {
@@ -511,6 +521,14 @@ async fn run_websocket_session(
                 return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
             }
         }
+    }
+
+    if final_packet_text.is_none() {
+        return Err(if connection_closed_before_final {
+            ASR_FINAL_INCOMPLETE_MESSAGE.to_string()
+        } else {
+            ASR_FINAL_TIMEOUT_MESSAGE.to_string()
+        });
     }
 
     select_final_output_text(
@@ -544,6 +562,10 @@ fn select_final_output_text(
     _live_caption_text: &str,
     remove_trailing_period: bool,
 ) -> Result<String, String> {
+    let Some(text) = final_packet_text else {
+        return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
+    };
+
     if !definitive_segments.is_empty() {
         let mut segments = definitive_segments.to_vec();
         segments.sort_by_key(|item| (item.start_time, item.end_time));
@@ -554,10 +576,6 @@ fn select_final_output_text(
             .join("");
         return Ok(asr::normalize_final_text(&text, remove_trailing_period));
     }
-
-    let Some(text) = final_packet_text else {
-        return Err(ASR_FINAL_TIMEOUT_MESSAGE.to_string());
-    };
 
     let final_text = asr::normalize_final_text(text, remove_trailing_period);
     if final_text.is_empty() {
@@ -850,8 +868,21 @@ mod tests {
             },
         ));
 
-        let text = select_final_output_text(&segments, None, "", false).unwrap();
+        let text = select_final_output_text(&segments, Some(""), "", false).unwrap();
         assert_eq!(text, "最终修正结果");
+    }
+
+    #[test]
+    fn final_output_rejects_definite_segments_without_last_package() {
+        let segments = vec![DefiniteSegment {
+            text: "缺少尾部的二遍结果".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let err = select_final_output_text(&segments, None, "实时字幕", false).unwrap_err();
+
+        assert!(err.contains("最终结果"));
     }
 
     #[test]
