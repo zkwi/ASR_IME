@@ -197,7 +197,7 @@ Recording defaults:
 ```toml
 [audio]
 max_record_seconds = 300
-stop_grace_ms = 150
+stop_grace_ms = 250
 silence_auto_stop_seconds = 30
 silence_level_threshold = 0.03
 input_gain_db = 0.0
@@ -206,7 +206,7 @@ mute_system_volume_while_recording = false
 
 VoxType normalizes captured microphone PCM to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are only low-level capture preferences, and most users should not change them. Actual ASR packets are kept within Doubao's recommended `100-200ms` range, defaulting to `200ms`. VoxType merges about `50ms` of leading silence into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for Doubao's final package.
 
-The recently verified stable combination is to keep the default `200ms` ASR packet size and put speed work into first-word acceleration, `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. Final output still accepts only Doubao's final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text instead of regressing to a truncated utterance string.
+The recently verified stable combination is to keep the default `200ms` ASR packet size and put speed work into first-word acceleration, `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. Final output still accepts only Doubao's final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording instead of regressing to a truncated utterance string.
 
 First-word acceleration is enabled by default with a moderate `accelerate_score` of `8` so captions start sooner. If the first word becomes noticeably less accurate, set `enable_accelerate_text = false` in `config.toml`, or lower `accelerate_score` to `0`.
 
@@ -216,7 +216,7 @@ Doubao's documentation does not require client-side automatic gain control and d
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 
-When stopping recording, `stop_grace_ms` is the requested minimum tail wait, defaulting to about `150ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `300ms` to reduce tail-word truncation when recording is stopped immediately after speaking, while still preventing noise from keeping recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+When stopping recording, `stop_grace_ms` is the requested minimum tail wait, defaulting to about `250ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `400ms` to reduce tail-word truncation when recording is stopped immediately after speaking, while still preventing noise from keeping recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
 
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 

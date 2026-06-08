@@ -64,7 +64,7 @@ export const fallbackConfig: AppConfig = {
     channels: 1,
     segment_ms: 200,
     max_record_seconds: 300,
-    stop_grace_ms: 150,
+    stop_grace_ms: 250,
     silence_auto_stop_seconds: 30,
     silence_level_threshold: 0.03,
     input_gain_db: 0,

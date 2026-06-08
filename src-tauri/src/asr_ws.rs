@@ -826,7 +826,7 @@ fn select_final_output_text(
             .collect::<Vec<_>>()
             .join("");
         let definitive_text = asr::normalize_final_text(&text, remove_trailing_period);
-        if final_text_covers_definitive_text(&final_text, &definitive_text) {
+        if final_text_matches_definitive_text(&final_text, &definitive_text) {
             return Ok(final_text);
         }
         return Ok(definitive_text);
@@ -837,9 +837,9 @@ fn select_final_output_text(
 
 // 最终输出仍必须来自豆包最终包；definite 分句用于稳定性，但不能压掉更完整的最终包。
 // 0.1.102 的回归经验：final 包补齐尾字时，前文可能相对 definite 分句有小幅改写。
-// 因此先接受严格包含，再用高重合度兜底；完全不相关的更长 final 包仍会被拒绝。
+// 因此先接受严格包含，再用高重合度兜底；明显残缺或不相关的 final 包仍会被拒绝。
 // 改这里时同步 docs/asr-quality-latency-guardrails.md，并先补 final_output_ 回归测试。
-fn final_text_covers_definitive_text(final_text: &str, definitive_text: &str) -> bool {
+fn final_text_matches_definitive_text(final_text: &str, definitive_text: &str) -> bool {
     let compact_final = compact_for_final_prefix(final_text);
     let compact_definitive = compact_for_final_prefix(definitive_text);
     if compact_final.is_empty() || compact_definitive.is_empty() {
@@ -848,15 +848,19 @@ fn final_text_covers_definitive_text(final_text: &str, definitive_text: &str) ->
 
     let final_len = compact_final.chars().count();
     let definitive_len = compact_definitive.chars().count();
-    if final_len <= definitive_len {
-        return false;
-    }
     if compact_final.contains(&compact_definitive) {
         return true;
     }
 
-    // 豆包 final 包可能补尾字的同时轻微改写前文；高重合且更长时应信任 final 包。
-    common_subsequence_len(&compact_final, &compact_definitive) * 100 >= definitive_len * 75
+    let overlap = common_subsequence_len(&compact_final, &compact_definitive);
+    if final_len > definitive_len {
+        // 豆包 final 包可能补尾字的同时轻微改写前文；高重合且更长时应信任 final 包。
+        return overlap * 100 >= definitive_len * 75;
+    }
+
+    // final 包有时会把前文改短但补齐尾字。只接受长度接近且高度重合的结果，
+    // 避免把“完整”这类残缺 final 包覆盖到更完整的 definite 分句上。
+    final_len * 100 >= definitive_len * 80 && overlap * 100 >= final_len * 85
 }
 
 fn common_subsequence_len(left: &str, right: &str) -> usize {
@@ -1273,6 +1277,38 @@ mod tests {
         .unwrap();
 
         assert_eq!(text, "我觉得这项配置可以生效");
+    }
+
+    #[test]
+    fn final_output_uses_last_package_text_when_tail_is_added_after_shorter_rewrite() {
+        let segments = vec![DefiniteSegment {
+            text: "最后一个字没有识别到".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(
+            &segments,
+            Some("最后字没有识别到了。"),
+            "最后字没有识别到了。",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(text, "最后字没有识别到了");
+    }
+
+    #[test]
+    fn final_output_keeps_definite_segments_when_last_package_is_too_short() {
+        let segments = vec![DefiniteSegment {
+            text: "完整的二遍分句还有后半段".to_string(),
+            start_time: 0,
+            end_time: 1000,
+        }];
+
+        let text = select_final_output_text(&segments, Some("完整"), "完整", false).unwrap();
+
+        assert_eq!(text, "完整的二遍分句还有后半段");
     }
 
     #[test]
