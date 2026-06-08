@@ -187,7 +187,33 @@ pub fn extract_display_text(payload_msg: Option<&Value>) -> String {
         .and_then(Value::as_str)
         .unwrap_or("")
         .trim();
-    let utterance_text = result
+    let utterance_text = extract_utterance_text(result);
+
+    if text_signal_len(&utterance_text) > text_signal_len(direct_text) {
+        return utterance_text;
+    }
+
+    direct_text.to_string()
+}
+
+pub fn extract_final_text(payload_msg: Option<&Value>) -> String {
+    let Some(result) = payload_msg.and_then(|payload| payload.get("result")) else {
+        return String::new();
+    };
+    let direct_text = result
+        .get("text")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if !direct_text.is_empty() {
+        return direct_text.to_string();
+    }
+
+    extract_utterance_text(result)
+}
+
+fn extract_utterance_text(result: &Value) -> String {
+    result
         .get("utterances")
         .and_then(Value::as_array)
         .map(|utterances| {
@@ -199,13 +225,7 @@ pub fn extract_display_text(payload_msg: Option<&Value>) -> String {
                 .collect::<Vec<_>>()
                 .join("")
         })
-        .unwrap_or_default();
-
-    if text_signal_len(&utterance_text) > text_signal_len(direct_text) {
-        return utterance_text;
-    }
-
-    direct_text.to_string()
+        .unwrap_or_default()
 }
 
 fn text_signal_len(text: &str) -> usize {
@@ -477,6 +497,21 @@ mod tests {
         });
 
         assert_eq!(extract_display_text(Some(&payload)), "实时字幕。");
+    }
+
+    #[test]
+    fn final_text_prefers_full_result_text_even_when_utterances_are_longer() {
+        let payload = json!({
+            "result": {
+                "text": "最后一个字到了",
+                "utterances": [
+                    {"definite": true, "text": "前面更长的上下文"},
+                    {"definite": true, "text": "最后一个字到"}
+                ]
+            }
+        });
+
+        assert_eq!(extract_final_text(Some(&payload)), "最后一个字到了");
     }
 
     #[test]

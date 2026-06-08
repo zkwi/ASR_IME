@@ -8,6 +8,7 @@ const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
 const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
 const LEGACY_STOP_GRACE_MS: u64 = 800;
 const PREVIOUS_DEFAULT_STOP_GRACE_MS: u64 = 200;
+const PREVIOUS_FAST_STOP_GRACE_MS: u64 = 100;
 const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = true;
@@ -658,6 +659,7 @@ fn migrate_silence_level_threshold_default(config: &mut AppConfig) -> bool {
 fn migrate_stop_grace_default(config: &mut AppConfig) -> bool {
     if config.audio.stop_grace_ms == LEGACY_STOP_GRACE_MS
         || config.audio.stop_grace_ms == PREVIOUS_DEFAULT_STOP_GRACE_MS
+        || config.audio.stop_grace_ms == PREVIOUS_FAST_STOP_GRACE_MS
     {
         config.audio.stop_grace_ms = default_stop_grace_ms();
         return true;
@@ -790,7 +792,7 @@ fn default_max_record_seconds() -> u64 {
     300
 }
 fn default_stop_grace_ms() -> u64 {
-    100
+    150
 }
 fn default_silence_auto_stop_seconds() -> u64 {
     30
@@ -972,7 +974,7 @@ mod tests {
         assert!(!config.triggers.middle_mouse_enabled);
         assert!(!config.triggers.right_alt_enabled);
         assert!(!config.audio.mute_system_volume_while_recording);
-        assert_eq!(config.audio.stop_grace_ms, 100);
+        assert_eq!(config.audio.stop_grace_ms, 150);
         assert_eq!(config.audio.silence_auto_stop_seconds, 30);
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.audio.input_gain_db, 0.0);
@@ -1331,7 +1333,7 @@ mod tests {
         config.audio.stop_grace_ms = 800;
 
         assert!(migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 100);
+        assert_eq!(config.audio.stop_grace_ms, 150);
         assert!(!migrate_stop_grace_default(&mut config));
 
         config.audio.stop_grace_ms = 500;
@@ -1340,6 +1342,10 @@ mod tests {
 
         config.audio.stop_grace_ms = 200;
         assert!(migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 100);
+        assert_eq!(config.audio.stop_grace_ms, 150);
+
+        config.audio.stop_grace_ms = 100;
+        assert!(migrate_stop_grace_default(&mut config));
+        assert_eq!(config.audio.stop_grace_ms, 150);
     }
 }

@@ -530,6 +530,8 @@ async fn run_websocket_session(
                 }
                 let packet_text =
                     normalize_live_text(&asr::extract_display_text(parsed.payload_msg.as_ref()));
+                let final_packet_candidate =
+                    normalize_live_text(&asr::extract_final_text(parsed.payload_msg.as_ref()));
                 let settling_after_final = final_packet_settle_started.is_some();
                 let live_packet_text_seen = !packet_text.is_empty();
                 if live_packet_text_seen && packet_text != display_text {
@@ -558,8 +560,8 @@ async fn run_websocket_session(
                     }
                 }
                 if settling_after_final {
-                    if !packet_text.is_empty() {
-                        final_packet_text = Some(packet_text.clone());
+                    if !final_packet_candidate.is_empty() {
+                        final_packet_text = Some(final_packet_candidate.clone());
                         final_update_seen = true;
                     }
                     if final_update_seen {
@@ -567,7 +569,7 @@ async fn run_websocket_session(
                     }
                 }
                 if parsed.is_last_package {
-                    final_packet_text = Some(packet_text);
+                    final_packet_text = Some(final_packet_candidate);
                     final_packet_settle_started = Some(Instant::now());
                 }
             }

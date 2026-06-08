@@ -14,12 +14,11 @@ use crate::system_audio::{self, VolumeState};
 use crate::tray;
 
 const STOP_TAIL_POLL_MS: u64 = 50;
-// 0.1.101 后验证较稳的折中：默认至少收 100ms 尾音，仍有人声时最多约 200ms。
-// 如果再次出现实际尾字被切断，优先调大 stop_grace_ms/这些窗口；不要用中间 ASR 文本兜底。
+// 尾字偶发截断时优先收更完整的真实尾音，不用中间 ASR 文本或尾部静音兜底。
 // 维护依据见 docs/asr-quality-latency-guardrails.md。
-const STOP_TAIL_MIN_CAPTURE_MS: u64 = 100;
-const STOP_TAIL_MIN_QUIET_MS: u64 = 100;
-const STOP_TAIL_MAX_EXTRA_MS: u64 = 100;
+const STOP_TAIL_MIN_CAPTURE_MS: u64 = 150;
+const STOP_TAIL_MIN_QUIET_MS: u64 = 150;
+const STOP_TAIL_MAX_EXTRA_MS: u64 = 150;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionState {
@@ -1055,17 +1054,17 @@ mod tests {
     #[test]
     fn stop_tail_wait_does_not_finish_before_min_wait() {
         assert!(!should_finish_stop_tail_wait(
-            Duration::from_millis(80),
+            Duration::from_millis(120),
             None,
-            Duration::from_millis(100),
-            Duration::from_millis(100),
-            Duration::from_millis(200),
+            Duration::from_millis(150),
+            Duration::from_millis(150),
+            Duration::from_millis(300),
         ));
     }
 
     #[test]
     fn effective_stop_tail_min_wait_has_internal_floor() {
-        assert_eq!(effective_stop_tail_min_wait(50), Duration::from_millis(100));
+        assert_eq!(effective_stop_tail_min_wait(50), Duration::from_millis(150));
         assert_eq!(
             effective_stop_tail_min_wait(800),
             Duration::from_millis(800)
@@ -1079,33 +1078,33 @@ mod tests {
     #[test]
     fn stop_tail_wait_extends_when_voice_is_recent() {
         assert!(!should_finish_stop_tail_wait(
-            Duration::from_millis(150),
-            Some(Duration::from_millis(50)),
-            Duration::from_millis(100),
-            Duration::from_millis(100),
             Duration::from_millis(200),
+            Some(Duration::from_millis(80)),
+            Duration::from_millis(150),
+            Duration::from_millis(150),
+            Duration::from_millis(300),
         ));
     }
 
     #[test]
     fn stop_tail_wait_finishes_after_quiet_tail() {
         assert!(should_finish_stop_tail_wait(
-            Duration::from_millis(220),
-            Some(Duration::from_millis(120)),
-            Duration::from_millis(100),
-            Duration::from_millis(100),
-            Duration::from_millis(200),
+            Duration::from_millis(250),
+            Some(Duration::from_millis(160)),
+            Duration::from_millis(150),
+            Duration::from_millis(150),
+            Duration::from_millis(300),
         ));
     }
 
     #[test]
     fn stop_tail_wait_forces_finish_at_max_wait() {
         assert!(should_finish_stop_tail_wait(
-            Duration::from_millis(200),
+            Duration::from_millis(300),
             Some(Duration::from_millis(20)),
-            Duration::from_millis(100),
-            Duration::from_millis(100),
-            Duration::from_millis(200),
+            Duration::from_millis(150),
+            Duration::from_millis(150),
+            Duration::from_millis(300),
         ));
     }
 }
