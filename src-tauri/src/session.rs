@@ -13,12 +13,9 @@ use crate::screen_context;
 use crate::system_audio::{self, VolumeState};
 use crate::tray;
 
-const STOP_TAIL_POLL_MS: u64 = 50;
 // 尾字偶发截断时优先收更完整的真实尾音，不用中间 ASR 文本或尾部静音兜底。
 // 维护依据见 docs/asr-quality-latency-guardrails.md。
 const STOP_TAIL_MIN_CAPTURE_MS: u64 = 250;
-const STOP_TAIL_MIN_QUIET_MS: u64 = 250;
-const STOP_TAIL_MAX_EXTRA_MS: u64 = 150;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionState {
@@ -491,7 +488,7 @@ impl SessionController {
 
         let controller = self.clone();
         thread::spawn(move || {
-            wait_for_stop_tail(&controller, generation, grace_ms);
+            wait_for_stop_tail(grace_ms);
             let stopped = controller.force_stop_generation(
                 generation,
                 SessionPhase::WaitingFinalResult,
@@ -546,18 +543,6 @@ impl SessionController {
             return false;
         };
         inner.generation == generation
-    }
-
-    fn recent_voice_elapsed_for_generation(&self, generation: u64) -> Option<Option<Duration>> {
-        let Ok(inner) = self.inner.lock() else {
-            app_log::warn("检查会话尾音状态失败：session mutex poisoned");
-            return None;
-        };
-        if !inner.recording || inner.generation != generation {
-            return None;
-        }
-        let audio_capture = inner.audio_capture.as_ref()?;
-        Some(audio_capture.recent_voice_elapsed())
     }
 
     pub fn set_phase_for_generation(
@@ -747,57 +732,17 @@ fn spawn_audio_error_listener(
     });
 }
 
-fn wait_for_stop_tail(controller: &SessionController, generation: u64, grace_ms: u64) {
-    let started_at = Instant::now();
-    let min_wait = effective_stop_tail_min_wait(grace_ms);
-    let quiet_window = Duration::from_millis(grace_ms.max(STOP_TAIL_MIN_QUIET_MS));
-    let max_wait = min_wait + Duration::from_millis(STOP_TAIL_MAX_EXTRA_MS);
-
-    loop {
-        let elapsed = started_at.elapsed();
-        let Some(recent_voice_elapsed) = controller.recent_voice_elapsed_for_generation(generation)
-        else {
-            return;
-        };
-        if should_finish_stop_tail_wait(
-            elapsed,
-            recent_voice_elapsed,
-            min_wait,
-            quiet_window,
-            max_wait,
-        ) {
-            return;
-        }
-        let remaining_min_wait = min_wait.saturating_sub(elapsed);
-        let poll = Duration::from_millis(STOP_TAIL_POLL_MS);
-        thread::sleep(if remaining_min_wait.is_zero() {
-            poll
-        } else {
-            remaining_min_wait.min(poll)
-        });
-    }
+fn wait_for_stop_tail(grace_ms: u64) {
+    thread::sleep(effective_stop_tail_min_wait(grace_ms));
 }
 
 fn effective_stop_tail_min_wait(grace_ms: u64) -> Duration {
     Duration::from_millis(grace_ms.max(STOP_TAIL_MIN_CAPTURE_MS))
 }
 
-fn should_finish_stop_tail_wait(
-    elapsed: Duration,
-    recent_voice_elapsed: Option<Duration>,
-    min_wait: Duration,
-    quiet_window: Duration,
-    max_wait: Duration,
-) -> bool {
-    if elapsed >= max_wait {
-        return true;
-    }
-    if elapsed < min_wait {
-        return false;
-    }
-    recent_voice_elapsed
-        .map(|voice_elapsed| voice_elapsed >= quiet_window)
-        .unwrap_or(true)
+#[cfg(test)]
+fn should_finish_stop_tail_wait(elapsed: Duration, min_wait: Duration) -> bool {
+    elapsed >= min_wait
 }
 
 fn is_processing_phase(phase: SessionPhase) -> bool {
@@ -1047,6 +992,11 @@ mod tests {
 
         std::thread::sleep(std::time::Duration::from_millis(10));
         let state = controller.current_state();
+        assert!(state.recording);
+        assert_eq!(state.phase, SessionPhase::Stopping);
+
+        std::thread::sleep(std::time::Duration::from_millis(280));
+        let state = controller.current_state();
         assert!(!state.recording);
         assert_eq!(state.phase, SessionPhase::WaitingFinalResult);
     }
@@ -1055,10 +1005,7 @@ mod tests {
     fn stop_tail_wait_does_not_finish_before_min_wait() {
         assert!(!should_finish_stop_tail_wait(
             Duration::from_millis(220),
-            None,
             Duration::from_millis(250),
-            Duration::from_millis(250),
-            Duration::from_millis(400),
         ));
     }
 
@@ -1076,35 +1023,18 @@ mod tests {
     }
 
     #[test]
-    fn stop_tail_wait_extends_when_voice_is_recent() {
-        assert!(!should_finish_stop_tail_wait(
-            Duration::from_millis(300),
-            Some(Duration::from_millis(80)),
+    fn stop_tail_wait_finishes_after_fixed_wait() {
+        assert!(should_finish_stop_tail_wait(
             Duration::from_millis(250),
             Duration::from_millis(250),
-            Duration::from_millis(400),
         ));
     }
 
     #[test]
-    fn stop_tail_wait_finishes_after_quiet_tail() {
+    fn stop_tail_wait_does_not_extend_for_recent_voice() {
         assert!(should_finish_stop_tail_wait(
-            Duration::from_millis(350),
-            Some(Duration::from_millis(260)),
             Duration::from_millis(250),
             Duration::from_millis(250),
-            Duration::from_millis(400),
-        ));
-    }
-
-    #[test]
-    fn stop_tail_wait_forces_finish_at_max_wait() {
-        assert!(should_finish_stop_tail_wait(
-            Duration::from_millis(400),
-            Some(Duration::from_millis(20)),
-            Duration::from_millis(250),
-            Duration::from_millis(250),
-            Duration::from_millis(400),
         ));
     }
 }

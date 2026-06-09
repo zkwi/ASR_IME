@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub const ASR_OUTPUT_SAMPLE_RATE: u32 = 16_000;
 pub const ASR_OUTPUT_CHANNELS: u16 = 1;
@@ -44,7 +44,6 @@ struct CaptureOutputs {
     input_gain_factor: f32,
     silence_auto_stop_seconds: u64,
     silence_level_threshold: f32,
-    voice_activity: VoiceActivity,
 }
 
 type CaptureStartResult = (Stream, String, u32, u16, Option<Arc<Mutex<PcmSink>>>);
@@ -57,7 +56,6 @@ pub struct AudioCapture {
     channels: u16,
     counters: CaptureCounters,
     pcm_sink: Option<Arc<Mutex<PcmSink>>>,
-    voice_activity: VoiceActivity,
 }
 
 impl AudioCapture {
@@ -69,10 +67,6 @@ impl AudioCapture {
             chunks: self.counters.chunks.load(Ordering::Relaxed),
             pcm_bytes: self.counters.pcm_bytes.load(Ordering::Relaxed),
         }
-    }
-
-    pub fn recent_voice_elapsed(&self) -> Option<Duration> {
-        self.voice_activity.recent_voice_elapsed()
     }
 }
 
@@ -91,9 +85,6 @@ pub fn start_capture(
     let worker_counters = counters.clone();
     let (ready_tx, ready_rx) = mpsc::channel();
     let (stop_tx, stop_rx) = mpsc::channel();
-    let voice_activity = VoiceActivity::default();
-    let worker_voice_activity = voice_activity.clone();
-
     let join_handle = thread::spawn(move || {
         let outputs = CaptureOutputs {
             chunk_tx,
@@ -104,7 +95,6 @@ pub fn start_capture(
             input_gain_factor: input_gain_factor(audio.input_gain_db),
             silence_auto_stop_seconds: audio.silence_auto_stop_seconds,
             silence_level_threshold: audio.silence_level_threshold,
-            voice_activity: worker_voice_activity,
         };
         let (stream, device_name, sample_rate, channels, pcm_sink) =
             match start_capture_in_thread(&audio, worker_counters, outputs) {
@@ -136,7 +126,6 @@ pub fn start_capture(
         channels,
         counters,
         pcm_sink,
-        voice_activity,
     })
 }
 
@@ -204,29 +193,6 @@ impl CaptureErrorReporter {
         if let Some(tx) = &self.tx {
             let _ = tx.send(message);
         }
-    }
-}
-
-#[derive(Clone, Default)]
-struct VoiceActivity {
-    last_voice_at: Arc<Mutex<Option<Instant>>>,
-}
-
-impl VoiceActivity {
-    fn observe(&self, level: f32, threshold: f32) {
-        if level <= threshold {
-            return;
-        }
-        if let Ok(mut last_voice_at) = self.last_voice_at.lock() {
-            *last_voice_at = Some(Instant::now());
-        }
-    }
-
-    fn recent_voice_elapsed(&self) -> Option<Duration> {
-        self.last_voice_at
-            .lock()
-            .ok()
-            .and_then(|last_voice_at| last_voice_at.map(|instant| instant.elapsed()))
     }
 }
 
@@ -792,7 +758,6 @@ fn build_i16_stream(
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let voice_threshold = outputs.silence_level_threshold;
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
         outputs.silence_auto_stop_seconds,
@@ -802,7 +767,6 @@ fn build_i16_stream(
         pcm_sink,
         level_tx,
         silence_tx,
-        voice_activity,
         error_reporter,
         input_gain_factor,
         ..
@@ -815,7 +779,6 @@ fn build_i16_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_i16(data), input_gain_factor);
                 send_level(&level_tx, level);
-                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_i16(data)
@@ -835,7 +798,6 @@ fn build_u16_stream(
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let voice_threshold = outputs.silence_level_threshold;
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
         outputs.silence_auto_stop_seconds,
@@ -845,7 +807,6 @@ fn build_u16_stream(
         pcm_sink,
         level_tx,
         silence_tx,
-        voice_activity,
         error_reporter,
         input_gain_factor,
         ..
@@ -858,7 +819,6 @@ fn build_u16_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_u16(data), input_gain_factor);
                 send_level(&level_tx, level);
-                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_u16(data)
@@ -878,7 +838,6 @@ fn build_u8_stream(
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let voice_threshold = outputs.silence_level_threshold;
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
         outputs.silence_auto_stop_seconds,
@@ -888,7 +847,6 @@ fn build_u8_stream(
         pcm_sink,
         level_tx,
         silence_tx,
-        voice_activity,
         error_reporter,
         input_gain_factor,
         ..
@@ -901,7 +859,6 @@ fn build_u8_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_u8(data), input_gain_factor);
                 send_level(&level_tx, level);
-                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_u8(data)
@@ -921,7 +878,6 @@ fn build_f32_stream(
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
     let channels = config.channels.max(1) as usize;
-    let voice_threshold = outputs.silence_level_threshold;
     let mut silence = SilenceAutoStopper::new(
         config.sample_rate,
         outputs.silence_auto_stop_seconds,
@@ -931,7 +887,6 @@ fn build_f32_stream(
         pcm_sink,
         level_tx,
         silence_tx,
-        voice_activity,
         error_reporter,
         input_gain_factor,
         ..
@@ -944,7 +899,6 @@ fn build_f32_stream(
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_f32(data), input_gain_factor);
                 send_level(&level_tx, level);
-                voice_activity.observe(level, voice_threshold);
                 send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_f32(data)

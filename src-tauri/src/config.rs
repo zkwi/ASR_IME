@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 10_000;
 const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
+const PREVIOUS_DEFAULT_SILENCE_AUTO_STOP_SECONDS: u64 = 30;
 const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
 const LEGACY_STOP_GRACE_MS: u64 = 800;
 const PREVIOUS_SHORT_STOP_GRACE_MS: u64 = 150;
@@ -640,7 +641,9 @@ fn migrate_auto_hotword_history_default(config: &mut AppConfig) -> bool {
 }
 
 fn migrate_silence_auto_stop_default(config: &mut AppConfig) -> bool {
-    if config.audio.silence_auto_stop_seconds == LEGACY_SILENCE_AUTO_STOP_SECONDS {
+    if config.audio.silence_auto_stop_seconds == LEGACY_SILENCE_AUTO_STOP_SECONDS
+        || config.audio.silence_auto_stop_seconds == PREVIOUS_DEFAULT_SILENCE_AUTO_STOP_SECONDS
+    {
         config.audio.silence_auto_stop_seconds = default_silence_auto_stop_seconds();
         return true;
     }
@@ -797,7 +800,7 @@ fn default_stop_grace_ms() -> u64 {
     250
 }
 fn default_silence_auto_stop_seconds() -> u64 {
-    30
+    0
 }
 fn default_silence_level_threshold() -> f32 {
     0.03
@@ -977,7 +980,7 @@ mod tests {
         assert!(!config.triggers.right_alt_enabled);
         assert!(!config.audio.mute_system_volume_while_recording);
         assert_eq!(config.audio.stop_grace_ms, 250);
-        assert_eq!(config.audio.silence_auto_stop_seconds, 30);
+        assert_eq!(config.audio.silence_auto_stop_seconds, 0);
         assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.audio.input_gain_db, 0.0);
         assert_eq!(config.request.end_window_size, Some(800));
@@ -1305,13 +1308,17 @@ mod tests {
         config.audio.silence_auto_stop_seconds = 10;
 
         assert!(migrate_silence_auto_stop_default(&mut config));
-        assert_eq!(config.audio.silence_auto_stop_seconds, 30);
+        assert_eq!(config.audio.silence_auto_stop_seconds, 0);
 
         assert!(!migrate_silence_auto_stop_default(&mut config));
 
         config.audio.silence_auto_stop_seconds = 30;
+        assert!(migrate_silence_auto_stop_default(&mut config));
+        assert_eq!(config.audio.silence_auto_stop_seconds, 0);
+
+        config.audio.silence_auto_stop_seconds = 45;
         assert!(!migrate_silence_auto_stop_default(&mut config));
-        assert_eq!(config.audio.silence_auto_stop_seconds, 30);
+        assert_eq!(config.audio.silence_auto_stop_seconds, 45);
     }
 
     #[test]

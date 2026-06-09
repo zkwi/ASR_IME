@@ -198,7 +198,7 @@ Recording defaults:
 [audio]
 max_record_seconds = 300
 stop_grace_ms = 250
-silence_auto_stop_seconds = 30
+silence_auto_stop_seconds = 0
 silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
@@ -216,7 +216,9 @@ Doubao's documentation does not require client-side automatic gain control and d
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 
-When stopping recording, `stop_grace_ms` is the requested minimum tail wait, defaulting to about `250ms`. If voice is still detected during the tail window, VoxType keeps recording until the tail becomes quiet; the default worst-case cap is about `400ms` to reduce tail-word truncation when recording is stopped immediately after speaking, while still preventing noise from keeping recording open. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+When stopping recording, `stop_grace_ms` is the fixed real-audio tail wait, defaulting to about `250ms`; it no longer depends on local volume detection to decide whether to extend. This avoids cutting the tail early when a replacement microphone is quiet or has unstable input level. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint.
+
+Local silence auto-stop is disabled by default with `silence_auto_stop_seconds = 0`. Keep it disabled for quiet microphones or unstable input levels; set it to a positive number only when unattended long recording matters.
 
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 
