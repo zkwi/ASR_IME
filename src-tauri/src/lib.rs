@@ -698,6 +698,14 @@ fn get_overlay_text() -> overlay::OverlayText {
 }
 
 #[tauri::command]
+fn get_overlay_config() -> overlay::OverlayConfig {
+    let ui = config::load_config()
+        .map(|loaded| loaded.data.ui)
+        .unwrap_or_else(|_| overlay::current_config());
+    overlay::OverlayConfig { ui }
+}
+
+#[tauri::command]
 fn list_audio_input_devices() -> Result<Vec<audio::AudioDeviceInfo>, String> {
     audio::list_input_devices()
 }
@@ -789,6 +797,7 @@ pub fn run() {
             check_for_update,
             download_and_install_update,
             get_overlay_text,
+            get_overlay_config,
             list_audio_input_devices,
             get_session_state,
             start_recording,

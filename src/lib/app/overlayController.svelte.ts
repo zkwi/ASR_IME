@@ -1,5 +1,5 @@
 import { defaultOverlayText } from "$lib/app/defaults";
-import type { AppConfig, OverlayMode, OverlayText } from "$lib/types/app";
+import type { AppConfig, OverlayConfig, OverlayMode, OverlayText } from "$lib/types/app";
 import {
   overlayBackgroundColor as getOverlayBackgroundColor,
   overlayBackgroundRgb as getOverlayBackgroundRgb,
@@ -44,7 +44,10 @@ export function createOverlayController(options: OverlayControllerOptions) {
   let tailHoldSteps = 0;
   let scrollTimer: number | undefined;
   let pollPending = false;
+  let configPollPending = false;
+  let lastConfigPollAt = 0;
   let smallLayoutLocked = false;
+  const configPollIntervalMs = 1000;
 
   async function refreshText() {
     if (pollPending) return;
@@ -58,15 +61,43 @@ export function createOverlayController(options: OverlayControllerOptions) {
     }
   }
 
+  async function refreshConfig(force = false) {
+    if (!options.isOverlay() || configPollPending) return;
+    const now = Date.now();
+    if (!force && now - lastConfigPollAt < configPollIntervalMs) return;
+    configPollPending = true;
+    lastConfigPollAt = now;
+    try {
+      const result = await options.safeInvoke<OverlayConfig>("get_overlay_config", undefined, true);
+      if (result?.ui) applyConfig(result.ui);
+    } finally {
+      configPollPending = false;
+    }
+  }
+
   function refreshLayout() {
     if (options.isOverlay()) applyText(text, true);
   }
 
   function applyConfig(ui: AppConfig["ui"]) {
     if (!options.isOverlay()) return;
+    if (!uiConfigChanged(ui)) return;
     options.updateUi(ui);
     stopScroll();
     applyText(text, true);
+  }
+
+  function uiConfigChanged(ui: AppConfig["ui"]) {
+    const current = options.getConfig().ui;
+    return (
+      current.width !== ui.width ||
+      current.height !== ui.height ||
+      current.margin_bottom !== ui.margin_bottom ||
+      current.opacity !== ui.opacity ||
+      current.scroll_interval_ms !== ui.scroll_interval_ms ||
+      current.background_color !== ui.background_color ||
+      current.text_color !== ui.text_color
+    );
   }
 
   function applyText(rawText: string, force = false) {
@@ -250,6 +281,7 @@ export function createOverlayController(options: OverlayControllerOptions) {
       return `--overlay-bg: ${backgroundColor()}; --overlay-bg-rgb: ${backgroundRgb()}; --overlay-opacity: ${opacity()}; --overlay-text: ${textColor()};`;
     },
     refreshText,
+    refreshConfig,
     refreshLayout,
     applyConfig,
     applyText,

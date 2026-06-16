@@ -261,9 +261,11 @@ export function createVoxTypeController() {
     let overlayPoll: number | undefined;
     if (isOverlay) {
       overlay.applyText("", true);
+      void overlay.refreshConfig(true);
       window.addEventListener("resize", overlay.refreshLayout);
       overlayPoll = window.setInterval(() => {
         void overlay.refreshText();
+        void overlay.refreshConfig();
       }, 250);
     }
     let unlisteners: Array<Promise<() => void>> = [];

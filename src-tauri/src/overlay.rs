@@ -17,6 +17,7 @@ pub const PASTE_FAILED_TEXT: &str = "粘贴失败，文本已复制，可手动 
 const DEFAULT_TEXT: &str = RECORDING_TEXT;
 const TRANSPARENT_BACKGROUND: Color = Color(0, 0, 0, 0);
 static OVERLAY_TEXT: OnceLock<Mutex<String>> = OnceLock::new();
+static OVERLAY_UI: OnceLock<Mutex<UiConfig>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize)]
 pub struct OverlayText {
@@ -174,6 +175,7 @@ pub fn update_text(app: &AppHandle, text: impl Into<String>) {
 }
 
 pub fn update_config(app: &AppHandle, ui: &UiConfig) {
+    set_current_config(ui);
     let _ = app.emit_to(
         OVERLAY_LABEL,
         "overlay-config",
@@ -195,6 +197,14 @@ pub fn current_text() -> String {
         .unwrap_or_else(|_| DEFAULT_TEXT.to_string())
 }
 
+pub fn current_config() -> UiConfig {
+    OVERLAY_UI
+        .get_or_init(|| Mutex::new(UiConfig::default()))
+        .lock()
+        .map(|ui| ui.clone())
+        .unwrap_or_default()
+}
+
 fn set_current_text(text: String) {
     if let Ok(mut current) = OVERLAY_TEXT
         .get_or_init(|| Mutex::new(DEFAULT_TEXT.to_string()))
@@ -205,5 +215,14 @@ fn set_current_text(text: String) {
         } else {
             text
         };
+    }
+}
+
+fn set_current_config(ui: &UiConfig) {
+    if let Ok(mut current) = OVERLAY_UI
+        .get_or_init(|| Mutex::new(UiConfig::default()))
+        .lock()
+    {
+        *current = ui.clone();
     }
 }
