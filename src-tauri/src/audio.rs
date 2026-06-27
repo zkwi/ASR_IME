@@ -6,12 +6,23 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub const ASR_OUTPUT_SAMPLE_RATE: u32 = 16_000;
 pub const ASR_OUTPUT_CHANNELS: u16 = 1;
 pub const ASR_MIN_SEGMENT_MS: u64 = 100;
 pub const ASR_MAX_SEGMENT_MS: u64 = 200;
+const INPUT_GAIN_TARGET_RMS: f32 = 0.10;
+const INPUT_GAIN_PEAK_CEILING: f32 = 0.70;
+const INPUT_GAIN_ACTIVE_RMS_FLOOR: f32 = 0.006;
+const INPUT_GAIN_MIN_ACTIVE_WINDOWS: usize = 3;
+const INPUT_GAIN_WINDOW_MS: u64 = 20;
+const AUDIO_QUALITY_ACTIVE_LEVEL: f32 = 0.035;
+const AUDIO_QUALITY_LOW_RMS_LEVEL: f32 = 0.05;
+const AUDIO_QUALITY_LOW_PEAK_LEVEL: f32 = 0.18;
+const AUDIO_QUALITY_CLIPPING_LEVEL: f32 = 0.96;
+const AUDIO_QUALITY_MIN_ACTIVE_RATIO: f32 = 0.10;
+const AUDIO_QUALITY_MIN_LEVEL_COUNT: usize = 3;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AudioCaptureInfo {
@@ -27,6 +38,28 @@ pub struct AudioDeviceInfo {
     pub index: u32,
     pub name: String,
     pub is_default: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct InputGainCalibrationResult {
+    pub recommended_gain_db: f32,
+    pub rms_dbfs: f32,
+    pub peak_dbfs: f32,
+    pub active_ratio: f32,
+    pub sample_count: usize,
+    pub duration_ms: u64,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AudioQualityDiagnostic {
+    pub rms_dbfs: f32,
+    pub peak_dbfs: f32,
+    pub active_ratio: f32,
+    pub duration_ms: u64,
+    pub level_count: usize,
+    pub clipping: bool,
+    pub status: String,
 }
 
 #[derive(Clone)]
@@ -438,6 +471,183 @@ fn apply_input_gain_to_pcm(bytes: &mut [u8], gain_factor: f32) {
         let value = i16::from_le_bytes([sample[0], sample[1]]);
         let boosted = ((value as f32) * gain_factor).round() as i32;
         sample.copy_from_slice(&clamp_i32_to_i16(boosted).to_le_bytes());
+    }
+}
+
+pub fn recommend_input_gain_db_from_pcm(bytes: &[u8]) -> InputGainCalibrationResult {
+    let samples = pcm_bytes_to_normalized_samples(bytes);
+    let sample_count = samples.len();
+    let duration_ms = (sample_count as u64 * 1000) / ASR_OUTPUT_SAMPLE_RATE as u64;
+    if samples.is_empty() {
+        return input_gain_calibration_result(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            sample_count,
+            duration_ms,
+            "too_quiet",
+        );
+    }
+
+    let peak = samples
+        .iter()
+        .map(|sample| sample.abs())
+        .fold(0.0_f32, f32::max);
+    let window_size =
+        ((ASR_OUTPUT_SAMPLE_RATE as u64 * INPUT_GAIN_WINDOW_MS) / 1000).max(1) as usize;
+    let mut active_windows = samples
+        .chunks(window_size)
+        .filter_map(|window| {
+            let rms = rms_f32(window);
+            (rms >= INPUT_GAIN_ACTIVE_RMS_FLOOR).then_some(rms)
+        })
+        .collect::<Vec<_>>();
+    let total_windows = samples.chunks(window_size).count().max(1);
+    let active_ratio = active_windows.len() as f32 / total_windows as f32;
+    if active_windows.len() < INPUT_GAIN_MIN_ACTIVE_WINDOWS || peak <= 0.0 {
+        return input_gain_calibration_result(
+            0.0,
+            0.0,
+            peak,
+            active_ratio,
+            sample_count,
+            duration_ms,
+            "too_quiet",
+        );
+    }
+
+    active_windows.sort_by(|left, right| left.total_cmp(right));
+    let speech_rms = percentile_value(&active_windows, 0.70);
+    let target_gain_db = linear_ratio_to_db(INPUT_GAIN_TARGET_RMS / speech_rms.max(f32::EPSILON));
+    let peak_limit_db = linear_ratio_to_db(INPUT_GAIN_PEAK_CEILING / peak.max(f32::EPSILON));
+    let recommended_gain_db = target_gain_db.min(peak_limit_db).clamp(-12.0, 24.0).round();
+    input_gain_calibration_result(
+        recommended_gain_db,
+        speech_rms,
+        peak,
+        active_ratio,
+        sample_count,
+        duration_ms,
+        "ok",
+    )
+}
+
+fn input_gain_calibration_result(
+    recommended_gain_db: f32,
+    rms: f32,
+    peak: f32,
+    active_ratio: f32,
+    sample_count: usize,
+    duration_ms: u64,
+    status: &str,
+) -> InputGainCalibrationResult {
+    InputGainCalibrationResult {
+        recommended_gain_db,
+        rms_dbfs: linear_to_dbfs(rms),
+        peak_dbfs: linear_to_dbfs(peak),
+        active_ratio,
+        sample_count,
+        duration_ms,
+        status: status.to_string(),
+    }
+}
+
+fn pcm_bytes_to_normalized_samples(bytes: &[u8]) -> Vec<f32> {
+    bytes
+        .chunks_exact(2)
+        .map(|chunk| {
+            let sample = i16::from_le_bytes([chunk[0], chunk[1]]);
+            (sample as f32 / i16::MAX as f32).clamp(-1.0, 1.0)
+        })
+        .collect()
+}
+
+fn percentile_value(sorted_values: &[f32], percentile: f32) -> f32 {
+    if sorted_values.is_empty() {
+        return 0.0;
+    }
+    let index = ((sorted_values.len() - 1) as f32 * percentile.clamp(0.0, 1.0)).round() as usize;
+    sorted_values[index]
+}
+
+fn linear_ratio_to_db(value: f32) -> f32 {
+    20.0 * value.max(f32::EPSILON).log10()
+}
+
+fn linear_to_dbfs(value: f32) -> f32 {
+    if value <= 0.0 || !value.is_finite() {
+        return -90.0;
+    }
+    linear_ratio_to_db(value).max(-90.0)
+}
+
+pub struct AudioQualityAccumulator {
+    started_at: Instant,
+    sum_square: f64,
+    peak: f32,
+    active_count: usize,
+    clipping_count: usize,
+    level_count: usize,
+}
+
+impl AudioQualityAccumulator {
+    pub fn new() -> Self {
+        Self {
+            started_at: Instant::now(),
+            sum_square: 0.0,
+            peak: 0.0,
+            active_count: 0,
+            clipping_count: 0,
+            level_count: 0,
+        }
+    }
+
+    pub fn observe(&mut self, level: f32) {
+        let level = level.clamp(0.0, 1.0);
+        self.sum_square += (level as f64) * (level as f64);
+        self.peak = self.peak.max(level);
+        if level >= AUDIO_QUALITY_ACTIVE_LEVEL {
+            self.active_count += 1;
+        }
+        if level >= AUDIO_QUALITY_CLIPPING_LEVEL {
+            self.clipping_count += 1;
+        }
+        self.level_count += 1;
+    }
+
+    pub fn finish(&self) -> AudioQualityDiagnostic {
+        let rms = if self.level_count == 0 {
+            0.0
+        } else {
+            (self.sum_square / self.level_count as f64).sqrt() as f32
+        };
+        let active_ratio = if self.level_count == 0 {
+            0.0
+        } else {
+            self.active_count as f32 / self.level_count as f32
+        };
+        let clipping = self.clipping_count >= 2 || self.peak >= 0.99;
+        let status = if self.level_count < AUDIO_QUALITY_MIN_LEVEL_COUNT
+            || active_ratio < AUDIO_QUALITY_MIN_ACTIVE_RATIO
+        {
+            "low_activity"
+        } else if clipping {
+            "clipping"
+        } else if rms < AUDIO_QUALITY_LOW_RMS_LEVEL && self.peak < AUDIO_QUALITY_LOW_PEAK_LEVEL {
+            "low_volume"
+        } else {
+            "ok"
+        };
+        AudioQualityDiagnostic {
+            rms_dbfs: linear_to_dbfs(rms),
+            peak_dbfs: linear_to_dbfs(self.peak),
+            active_ratio,
+            duration_ms: self.started_at.elapsed().as_millis() as u64,
+            level_count: self.level_count,
+            clipping,
+            status: status.to_string(),
+        }
     }
 }
 
@@ -914,8 +1124,9 @@ fn build_f32_stream(
 mod tests {
     use super::{
         apply_input_gain_to_pcm, apply_level_gain, effective_asr_segment_ms, input_gain_factor,
-        target_chunk_bytes, CaptureErrorReporter, PcmNormalizer, PcmSink, SegmentedAudioBuffer,
-        SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
+        recommend_input_gain_db_from_pcm, target_chunk_bytes, AudioQualityAccumulator,
+        CaptureErrorReporter, PcmNormalizer, PcmSink, SegmentedAudioBuffer, SilenceAutoStopper,
+        ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
     };
     use std::sync::mpsc;
 
@@ -1018,6 +1229,86 @@ mod tests {
         apply_input_gain_to_pcm(&mut bytes, input_gain_factor(6.0));
 
         assert_eq!(pcm_bytes_to_i16(&bytes), vec![19_953, -32768, 32767]);
+    }
+
+    fn sine_pcm_bytes(peak: f32, frames: usize) -> Vec<u8> {
+        (0..frames)
+            .flat_map(|index| {
+                let phase = (index as f32 / 80.0) * std::f32::consts::TAU;
+                let sample = (phase.sin() * peak.clamp(0.0, 1.0) * i16::MAX as f32) as i16;
+                sample.to_le_bytes()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn gain_calibration_recommends_positive_gain_for_quiet_speech() {
+        let result = recommend_input_gain_db_from_pcm(&sine_pcm_bytes(0.02, 16_000));
+
+        assert_eq!(result.status, "ok");
+        assert!(result.recommended_gain_db >= 12.0);
+        assert!(result.recommended_gain_db <= 20.0);
+        assert!(result.rms_dbfs < -30.0);
+    }
+
+    #[test]
+    fn gain_calibration_limits_gain_to_avoid_clipping() {
+        let result = recommend_input_gain_db_from_pcm(&sine_pcm_bytes(0.65, 16_000));
+
+        assert_eq!(result.status, "ok");
+        assert!(result.recommended_gain_db <= 0.0);
+        assert!(result.peak_dbfs > -5.0);
+    }
+
+    #[test]
+    fn gain_calibration_rejects_silence() {
+        let result = recommend_input_gain_db_from_pcm(&vec![0; 16_000 * 2]);
+
+        assert_eq!(result.status, "too_quiet");
+        assert_eq!(result.recommended_gain_db, 0.0);
+    }
+
+    #[test]
+    fn audio_quality_flags_low_activity() {
+        let mut quality = AudioQualityAccumulator::new();
+        for _ in 0..20 {
+            quality.observe(0.0);
+        }
+
+        let diagnostic = quality.finish();
+
+        assert_eq!(diagnostic.status, "low_activity");
+        assert_eq!(diagnostic.active_ratio, 0.0);
+        assert_eq!(diagnostic.peak_dbfs, -90.0);
+    }
+
+    #[test]
+    fn audio_quality_flags_low_volume() {
+        let mut quality = AudioQualityAccumulator::new();
+        for _ in 0..20 {
+            quality.observe(0.04);
+        }
+
+        let diagnostic = quality.finish();
+
+        assert_eq!(diagnostic.status, "low_volume");
+        assert!(diagnostic.rms_dbfs < -25.0);
+        assert!(diagnostic.active_ratio > 0.9);
+    }
+
+    #[test]
+    fn audio_quality_flags_clipping() {
+        let mut quality = AudioQualityAccumulator::new();
+        for _ in 0..18 {
+            quality.observe(0.25);
+        }
+        quality.observe(0.97);
+        quality.observe(0.98);
+
+        let diagnostic = quality.finish();
+
+        assert_eq!(diagnostic.status, "clipping");
+        assert!(diagnostic.clipping);
     }
 
     #[test]

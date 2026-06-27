@@ -93,10 +93,12 @@ import type {
   AsrFinalText,
   AudioDeviceInfo,
   AudioLevel,
+  AudioQualityDiagnostic,
   CloseToTrayRequest,
   ConfigSaveError,
   ConfigValidationError,
   ConnectionTestResult,
+  InputGainCalibrationResult,
   LastSessionOutcome,
   LoadedConfig,
   LocalDataStatus,
@@ -125,6 +127,7 @@ export function createVoxTypeController() {
   let sessionPhase = $state<SessionPhase>("idle");
   let sessionErrorCode = $state<string | null>(null);
   let lastSessionOutcome = $state<LastSessionOutcome>(null);
+  let lastAudioQualityDiagnostic = $state<AudioQualityDiagnostic | null>(null);
   let language = $state<Language>("zh-CN");
   let statusMessage = $state(copy["zh-CN"].bridgeLoading);
   let promptPreviewText = $state("");
@@ -167,6 +170,8 @@ export function createVoxTypeController() {
   let testingLlm = $state(false);
   let testingScreenContext = $state(false);
   let screenContextTestResult = $state<ScreenContextTestResult | null>(null);
+  let calibratingInputGain = $state(false);
+  let inputGainCalibrationResult = $state<InputGainCalibrationResult | null>(null);
   let validationErrors = $state<Record<string, string>>({});
   const autoHotwords = createAutoHotwordsController({
     getConfig: () => config,
@@ -314,6 +319,9 @@ export function createVoxTypeController() {
       const unlistenAudioLevel = listen<AudioLevel>("audio-level", (event) => {
         audioLevel = clampAudioLevel(event.payload.level);
       });
+      const unlistenAudioQuality = listen<AudioQualityDiagnostic>("audio-quality-diagnostic", (event) => {
+        lastAudioQualityDiagnostic = event.payload;
+      });
       const unlistenClosePrompt = listen<CloseToTrayRequest>("close-to-tray-requested", (event) => {
         windows.showClosePrompt(event.payload);
       });
@@ -327,6 +335,7 @@ export function createVoxTypeController() {
         unlistenOverlayConfig,
         unlistenStats,
         unlistenAudioLevel,
+        unlistenAudioQuality,
         unlistenClosePrompt,
         unlistenTrayUpdateCheck,
       ];
@@ -478,7 +487,10 @@ export function createVoxTypeController() {
   async function toggleRecordingFromUi() {
     if (requireAsrAuthGate()) return;
     if (isSessionBusy()) return;
-    if (!recording) lastSessionOutcome = null;
+    if (!recording) {
+      lastSessionOutcome = null;
+      lastAudioQualityDiagnostic = null;
+    }
     const result = await safeInvoke<SessionState>("toggle_recording");
     if (result) applySessionState(result);
   }
@@ -588,7 +600,10 @@ export function createVoxTypeController() {
     recording = state.recording;
     sessionPhase = state.phase ?? (state.recording ? "recording" : "idle");
     sessionErrorCode = state.error_code;
-    if (sessionPhase === "starting" || sessionPhase === "recording") lastSessionOutcome = null;
+    if (sessionPhase === "starting" || sessionPhase === "recording") {
+      lastSessionOutcome = null;
+      lastAudioQualityDiagnostic = null;
+    }
     if (sessionPhase !== "succeeded" && succeededIdleTimer !== undefined) {
       window.clearTimeout(succeededIdleTimer);
       succeededIdleTimer = undefined;
@@ -791,6 +806,44 @@ export function createVoxTypeController() {
       testingScreenContext = false;
     }
   }
+  async function calibrateInputGain() {
+    if (calibratingInputGain) return;
+    if (recording || isSessionBusy()) {
+      statusMessage = t("inputGainCalibrationBusy");
+      notifications.show(statusMessage, "warning");
+      return;
+    }
+    calibratingInputGain = true;
+    inputGainCalibrationResult = null;
+    statusMessage = t("inputGainCalibrationRunning");
+    try {
+      const result = await safeInvoke<InputGainCalibrationResult>("calibrate_input_gain");
+      if (result) {
+        inputGainCalibrationResult = result;
+        if (result.status === "ok") {
+          statusMessage = t("inputGainCalibrationSucceeded", {
+            gain: formatSignedDb(result.recommended_gain_db),
+          });
+          notifications.show(statusMessage, "success");
+        } else {
+          statusMessage = t("inputGainCalibrationTooQuiet");
+          notifications.show(statusMessage, "warning");
+        }
+      } else if (statusMessage) {
+        notifications.show(statusMessage, "error");
+      }
+    } finally {
+      calibratingInputGain = false;
+    }
+  }
+  function applyInputGainCalibration() {
+    if (!inputGainCalibrationResult || inputGainCalibrationResult.status !== "ok") return;
+    config.audio.input_gain_db = inputGainCalibrationResult.recommended_gain_db;
+    notifications.show(
+      t("inputGainCalibrationApplied", { gain: formatSignedDb(inputGainCalibrationResult.recommended_gain_db) }),
+      "success",
+    );
+  }
   function optionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     if (!enabled) return "";
     if (key === "middle_mouse_enabled" || key === "right_alt_enabled") return t("extraTriggerEnabledNotice");
@@ -858,6 +911,9 @@ export function createVoxTypeController() {
   }
   function setupActionText(action: string) {
     return getSetupActionText(action, t);
+  }
+  function openRecordingTroubleshooting() {
+    settingsNav.scrollToSettingsPanel("settings-recording-troubleshooting");
   }
   function handleSetupAction(action: string) {
     if (action === "audio") void refreshSetupStatus();
@@ -1009,6 +1065,10 @@ export function createVoxTypeController() {
   function formatNumber(value: number) {
     return formatNumberForLanguage(value, language);
   }
+  function formatSignedDb(value: number) {
+    const rounded = Math.round(value);
+    return `${rounded > 0 ? "+" : ""}${formatNumber(rounded)} dB`;
+  }
   function inputStatus(): "idle" | "listening" | "error" {
     if (sessionPhase === "failed" || isErrorStatus(statusMessage)) return "error";
     return recording || isSessionBusy() ? "listening" : "idle";
@@ -1156,6 +1216,7 @@ export function createVoxTypeController() {
       activeErrorDetail: activeUserErrorDetail(),
       activeErrorActions: activeUserErrorActions(),
       lastSessionOutcome,
+      lastAudioQualityDiagnostic,
       sessionBusy: isSessionBusy(),
       snapshotHotkey: snapshot.hotkey,
       chineseTypingCharsPerMinute,
@@ -1169,6 +1230,8 @@ export function createVoxTypeController() {
       testingLlm,
       testingScreenContext,
       screenContextTestResult,
+      calibratingInputGain,
+      inputGainCalibrationResult,
       hotkeyCaptureState: hotkeyCapture.state,
       hotkeyValidationMessage: hotkeyCapture.validationMessage,
       overlayColorPresets,
@@ -1216,6 +1279,7 @@ export function createVoxTypeController() {
       privacyClearingUsageStats: privacy.clearingUsageStats,
       onOpenSettings: openSettings,
       onOpenSetupGuide: openSetupGuide,
+      onOpenRecordingTroubleshooting: openRecordingTroubleshooting,
       onUserErrorAction: handleUserErrorAction,
       onCopyLastOutcomeText: copyLastOutcomeText,
       onToggleRecording: toggleRecordingFromUi,
@@ -1242,6 +1306,8 @@ export function createVoxTypeController() {
       onTestAsrConfig: testAsrConfig,
       onTestLlmConfig: testLlmConfig,
       onTestScreenContext: testScreenContext,
+      onCalibrateInputGain: calibrateInputGain,
+      onApplyInputGainCalibration: applyInputGainCalibration,
       onHotkeyKeydown: hotkeyCapture.handleKeydown,
       onBeginHotkeyCapture: hotkeyCapture.beginCapture,
       onApplyOverlayPreset: overlay.applyPreset,

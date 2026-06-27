@@ -27,7 +27,7 @@ stop_grace_ms = 250
 silence_auto_stop_seconds = 0
 # 静音判定音量阈值；短促噪声不会立即重置计时，普通用户不需要修改
 silence_level_threshold = 0.03
-# 麦克风输入增益 dB；默认 0 不改变音频。声音偏小但清晰时可先试 6，仍偏小再试 12，范围 -12 到 24
+# 麦克风输入增益 dB；默认 0 不改变音频。声音偏小但清晰时可先用设置页“校准增益”，或手动试 6 / 12，范围 -12 到 24
 input_gain_db = 0.0
 # 录音时是否自动静音系统音量；可减少回声，但可能影响会议、视频或系统提示音
 mute_system_volume_while_recording = false
@@ -39,7 +39,7 @@ mute_system_volume_while_recording = false
 ws_url = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
 model_name = "bigmodel"
 # 识别语言默认留空：当前使用 bigmodel_async + enable_nonstream 二遍识别，豆包文档说明二遍不支持 language
-# 留空和旧默认 zh-CN 都会按服务默认处理；只有明确要尝试固定非默认语种时再填写，例如 en-US / ja-JP / yue-CN
+# 中文普通话无需填写；旧默认 zh-CN 会自动迁移为空。只有明确要排查非默认语种时再填写，例如 en-US / ja-JP / yue-CN
 language = ""
 # 以下为 ASR 请求内部参数；主链路会强制使用二遍最终结果所需组合
 # 是否开启二遍识别；主链路会强制开启

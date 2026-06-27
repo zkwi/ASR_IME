@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::app_log;
 use crate::asr_ws;
-use crate::audio::{self, AudioCapture};
+use crate::audio::{self, AudioCapture, AudioQualityAccumulator};
 use crate::config;
 use crate::overlay;
 use crate::screen_context;
@@ -16,7 +16,6 @@ use crate::tray;
 // 尾字偶发截断时优先收更完整的真实尾音，不用中间 ASR 文本或尾部静音兜底。
 // 维护依据见 docs/asr-quality-latency-guardrails.md。
 const STOP_TAIL_MIN_CAPTURE_MS: u64 = 250;
-
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionState {
     pub recording: bool,
@@ -647,19 +646,21 @@ fn spawn_audio_level_emitter(app: AppHandle, level_rx: std::sync::mpsc::Receiver
         let mut last_emit = Instant::now()
             .checked_sub(Duration::from_millis(100))
             .unwrap_or_else(Instant::now);
+        let mut quality = AudioQualityAccumulator::new();
         while let Ok(level) = level_rx.recv() {
+            let level = level.clamp(0.0, 1.0);
+            quality.observe(level);
             if last_emit.elapsed() < Duration::from_millis(80) {
                 continue;
             }
-            let _ = app.emit(
-                "audio-level",
-                AudioLevel {
-                    level: level.clamp(0.0, 1.0),
-                },
-            );
+            let _ = app.emit("audio-level", AudioLevel { level });
             last_emit = Instant::now();
         }
         let _ = app.emit("audio-level", AudioLevel { level: 0.0 });
+        let diagnostic = quality.finish();
+        if diagnostic.level_count > 0 {
+            let _ = app.emit("audio-quality-diagnostic", diagnostic);
+        }
     });
 }
 

@@ -121,7 +121,7 @@ resource_id = "volc.seedasr.sauc.duration"
 
 VoxType currently follows the Doubao streaming ASR WebSocket header shape with `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`. The default `resource_id` is `volc.seedasr.sauc.duration`, the hourly billing resource for the speech recognition big model 2.0. Change it only if your Volcano Engine account uses a concurrent resource or an older model resource. Do not paste an LLM API key, GitHub token, or unrelated cloud secret into the ASR fields. The Doubao credentials panel includes a docs link so first-time setup can be checked against the official field descriptions.
 
-API Config also includes the Doubao ASR input language. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Existing `zh-CN` configs are also treated as Auto/service default; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when you explicitly want to try locking recognition to a non-default language.
+API Config also includes the Doubao ASR input language. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
 
 Common Doubao ASR test failures:
 
@@ -212,7 +212,9 @@ First-word acceleration is enabled by default with a moderate `accelerate_score`
 
 Semantic smoothing `enable_ddc` is newly disabled by default to match Doubao's documented default and avoid readability-oriented rewrites of proper nouns, short commands, or punctuation-sensitive dictation. Existing explicit values in `config.toml` are preserved; enable it manually if smoother long-form prose matters more.
 
-Doubao's documentation does not require client-side automatic gain control and does not define a separate gain request parameter. When the microphone is quiet but clear, set `input_gain_db` in VoxType's recording troubleshooting settings; VoxType boosts the 16-bit PCM before sending it to ASR. Try `+6 dB` first, then `+12 dB` if it is still too quiet, because excessive gain can clip speech and amplify room noise.
+Doubao's documentation does not require client-side automatic gain control and does not define a separate gain request parameter. When the microphone is quiet but clear, set `input_gain_db` in VoxType's recording troubleshooting settings; VoxType boosts the 16-bit PCM before sending it to ASR. Use "Calibrate gain" first and read a few sentences; VoxType analyzes 16-bit PCM RMS and peak locally to recommend a dB value without saving or uploading audio. You can also try `+6 dB` manually, then `+12 dB` if it is still too quiet, because excessive gain can clip speech and amplify room noise.
+
+After each recording, Home shows a lightweight recording quality card with the latest RMS, peak, active speech ratio, and a suggestion. These metrics contain no recognized text and are not written to the main stats table.
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 

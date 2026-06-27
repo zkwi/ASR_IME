@@ -1,5 +1,12 @@
 <script lang="ts">
-  import type { AppConfig, LastSessionOutcome, StatsSnapshot, UsageStats, UserErrorAction } from "$lib/types/app";
+  import type {
+    AppConfig,
+    AudioQualityDiagnostic,
+    LastSessionOutcome,
+    StatsSnapshot,
+    UsageStats,
+    UserErrorAction,
+  } from "$lib/types/app";
   import type { CopyKey, UserErrorDetail } from "$lib/i18n";
   import { savedHoursForUsage } from "$lib/utils/stats";
   import {
@@ -33,6 +40,7 @@
     activeErrorDetail: UserErrorDetail | null;
     activeErrorActions: UserErrorAction[];
     lastSessionOutcome: LastSessionOutcome;
+    lastAudioQualityDiagnostic: AudioQualityDiagnostic | null;
     sessionBusy: boolean;
     snapshotHotkey: string;
     chineseTypingCharsPerMinute: number;
@@ -45,6 +53,7 @@
     triggerLabel: (enabled: boolean) => string;
     onOpenSettings: () => void;
     onOpenSetupGuide: () => void;
+    onOpenRecordingTroubleshooting: () => void;
     onUserErrorAction: (action: UserErrorAction) => void;
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
@@ -66,6 +75,7 @@
     activeErrorDetail,
     activeErrorActions,
     lastSessionOutcome,
+    lastAudioQualityDiagnostic,
     sessionBusy,
     snapshotHotkey,
     chineseTypingCharsPerMinute,
@@ -78,6 +88,7 @@
     triggerLabel,
     onOpenSettings,
     onOpenSetupGuide,
+    onOpenRecordingTroubleshooting,
     onUserErrorAction,
     onCopyLastOutcomeText,
     onToggleRecording,
@@ -137,6 +148,30 @@
 
   function savedHoursText(usage: UsageStats) {
     return formatHours(savedHoursForUsage(usage, chineseTypingCharsPerMinute)).replace(" h", "");
+  }
+
+  function audioQualityTitle(diagnostic: AudioQualityDiagnostic) {
+    if (diagnostic.status === "low_volume") return t("audioQualityLowVolumeTitle");
+    if (diagnostic.status === "clipping") return t("audioQualityClippingTitle");
+    if (diagnostic.status === "low_activity") return t("audioQualityLowActivityTitle");
+    return t("audioQualityOkTitle");
+  }
+
+  function audioQualityDescription(diagnostic: AudioQualityDiagnostic) {
+    if (diagnostic.status === "low_volume") return t("audioQualityLowVolumeDescription");
+    if (diagnostic.status === "clipping") return t("audioQualityClippingDescription");
+    if (diagnostic.status === "low_activity") return t("audioQualityLowActivityDescription");
+    return t("audioQualityOkDescription");
+  }
+
+  function formatDbfs(value: number) {
+    return `${Math.round(value)} dBFS`;
+  }
+
+  function formatDuration(valueMs: number) {
+    const seconds = Math.max(0, valueMs / 1000);
+    if (seconds < 1) return t("audioQualityDurationSubSecond");
+    return t("audioQualityDurationSeconds", { seconds: formatNumber(Math.round(seconds)) });
   }
 </script>
 
@@ -268,6 +303,31 @@
     </p>
   </section>
 {/if}
+{#if lastAudioQualityDiagnostic}
+  <section
+    class:issue={lastAudioQualityDiagnostic.status !== "ok"}
+    class="audio-quality-card"
+    aria-live="polite"
+  >
+    <div class="audio-quality-copy">
+      <strong>{audioQualityTitle(lastAudioQualityDiagnostic)}</strong>
+      <p>{audioQualityDescription(lastAudioQualityDiagnostic)}</p>
+      <small>
+        {t("audioQualityMetrics", {
+          rms: formatDbfs(lastAudioQualityDiagnostic.rms_dbfs),
+          peak: formatDbfs(lastAudioQualityDiagnostic.peak_dbfs),
+          active: `${Math.round(lastAudioQualityDiagnostic.active_ratio * 100)}%`,
+          duration: formatDuration(lastAudioQualityDiagnostic.duration_ms)
+        })}
+      </small>
+    </div>
+    {#if lastAudioQualityDiagnostic.status !== "ok"}
+      <button type="button" class="link-action compact" onclick={onOpenRecordingTroubleshooting}>
+        {t("audioQualityOpenTroubleshooting")} <ChevronRight size={14} />
+      </button>
+    {/if}
+  </section>
+{/if}
 <section class="performance-card">
   <div class="section-title-row">
     <h3>{t("recentUsage")}</h3>
@@ -304,6 +364,7 @@
 <style>
   .voice-card,
   .last-outcome-card,
+  .audio-quality-card,
   .performance-card {
     width: 100%;
     margin-inline: 0;
@@ -317,6 +378,7 @@
   }
 
   .last-outcome-card,
+  .audio-quality-card,
   .performance-card {
     padding: 18px;
     overflow: hidden;
@@ -336,6 +398,56 @@
 
   .performance-card {
     order: 2;
+  }
+
+  .audio-quality-card {
+    order: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f7fbff;
+    border-color: rgba(47, 128, 237, 0.16);
+    box-shadow: none;
+  }
+
+  .audio-quality-card.issue {
+    background: #fffaf3;
+    border-color: rgba(217, 119, 6, 0.26);
+  }
+
+  .audio-quality-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .audio-quality-copy strong {
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .audio-quality-copy p,
+  .audio-quality-copy small {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .audio-quality-copy small {
+    color: var(--text-muted);
+  }
+
+  .audio-quality-card.issue .audio-quality-copy strong {
+    color: #8a4b00;
+  }
+
+  .audio-quality-card .link-action {
+    align-self: center;
   }
 
   .section-title-row {
@@ -950,6 +1062,7 @@
   }
 
   :global(.ui-compact) .last-outcome-card,
+  :global(.ui-compact) .audio-quality-card,
   :global(.ui-compact) .performance-card {
     padding: 14px;
   }
@@ -1015,6 +1128,15 @@
 
     .last-outcome-actions {
       justify-content: flex-start;
+    }
+
+    .audio-quality-card {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: stretch;
+    }
+
+    .audio-quality-card .link-action {
+      justify-self: flex-start;
     }
 
     .stats-row,

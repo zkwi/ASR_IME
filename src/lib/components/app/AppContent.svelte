@@ -13,6 +13,8 @@
   import type {
     AppConfig,
     AudioDeviceInfo,
+    AudioQualityDiagnostic,
+    InputGainCalibrationResult,
     LastSessionOutcome,
     LocalDataStatus,
     ScreenContextTestResult,
@@ -43,6 +45,7 @@
     activeErrorDetail: UserErrorDetail | null;
     activeErrorActions: UserErrorAction[];
     lastSessionOutcome: LastSessionOutcome;
+    lastAudioQualityDiagnostic: AudioQualityDiagnostic | null;
     sessionBusy: boolean;
     snapshotHotkey: string;
     chineseTypingCharsPerMinute: number;
@@ -56,6 +59,8 @@
     testingLlm: boolean;
     testingScreenContext: boolean;
     screenContextTestResult: ScreenContextTestResult | null;
+    calibratingInputGain: boolean;
+    inputGainCalibrationResult: InputGainCalibrationResult | null;
     hotkeyCaptureState: "idle" | "recording";
     hotkeyValidationMessage: string;
     overlayColorPresets: Array<{ label: CopyKey; background: string; text: string }>;
@@ -103,6 +108,7 @@
     privacyClearingUsageStats: boolean;
     onOpenSettings: () => void;
     onOpenSetupGuide: () => void;
+    onOpenRecordingTroubleshooting: () => void;
     onUserErrorAction: (action: UserErrorAction) => void;
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
@@ -129,6 +135,8 @@
     onTestAsrConfig: () => void;
     onTestLlmConfig: () => void;
     onTestScreenContext: () => void;
+    onCalibrateInputGain: () => void;
+    onApplyInputGainCalibration: () => void;
     onHotkeyKeydown: (event: KeyboardEvent) => void;
     onBeginHotkeyCapture: () => void;
     onApplyOverlayPreset: (background: string, text: string) => void;
@@ -161,6 +169,7 @@
     activeErrorDetail,
     activeErrorActions,
     lastSessionOutcome,
+    lastAudioQualityDiagnostic,
     sessionBusy,
     snapshotHotkey,
     chineseTypingCharsPerMinute,
@@ -174,6 +183,8 @@
     testingLlm,
     testingScreenContext,
     screenContextTestResult,
+    calibratingInputGain,
+    inputGainCalibrationResult,
     hotkeyCaptureState,
     hotkeyValidationMessage,
     overlayColorPresets,
@@ -221,6 +232,7 @@
     privacyClearingUsageStats,
     onOpenSettings,
     onOpenSetupGuide,
+    onOpenRecordingTroubleshooting,
     onUserErrorAction,
     onCopyLastOutcomeText,
     onToggleRecording,
@@ -247,6 +259,8 @@
     onTestAsrConfig,
     onTestLlmConfig,
     onTestScreenContext,
+    onCalibrateInputGain,
+    onApplyInputGainCalibration,
     onHotkeyKeydown,
     onBeginHotkeyCapture,
     onApplyOverlayPreset,
@@ -279,6 +293,7 @@
     {activeErrorDetail}
     {activeErrorActions}
     {lastSessionOutcome}
+    {lastAudioQualityDiagnostic}
     {onCopyLastOutcomeText}
     {sessionBusy}
     {snapshotHotkey}
@@ -292,6 +307,7 @@
     {triggerLabel}
     onOpenSettings={onOpenSettings}
     onOpenSetupGuide={onOpenSetupGuide}
+    onOpenRecordingTroubleshooting={onOpenRecordingTroubleshooting}
     onUserErrorAction={onUserErrorAction}
     onToggleRecording={onToggleRecording}
     onSelectSection={onSelectSection}
@@ -372,6 +388,8 @@
     {copyingDiagnosticReport}
     {testingScreenContext}
     {screenContextTestResult}
+    {calibratingInputGain}
+    {inputGainCalibrationResult}
     {fieldError}
     {formatHotkey}
     {overlayBackgroundRgb}
@@ -394,6 +412,8 @@
     onOpenLog={onOpenLog}
     onCopyDiagnosticReport={onCopyDiagnosticReport}
     onTestScreenContext={onTestScreenContext}
+    onCalibrateInputGain={onCalibrateInputGain}
+    onApplyInputGainCalibration={onApplyInputGainCalibration}
     onScrollToSettingsPanel={onScrollToSettingsPanel}
   />
 {:else if selectedSection === "Privacy"}

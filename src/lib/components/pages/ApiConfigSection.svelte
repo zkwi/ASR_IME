@@ -12,7 +12,6 @@
 
   const asrLanguageOptions: Array<{ value: string; labelKey: CopyKey }> = [
     { value: "", labelKey: "asrLanguageAuto" },
-    { value: "zh-CN", labelKey: "asrLanguageZhCN" },
     { value: "en-US", labelKey: "asrLanguageEnUS" },
     { value: "ja-JP", labelKey: "asrLanguageJaJP" },
     { value: "id-ID", labelKey: "asrLanguageIdID" },
@@ -208,7 +207,7 @@
         <div class="section-heading-copy">
           <h3>{t("asrLanguageTitle")}</h3>
           <p>{t("asrLanguageDescription")}</p>
-          <SettingTags tags={[t("tagOptional"), t("tagSentToService")]} />
+          <SettingTags tags={[t("tagOptional")]} />
         </div>
       </div>
       <div class="form-grid">

@@ -549,12 +549,14 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_silence_level_threshold = migrate_silence_level_threshold_default(&mut data);
     let migrated_stop_grace = migrate_stop_grace_default(&mut data);
     let migrated_result_type = migrate_result_type_default(&mut data);
+    let migrated_asr_language = migrate_legacy_asr_language_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
         || migrated_silence_auto_stop
         || migrated_silence_level_threshold
         || migrated_stop_grace
         || migrated_result_type
+        || migrated_asr_language
     {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
@@ -675,6 +677,14 @@ fn migrate_stop_grace_default(config: &mut AppConfig) -> bool {
 fn migrate_result_type_default(config: &mut AppConfig) -> bool {
     if config.request.result_type == LEGACY_RESULT_TYPE_DEFAULT {
         config.request.result_type = default_result_type();
+        return true;
+    }
+    false
+}
+
+fn migrate_legacy_asr_language_default(config: &mut AppConfig) -> bool {
+    if config.request.language.trim().eq_ignore_ascii_case("zh-CN") {
+        config.request.language.clear();
         return true;
     }
     false
@@ -967,9 +977,10 @@ fn default_close_behavior() -> String {
 mod tests {
     use super::{
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
-        migrate_result_type_default, migrate_silence_auto_stop_default,
-        migrate_silence_level_threshold_default, migrate_stop_grace_default, validate_config,
-        AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        migrate_legacy_asr_language_default, migrate_result_type_default,
+        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
+        migrate_stop_grace_default, validate_config, AppConfig, TextContext,
+        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
 
     #[test]
@@ -1300,6 +1311,20 @@ mod tests {
         assert!(migrate_result_type_default(&mut config));
         assert_eq!(config.request.result_type, "full");
         assert!(!migrate_result_type_default(&mut config));
+    }
+
+    #[test]
+    fn migrates_legacy_asr_language_default() {
+        let mut config = AppConfig::default();
+        config.request.language = "zh-CN".to_string();
+
+        assert!(migrate_legacy_asr_language_default(&mut config));
+        assert!(config.request.language.is_empty());
+        assert!(!migrate_legacy_asr_language_default(&mut config));
+
+        config.request.language = "en-US".to_string();
+        assert!(!migrate_legacy_asr_language_default(&mut config));
+        assert_eq!(config.request.language, "en-US");
     }
 
     #[test]

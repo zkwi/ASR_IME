@@ -168,7 +168,25 @@ export type UserErrorAction =
   | "open_log";
 
 export type AudioLevel = { level: number };
+export type AudioQualityDiagnostic = {
+  rms_dbfs: number;
+  peak_dbfs: number;
+  active_ratio: number;
+  duration_ms: number;
+  level_count: number;
+  clipping: boolean;
+  status: "ok" | "low_volume" | "clipping" | "low_activity" | string;
+};
 export type AudioDeviceInfo = { index: number; name: string; is_default: boolean };
+export type InputGainCalibrationResult = {
+  recommended_gain_db: number;
+  rms_dbfs: number;
+  peak_dbfs: number;
+  active_ratio: number;
+  sample_count: number;
+  duration_ms: number;
+  status: string;
+};
 export type OverlayMode = "single" | "double";
 export type AsrConnectionStatus =
   | "missing_auth"
