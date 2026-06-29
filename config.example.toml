@@ -27,7 +27,7 @@ stop_grace_ms = 250
 silence_auto_stop_seconds = 0
 # 静音判定音量阈值；短促噪声不会立即重置计时，普通用户不需要修改
 silence_level_threshold = 0.03
-# 麦克风输入增益 dB；默认 0 不改变音频。声音偏小但清晰时可先用设置页“校准增益”，或手动试 6 / 12，范围 -12 到 24
+# 麦克风输入增益 dB；默认 0 不改变音频。声音持续偏小但清晰时再手动小幅尝试 +3 / +6，范围 -12 到 24
 input_gain_db = 0.0
 # 录音时是否自动静音系统音量；可减少回声，但可能影响会议、视频或系统提示音
 mute_system_volume_while_recording = false
@@ -51,9 +51,9 @@ enable_ddc = false
 show_utterances = true
 # full 返回累计结果，最终包可兜底补齐开头或尾部分句；中间结果只用于字幕反馈
 result_type = "full"
-# 首字返回加速；默认开启以提升实时字幕首字速度。若首字误识别明显，可改为 false 或把分数降到 0
-enable_accelerate_text = true
-accelerate_score = 8
+# 首字返回加速默认关闭，优先保障首字准确率；如特别看重实时字幕速度，可手动开启并调高分数
+enable_accelerate_text = false
+accelerate_score = 0
 end_window_size = 800
 # force_to_speech_time = 800
 # 停录后等待最终结果的超时时间

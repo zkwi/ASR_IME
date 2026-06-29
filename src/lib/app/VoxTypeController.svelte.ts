@@ -98,7 +98,6 @@ import type {
   ConfigSaveError,
   ConfigValidationError,
   ConnectionTestResult,
-  InputGainCalibrationResult,
   LastSessionOutcome,
   LoadedConfig,
   LocalDataStatus,
@@ -170,8 +169,6 @@ export function createVoxTypeController() {
   let testingLlm = $state(false);
   let testingScreenContext = $state(false);
   let screenContextTestResult = $state<ScreenContextTestResult | null>(null);
-  let calibratingInputGain = $state(false);
-  let inputGainCalibrationResult = $state<InputGainCalibrationResult | null>(null);
   let validationErrors = $state<Record<string, string>>({});
   const autoHotwords = createAutoHotwordsController({
     getConfig: () => config,
@@ -806,44 +803,6 @@ export function createVoxTypeController() {
       testingScreenContext = false;
     }
   }
-  async function calibrateInputGain() {
-    if (calibratingInputGain) return;
-    if (recording || isSessionBusy()) {
-      statusMessage = t("inputGainCalibrationBusy");
-      notifications.show(statusMessage, "warning");
-      return;
-    }
-    calibratingInputGain = true;
-    inputGainCalibrationResult = null;
-    statusMessage = t("inputGainCalibrationRunning");
-    try {
-      const result = await safeInvoke<InputGainCalibrationResult>("calibrate_input_gain");
-      if (result) {
-        inputGainCalibrationResult = result;
-        if (result.status === "ok") {
-          statusMessage = t("inputGainCalibrationSucceeded", {
-            gain: formatSignedDb(result.recommended_gain_db),
-          });
-          notifications.show(statusMessage, "success");
-        } else {
-          statusMessage = t("inputGainCalibrationTooQuiet");
-          notifications.show(statusMessage, "warning");
-        }
-      } else if (statusMessage) {
-        notifications.show(statusMessage, "error");
-      }
-    } finally {
-      calibratingInputGain = false;
-    }
-  }
-  function applyInputGainCalibration() {
-    if (!inputGainCalibrationResult || inputGainCalibrationResult.status !== "ok") return;
-    config.audio.input_gain_db = inputGainCalibrationResult.recommended_gain_db;
-    notifications.show(
-      t("inputGainCalibrationApplied", { gain: formatSignedDb(inputGainCalibrationResult.recommended_gain_db) }),
-      "success",
-    );
-  }
   function optionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     if (!enabled) return "";
     if (key === "middle_mouse_enabled" || key === "right_alt_enabled") return t("extraTriggerEnabledNotice");
@@ -1065,10 +1024,6 @@ export function createVoxTypeController() {
   function formatNumber(value: number) {
     return formatNumberForLanguage(value, language);
   }
-  function formatSignedDb(value: number) {
-    const rounded = Math.round(value);
-    return `${rounded > 0 ? "+" : ""}${formatNumber(rounded)} dB`;
-  }
   function inputStatus(): "idle" | "listening" | "error" {
     if (sessionPhase === "failed" || isErrorStatus(statusMessage)) return "error";
     return recording || isSessionBusy() ? "listening" : "idle";
@@ -1230,8 +1185,6 @@ export function createVoxTypeController() {
       testingLlm,
       testingScreenContext,
       screenContextTestResult,
-      calibratingInputGain,
-      inputGainCalibrationResult,
       hotkeyCaptureState: hotkeyCapture.state,
       hotkeyValidationMessage: hotkeyCapture.validationMessage,
       overlayColorPresets,
@@ -1306,8 +1259,6 @@ export function createVoxTypeController() {
       onTestAsrConfig: testAsrConfig,
       onTestLlmConfig: testLlmConfig,
       onTestScreenContext: testScreenContext,
-      onCalibrateInputGain: calibrateInputGain,
-      onApplyInputGainCalibration: applyInputGainCalibration,
       onHotkeyKeydown: hotkeyCapture.handleKeydown,
       onBeginHotkeyCapture: hotkeyCapture.beginCapture,
       onApplyOverlayPreset: overlay.applyPreset,

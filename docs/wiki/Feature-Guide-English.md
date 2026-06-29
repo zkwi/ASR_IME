@@ -51,7 +51,7 @@ Defaults. These are low-level parameters, so most users do not need to change th
 - Channels: `1`
 - Segment size: `200ms`
 - Max recording duration: `300s`
-- Local low-volume auto-stop: `30s`, threshold `0.03`
+- Local low-volume auto-stop: off by default (`0s`), threshold `0.03`
 - Microphone input gain: `0 dB`
 
 VoxType normalizes the actual microphone input to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are capture preferences, not the final wire format.
@@ -60,28 +60,28 @@ Tips:
 
 - Select a fixed input device if you have multiple microphones.
 - Low volume, long distance, noisy rooms, and disabled Windows microphone permission can cause empty recognition.
-- If the microphone is quiet but clear, raise input gain in recording troubleshooting. Try `+6 dB` first, then `+12 dB`; excessive gain clips speech and amplifies room noise.
+- If the microphone is quiet but clear, check the system microphone level and distance first; if the recording quality card still repeatedly reports low volume, raise input gain slightly in recording troubleshooting to `+3 dB` or `+6 dB`.
 - A microphone input-stream error fails the current session immediately, so incomplete audio is not polished, pasted, or counted as success.
-- If a recording contains no useful speech, VoxType uses the local silence fallback to stop recording instead of waiting for the maximum duration.
+- Local silence auto-stop is off by default; set `silence_auto_stop_seconds` to a positive value only when unattended long recording matters.
 - System-volume mute while recording is off by default; enable it only if echo affects recognition.
 
 ## 5. Doubao Streaming ASR
 
 VoxType uses Doubao `bigmodel_async` WebSocket by default.
 
-It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is enabled by default for faster captions, while DDC semantic smoothing is newly disabled by default to reduce readability-oriented rewrites.
+It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is disabled by default to prioritize beginning-word accuracy, while DDC semantic smoothing remains disabled by default to reduce readability-oriented rewrites.
 
 Quality and latency factors:
 
 | Factor | Recommendation |
 | --- | --- |
 | Audio segment | Keep the internal default 200ms |
-| Microphone input gain | Default 0 dB; quiet but clear mics can try +6 dB to +12 dB |
+| Microphone input gain | Default 0 dB; quiet but clear mics can try a small +3 dB or +6 dB boost |
 | Server endpointing | `end_window_size` defaults to 800ms; existing manual config is preserved |
-| First-word return | `enable_accelerate_text` defaults to on with `accelerate_score = 8`; turn it off or lower it to 0 if the first word becomes less accurate |
+| First-word return | `enable_accelerate_text` defaults to off with `accelerate_score = 0`; enable it manually only when faster live-caption startup matters more |
 | Semantic smoothing | `enable_ddc` is newly off by default; enable it manually when smoother long-form prose matters more |
 | Result type | The main workflow forces `full` so the final package contains the complete cumulative text; interim captions are feedback only |
-| Local silence fallback | Continuous low volume follows the manual-stop flow after 30 seconds by default |
+| Local silence fallback | Off by default; set a positive value only for unattended long recording |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
 | Hotwords | Important for proper nouns and product names |
 | Recent context | Useful for continuous writing, but disabled by default for privacy |

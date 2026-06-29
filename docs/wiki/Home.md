@@ -49,7 +49,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 - Recent context and automatic hotword candidates: off by default.
 - Screen OCR context: on by default, current display by default, no persisted OCR text.
 - Optional LLM polishing: off by default; when enabled, thinking/reasoning is disabled with provider-specific adapters where supported.
-- Local silence fallback: continuous low volume stops recording after 30 seconds by default, with a `0.03` threshold.
+- Local silence fallback: low-volume auto-stop is off by default, with a `0.03` threshold used only when you set a positive auto-stop duration.
 - Doubao server endpointing example value: `end_window_size = 800`.
 - Update prompts provide an "Update now" action when a new installer is available.
 

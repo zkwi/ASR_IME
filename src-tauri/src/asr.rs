@@ -72,7 +72,7 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
         json!(enable_accelerate_text),
     );
     if enable_accelerate_text {
-        // 中等首字加速提升字幕跟手感；若首字误识别变多，应降分或关闭，而不是改变最终文本门禁。
+        // 首字加速会降低首字准确率，默认关闭；只在用户明确开启时发送加速率。
         request.insert(
             "accelerate_score".to_string(),
             json!(config
@@ -354,8 +354,8 @@ mod tests {
         assert_eq!(payload["request"]["show_utterances"], true);
         assert_eq!(payload["request"]["result_type"], "full");
         assert_eq!(payload["request"]["enable_ddc"], false);
-        assert_eq!(payload["request"]["enable_accelerate_text"], true);
-        assert_eq!(payload["request"]["accelerate_score"], 8);
+        assert_eq!(payload["request"]["enable_accelerate_text"], false);
+        assert!(payload["request"].get("accelerate_score").is_none());
     }
 
     #[test]

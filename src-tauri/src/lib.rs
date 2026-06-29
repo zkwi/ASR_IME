@@ -28,8 +28,6 @@ use config::{AppConfig, LoadedConfig};
 use serde::Serialize;
 use session::SessionController;
 use stats::StatsSnapshot;
-use std::sync::mpsc;
-use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 
 const APP_WINDOW_ICON: tauri::image::Image<'static> = tauri::include_image!("./icons/128x128.png");
@@ -185,48 +183,6 @@ fn build_setup_status(data: AppConfig, has_audio_device: bool) -> SetupStatus {
         privacy_recent_context_enabled: data.context.enable_recent_context,
         warnings,
     }
-}
-
-#[tauri::command]
-fn calibrate_input_gain() -> Result<audio::InputGainCalibrationResult, String> {
-    let loaded = config::load_config()?;
-    let mut audio_config = loaded.data.audio;
-    audio_config.input_gain_db = 0.0;
-    audio_config.silence_auto_stop_seconds = 0;
-
-    let duration = Duration::from_millis(6_000);
-    let (tx, rx) = mpsc::channel();
-    app_log::info(format!(
-        "开始麦克风增益校准: duration_ms={}",
-        duration.as_millis()
-    ));
-    let capture = audio::start_capture(&audio_config, Some(tx), None, None, None)
-        .map_err(|err| format!("启动麦克风增益校准失败: {}", err))?;
-    let started = Instant::now();
-    let mut pcm = Vec::new();
-    while started.elapsed() < duration {
-        match rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(chunk) => pcm.extend(chunk),
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
-            Err(mpsc::RecvTimeoutError::Disconnected) => break,
-        }
-    }
-    drop(capture);
-    while let Ok(chunk) = rx.try_recv() {
-        pcm.extend(chunk);
-    }
-
-    let result = audio::recommend_input_gain_db_from_pcm(&pcm);
-    app_log::info(format!(
-        "麦克风增益校准完成: status={}, recommended_gain_db={}, rms_dbfs={}, peak_dbfs={}, active_ratio={}, duration_ms={}",
-        result.status,
-        result.recommended_gain_db,
-        result.rms_dbfs,
-        result.peak_dbfs,
-        result.active_ratio,
-        result.duration_ms
-    ));
-    Ok(result)
 }
 
 #[tauri::command]
@@ -814,7 +770,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_snapshot,
             get_setup_status,
-            calibrate_input_gain,
             load_app_config,
             save_app_config,
             test_asr_config,

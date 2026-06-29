@@ -14,7 +14,6 @@
     AppConfig,
     AudioDeviceInfo,
     AudioQualityDiagnostic,
-    InputGainCalibrationResult,
     LastSessionOutcome,
     LocalDataStatus,
     ScreenContextTestResult,
@@ -59,8 +58,6 @@
     testingLlm: boolean;
     testingScreenContext: boolean;
     screenContextTestResult: ScreenContextTestResult | null;
-    calibratingInputGain: boolean;
-    inputGainCalibrationResult: InputGainCalibrationResult | null;
     hotkeyCaptureState: "idle" | "recording";
     hotkeyValidationMessage: string;
     overlayColorPresets: Array<{ label: CopyKey; background: string; text: string }>;
@@ -135,8 +132,6 @@
     onTestAsrConfig: () => void;
     onTestLlmConfig: () => void;
     onTestScreenContext: () => void;
-    onCalibrateInputGain: () => void;
-    onApplyInputGainCalibration: () => void;
     onHotkeyKeydown: (event: KeyboardEvent) => void;
     onBeginHotkeyCapture: () => void;
     onApplyOverlayPreset: (background: string, text: string) => void;
@@ -183,8 +178,6 @@
     testingLlm,
     testingScreenContext,
     screenContextTestResult,
-    calibratingInputGain,
-    inputGainCalibrationResult,
     hotkeyCaptureState,
     hotkeyValidationMessage,
     overlayColorPresets,
@@ -259,8 +252,6 @@
     onTestAsrConfig,
     onTestLlmConfig,
     onTestScreenContext,
-    onCalibrateInputGain,
-    onApplyInputGainCalibration,
     onHotkeyKeydown,
     onBeginHotkeyCapture,
     onApplyOverlayPreset,
@@ -388,8 +379,6 @@
     {copyingDiagnosticReport}
     {testingScreenContext}
     {screenContextTestResult}
-    {calibratingInputGain}
-    {inputGainCalibrationResult}
     {fieldError}
     {formatHotkey}
     {overlayBackgroundRgb}
@@ -412,8 +401,6 @@
     onOpenLog={onOpenLog}
     onCopyDiagnosticReport={onCopyDiagnosticReport}
     onTestScreenContext={onTestScreenContext}
-    onCalibrateInputGain={onCalibrateInputGain}
-    onApplyInputGainCalibration={onApplyInputGainCalibration}
     onScrollToSettingsPanel={onScrollToSettingsPanel}
   />
 {:else if selectedSection === "Privacy"}

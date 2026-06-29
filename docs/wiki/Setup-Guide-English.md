@@ -206,7 +206,7 @@ Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, mode
 | Right Alt | Off | Can conflict with IMEs or shortcuts |
 | Paste method | Automatic paste | Works for most text fields |
 | Clipboard restore | On | Tries to restore previous clipboard after paste |
-| Low-volume auto-stop | 30 seconds, threshold `0.03` | Less likely to cut off long or quiet dictation |
+| Low-volume auto-stop | Off by default (`0` seconds), threshold `0.03` | Avoids cutting off quiet microphones because of local threshold misclassification; set a positive value only for unattended long recording |
 | Screen OCR context | On, current display | Improves names, UI terms, filenames, and code identifiers; switch to current-window-only or disable in sensitive scenarios |
 | Recent context | Off | Conservative by default; AI access to previous text also needs a separate opt-in |
 | Automatic hotword candidates | Off | Does not save transcript history by default |
@@ -254,13 +254,13 @@ mute_system_volume_while_recording = false
 
 VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet.
 
-When the microphone is quiet but clear, set `input_gain_db` in recording troubleshooting; VoxType boosts the 16-bit PCM before sending it to ASR. Use "Calibrate gain" first and read a few sentences; VoxType analyzes RMS and peak locally to recommend a dB value without saving or uploading audio. You can also try `+6 dB` manually, then `+12 dB` if it is still too quiet. After each recording, Home shows a lightweight recording quality card with the latest RMS, peak, active speech ratio, and a suggestion; these metrics contain no recognized text and are not written to the main stats table.
+VoxType keeps `input_gain_db = 0.0` by default and does not boost microphone audio. Only raise input gain slightly in recording troubleshooting when the recording quality card repeatedly reports low volume and the system microphone level and distance already look correct; try `+3 dB` or `+6 dB` first to avoid clipping speech or amplifying room noise. After each recording, Home shows a lightweight recording quality card with the latest RMS, peak, active speech ratio, and a suggestion; these metrics contain no recognized text and are not written to the main stats table.
 
 Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. `stop_grace_ms` is the fixed real-audio tail wait after stopping, defaulting to about `250ms`; it no longer depends on local volume detection to decide whether to extend, so quiet microphones are less likely to lose tail words because of threshold misclassification. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint. Local silence auto-stop is disabled by default with `silence_auto_stop_seconds = 0`; keep it disabled for quiet microphones.
 
-The recently verified stable combination is to keep the default `200ms` ASR packet size and put speed work into first-word acceleration, `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. Final output still accepts only Doubao's final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording.
+The recently verified stable combination is to keep the default `200ms` ASR packet size and put perceived-speed work into `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. First-word acceleration is off by default to prioritize beginning-word accuracy. Final output still accepts only Doubao's final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording.
 
-First-word acceleration is enabled by default with a moderate `accelerate_score` of `8` so captions start sooner. If the first word becomes noticeably less accurate, set `enable_accelerate_text = false` in `config.toml`, or lower `accelerate_score` to `0`.
+First-word acceleration is disabled by default with `enable_accelerate_text = false` and `accelerate_score = 0`; the old default `true + 8` migrates to off. If faster live-caption startup matters more, you can manually enable it in `config.toml`, but beginning-word accuracy may drop.
 
 Semantic smoothing `enable_ddc` is newly disabled by default to match Doubao's documented default and avoid readability-oriented rewrites of proper nouns, short commands, or punctuation-sensitive dictation. Existing explicit values in `config.toml` are preserved; enable it manually if smoother long-form prose matters more.
 
@@ -308,7 +308,7 @@ github_repo = "zkwi/VoxType"
 3. Fill in Doubao ASR App Key and Access Key; keep the default Resource ID unless you have a special reason.
 4. Click **Test** for Doubao ASR.
 5. Return to Home and put the cursor in a target input field.
-6. Press `Ctrl + Q` to start recording; press it again to stop, or wait for low-volume auto-stop.
+6. Press `Ctrl + Q` to start recording; press it again to stop. Local silence auto-stop is off by default and should be enabled only for unattended long recording.
 7. Wait for final recognition and optional polishing.
 8. If text does not appear in the target field, press `Ctrl + V` manually.
 

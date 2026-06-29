@@ -3,13 +3,12 @@
     AppConfig,
     AudioDeviceInfo,
     HotkeyCaptureState,
-    InputGainCalibrationResult,
     ScreenContextTestResult,
     SoftConfigNoticeKey,
     UpdateStatus,
   } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
-  import { Check, ClipboardCopy, Download, FileText, Gauge, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
+  import { ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type OverlayColorPreset = { label: CopyKey; background: string; text: string };
@@ -39,8 +38,6 @@
     copyingDiagnosticReport: boolean;
     testingScreenContext: boolean;
     screenContextTestResult: ScreenContextTestResult | null;
-    calibratingInputGain: boolean;
-    inputGainCalibrationResult: InputGainCalibrationResult | null;
     fieldError: (field: string) => string;
     formatHotkey: (value: string) => string;
     overlayBackgroundRgb: () => string;
@@ -63,8 +60,6 @@
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
     onTestScreenContext: () => void;
-    onCalibrateInputGain: () => void;
-    onApplyInputGainCalibration: () => void;
     onScrollToSettingsPanel: (id: string) => void;
   };
 
@@ -83,8 +78,6 @@
     copyingDiagnosticReport,
     testingScreenContext,
     screenContextTestResult,
-    calibratingInputGain,
-    inputGainCalibrationResult,
     fieldError,
     formatHotkey,
     overlayBackgroundRgb,
@@ -107,14 +100,8 @@
     onOpenLog,
     onCopyDiagnosticReport,
     onTestScreenContext,
-    onCalibrateInputGain,
-    onApplyInputGainCalibration,
     onScrollToSettingsPanel,
   }: Props = $props();
-
-  const formatDb = (value: number) => `${Math.round(value) > 0 ? "+" : ""}${Math.round(value)} dB`;
-  const formatDbfs = (value: number) => `${Math.round(value)} dBFS`;
-
 </script>
 
 <section class="settings-stack">
@@ -195,36 +182,6 @@
         </div>
         <p class="field-hint">{t("silenceAutoStopHint")}</p>
         <p class="field-hint">{t("inputGainHint")}</p>
-        <div class="gain-calibration">
-          <div>
-            <strong>{t("inputGainCalibrationTitle")}</strong>
-            <span>{t("inputGainCalibrationDescription")}</span>
-          </div>
-          <button class="test-button" type="button" onclick={onCalibrateInputGain} disabled={calibratingInputGain}>
-            <Gauge size={16} />{calibratingInputGain ? t("inputGainCalibrationRunningShort") : t("inputGainCalibrationStart")}
-          </button>
-        </div>
-        {#if inputGainCalibrationResult}
-          <div class:empty={inputGainCalibrationResult.status !== "ok"} class="gain-result">
-            <strong>
-              {inputGainCalibrationResult.status === "ok"
-                ? t("inputGainCalibrationResultTitle", { gain: formatDb(inputGainCalibrationResult.recommended_gain_db) })
-                : t("inputGainCalibrationTooQuietTitle")}
-            </strong>
-            {#if inputGainCalibrationResult.status === "ok"}
-              <span>{t("inputGainCalibrationResultMeta", {
-                rms: formatDbfs(inputGainCalibrationResult.rms_dbfs),
-                peak: formatDbfs(inputGainCalibrationResult.peak_dbfs),
-                active: `${Math.round(inputGainCalibrationResult.active_ratio * 100)}%`
-              })}</span>
-              <button class="test-button primary" type="button" onclick={onApplyInputGainCalibration}>
-                <Check size={16} />{t("inputGainCalibrationApply")}
-              </button>
-            {:else}
-              <span>{t("inputGainCalibrationTooQuietHint")}</span>
-            {/if}
-          </div>
-        {/if}
       </div>
     </div>
     <div id="settings-basic-output" class="form-panel">
@@ -662,52 +619,6 @@
     opacity: 0.66;
   }
 
-  .gain-calibration,
-  .gain-result {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #f8fbff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-  }
-
-  .gain-calibration > div,
-  .gain-result {
-    min-width: 0;
-  }
-
-  .gain-calibration strong,
-  .gain-result strong {
-    display: block;
-    color: var(--text-main);
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .gain-calibration span,
-  .gain-result span {
-    display: block;
-    margin-top: 4px;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-  }
-
-  .gain-result.empty {
-    grid-template-columns: 1fr;
-    background: #fff8ed;
-  }
-
-  .gain-result .primary {
-    color: #ffffff;
-    background: var(--primary);
-    border-color: var(--primary);
-  }
-
   .update-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -818,12 +729,6 @@
 
   @media (max-width: 920px) {
     .update-card {
-      grid-template-columns: 1fr;
-      align-items: stretch;
-    }
-
-    .gain-calibration,
-    .gain-result {
       grid-template-columns: 1fr;
       align-items: stretch;
     }

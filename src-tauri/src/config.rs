@@ -13,8 +13,10 @@ const PREVIOUS_DEFAULT_STOP_GRACE_MS: u64 = 200;
 const PREVIOUS_FAST_STOP_GRACE_MS: u64 = 100;
 const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
-pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = true;
-pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 8;
+const LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT: bool = true;
+const LEGACY_ACCELERATE_SCORE_DEFAULT: i64 = 8;
+pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
+pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 
 use crate::config_validation::format_validation_errors;
 pub use crate::config_validation::validate_config;
@@ -550,6 +552,7 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_stop_grace = migrate_stop_grace_default(&mut data);
     let migrated_result_type = migrate_result_type_default(&mut data);
     let migrated_asr_language = migrate_legacy_asr_language_default(&mut data);
+    let migrated_acceleration = migrate_first_word_acceleration_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
         || migrated_silence_auto_stop
@@ -557,6 +560,7 @@ pub fn load_config() -> Result<LoadedConfig, String> {
         || migrated_stop_grace
         || migrated_result_type
         || migrated_asr_language
+        || migrated_acceleration
     {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
@@ -685,6 +689,17 @@ fn migrate_result_type_default(config: &mut AppConfig) -> bool {
 fn migrate_legacy_asr_language_default(config: &mut AppConfig) -> bool {
     if config.request.language.trim().eq_ignore_ascii_case("zh-CN") {
         config.request.language.clear();
+        return true;
+    }
+    false
+}
+
+fn migrate_first_word_acceleration_default(config: &mut AppConfig) -> bool {
+    if config.request.enable_accelerate_text == Some(LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT)
+        && config.request.accelerate_score == Some(LEGACY_ACCELERATE_SCORE_DEFAULT)
+    {
+        config.request.enable_accelerate_text = Some(DEFAULT_ENABLE_ACCELERATE_TEXT);
+        config.request.accelerate_score = Some(DEFAULT_ACCELERATE_SCORE);
         return true;
     }
     false
@@ -977,10 +992,10 @@ fn default_close_behavior() -> String {
 mod tests {
     use super::{
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
-        migrate_legacy_asr_language_default, migrate_result_type_default,
-        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
-        migrate_stop_grace_default, validate_config, AppConfig, TextContext,
-        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        migrate_first_word_acceleration_default, migrate_legacy_asr_language_default,
+        migrate_result_type_default, migrate_silence_auto_stop_default,
+        migrate_silence_level_threshold_default, migrate_stop_grace_default, validate_config,
+        AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
 
     #[test]
@@ -1325,6 +1340,30 @@ mod tests {
         config.request.language = "en-US".to_string();
         assert!(!migrate_legacy_asr_language_default(&mut config));
         assert_eq!(config.request.language, "en-US");
+    }
+
+    #[test]
+    fn migrates_legacy_first_word_acceleration_default() {
+        let mut config = AppConfig::default();
+        config.request.enable_accelerate_text = Some(true);
+        config.request.accelerate_score = Some(8);
+
+        assert!(migrate_first_word_acceleration_default(&mut config));
+        assert_eq!(
+            config.request.enable_accelerate_text,
+            Some(DEFAULT_ENABLE_ACCELERATE_TEXT)
+        );
+        assert_eq!(
+            config.request.accelerate_score,
+            Some(DEFAULT_ACCELERATE_SCORE)
+        );
+        assert!(!migrate_first_word_acceleration_default(&mut config));
+
+        config.request.enable_accelerate_text = Some(true);
+        config.request.accelerate_score = Some(12);
+        assert!(!migrate_first_word_acceleration_default(&mut config));
+        assert_eq!(config.request.enable_accelerate_text, Some(true));
+        assert_eq!(config.request.accelerate_score, Some(12));
     }
 
     #[test]
