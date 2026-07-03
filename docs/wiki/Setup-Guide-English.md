@@ -114,7 +114,7 @@ For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](.
 Recommendations:
 
 - Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; retest after changing Base URL or model.
-- Text shorter than `min_chars = 100` is not polished by default.
+- Text below `min_chars = 100` is not polished by default. CJK characters count individually; English and numbers count by contiguous word-like segments; spaces and punctuation do not count.
 - Similar or identical model names can behave very differently across providers, so prefer the latency measured by API Config over the model name alone.
 - Code paths, filenames, and English identifiers are easy for an LLM to "correct" into plausible but wrong forms. Use screen OCR, hotwords, or a manual check for those terms.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
@@ -126,7 +126,7 @@ Recommendations:
 | API Key or permission failure | API Key belongs to the configured Base URL provider and region |
 | Model not found or forbidden | Model name spelling and account permission |
 | Connection failure | Base URL belongs to the configured provider, network/proxy is usable |
-| Test passes but polishing does not run | Polishing is enabled and text length reaches `min_chars` |
+| Test passes but polishing does not run | Polishing is enabled and polishing length reaches `min_chars` |
 | Test passes but real polishing is slow | Rerun the thinking adapter test and confirm thinking/reasoning is disabled or minimized |
 | Code paths are often rewritten | Enable screen OCR, or add common paths, filenames, and field names to hotwords |
 
@@ -169,7 +169,7 @@ The Hotwords page lets you:
 - Restore the default prompt.
 - Preview the final prompt, including reference-information rules, the current screen OCR policy and LLM budgets, and whether recent context enters the AI prompt.
 - Edit the User Prompt template.
-- Adjust the minimum polishing length from 0 to 10000.
+- Adjust the minimum polishing length from 0 to 10000. CJK characters count individually; English and numbers count by contiguous word-like segments.
 
 System Prompt stays in `config.toml` to keep the normal UI concise.
 

@@ -135,7 +135,7 @@ Possible causes:
 
 - LLM polishing is disabled.
 - Base URL, API Key, or model is incomplete.
-- Text length is below `min_chars`.
+- Polishing length is below `min_chars`.
 - LLM connection test fails.
 
 Fix:

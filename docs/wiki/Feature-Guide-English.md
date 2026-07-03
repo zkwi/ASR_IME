@@ -15,7 +15,7 @@ Trigger recording → Capture microphone audio → Doubao streaming ASR → Opti
 Main workflow guarantees:
 
 - Empty recognition becomes a failure and does not trigger polishing, paste, or successful statistics.
-- The UI only shows "polishing" when LLM polishing is enabled, text reaches `min_chars`, and Base URL, API Key, and model are complete.
+- The UI only shows "polishing" when LLM polishing is enabled, polishing length reaches `min_chars`, and Base URL, API Key, and model are complete.
 - Floating captions show real-time text, elapsed state, and errors only.
 - Usage statistics do not store recognized text.
 
@@ -118,7 +118,7 @@ LLM polishing is useful for:
 Defaults:
 
 - ASR only unless LLM polishing is enabled.
-- Short text below `min_chars` is not polished.
+- Text below `min_chars` is not polished. CJK characters count individually, while English and numbers count by contiguous word-like segments.
 - Thinking is disabled with provider-specific adapters where supported, and the LLM test saves the fastest successful adapter.
 - When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information.
 - Recent context for AI is off by default. It is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default.

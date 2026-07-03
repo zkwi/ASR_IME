@@ -37,7 +37,7 @@ struct ChatJsonResult {
 pub fn should_polish(config: &AppConfig, text: &str) -> bool {
     let settings = &config.llm_post_edit;
     settings.enabled
-        && text.trim().chars().count() >= settings.min_chars
+        && polish_trigger_units(text) >= settings.min_chars
         && !settings.api_key.trim().is_empty()
         && !settings.base_url.trim().is_empty()
         && !settings.model.trim().is_empty()
@@ -49,10 +49,11 @@ pub async fn polish(config: &AppConfig, text: &str, screen_context: Option<&str>
         return unchanged(text);
     }
     let input_chars = text.trim().chars().count();
-    if input_chars < settings.min_chars {
+    let trigger_units = polish_trigger_units(text);
+    if trigger_units < settings.min_chars {
         app_log::info(format!(
-            "LLM polish skipped: chars={} min_chars={}",
-            input_chars, settings.min_chars
+            "LLM polish skipped: chars={} trigger_units={} min_chars={}",
+            input_chars, trigger_units, settings.min_chars
         ));
         return unchanged(text);
     }
@@ -71,9 +72,10 @@ pub async fn polish(config: &AppConfig, text: &str, screen_context: Option<&str>
 
     let max_tokens = polish_max_tokens_for_request(base_url, input_chars);
     app_log::info(format!(
-        "LLM polish started: model={}, chars={}, max_tokens={}",
+        "LLM polish started: model={}, chars={}, trigger_units={}, max_tokens={}",
         model,
         input_chars,
+        trigger_units,
         max_tokens
             .map(|value| value.to_string())
             .unwrap_or_else(|| "provider_default".to_string())
@@ -103,6 +105,53 @@ pub async fn polish(config: &AppConfig, text: &str, screen_context: Option<&str>
             with_warning(text, &warning)
         }
     }
+}
+
+fn polish_trigger_units(text: &str) -> usize {
+    let mut units = 0;
+    let mut in_ascii_word = false;
+
+    for ch in text.trim().chars() {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            if !in_ascii_word {
+                units += 1;
+                in_ascii_word = true;
+            }
+            continue;
+        }
+
+        in_ascii_word = false;
+        if ch.is_whitespace() || ch.is_ascii_punctuation() || is_common_cjk_punctuation(ch) {
+            continue;
+        }
+        units += 1;
+    }
+
+    units
+}
+
+fn is_common_cjk_punctuation(ch: char) -> bool {
+    matches!(
+        ch,
+        '，' | '。'
+            | '、'
+            | '；'
+            | '：'
+            | '？'
+            | '！'
+            | '（'
+            | '）'
+            | '【'
+            | '】'
+            | '《'
+            | '》'
+            | '“'
+            | '”'
+            | '‘'
+            | '’'
+            | '…'
+            | '—'
+    )
 }
 
 fn build_polish_user_prompt(
@@ -567,8 +616,9 @@ mod tests {
         build_polish_user_prompt, build_recent_context_reference, chat_body,
         compact_screen_context_for_llm, connection_test_chat_body, extract_message_content,
         friendly_llm_error, friendly_llm_test_error, has_connection_test_output,
-        polish_max_tokens_for_input, polish_max_tokens_for_request, should_polish,
-        system_prompt_for_request, LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT,
+        polish_max_tokens_for_input, polish_max_tokens_for_request, polish_trigger_units,
+        should_polish, system_prompt_for_request, LLM_CONNECTION_TEST_MAX_TOKENS,
+        LLM_CONNECTION_TEST_TEXT,
     };
     use crate::config::{AppConfig, TextContext};
     use crate::llm_request_adapter::{
@@ -758,27 +808,45 @@ mod tests {
         config.llm_post_edit.api_key = "test-key".to_string();
         config.llm_post_edit.model = "test-model".to_string();
 
-        assert!(should_polish(&config, "hello"));
+        assert!(should_polish(&config, "one two three four five"));
         assert!(!should_polish(&config, "hi"));
 
         config.llm_post_edit.enabled = false;
-        assert!(!should_polish(&config, "hello"));
+        assert!(!should_polish(&config, "hello world again now ok"));
 
         config.llm_post_edit.enabled = true;
         config.llm_post_edit.api_key.clear();
-        assert!(!should_polish(&config, "hello"));
+        assert!(!should_polish(&config, "hello world again now ok"));
     }
 
     #[test]
-    fn default_min_chars_skips_medium_short_polish_requests() {
+    fn polish_trigger_units_handle_cjk_and_latin_text_fairly() {
+        assert_eq!(polish_trigger_units("你好，VoxType 2.0！"), 5);
+        assert_eq!(polish_trigger_units("hello world from VoxType"), 4);
+        assert_eq!(
+            polish_trigger_units("src-tauri/src/llm_post_edit.rs enable_ddc Ctrl+V"),
+            8
+        );
+        assert_eq!(polish_trigger_units("  ，。！？  "), 0);
+    }
+
+    #[test]
+    fn default_min_units_skip_medium_short_polish_requests() {
         let mut config = AppConfig::default();
         config.llm_post_edit.enabled = true;
         config.llm_post_edit.base_url = "https://api.example.test/v1".to_string();
         config.llm_post_edit.api_key = "test-key".to_string();
         config.llm_post_edit.model = "test-model".to_string();
 
-        assert!(!should_polish(&config, &"a".repeat(99)));
-        assert!(should_polish(&config, &"a".repeat(100)));
+        assert!(!should_polish(&config, &"字".repeat(99)));
+        assert!(should_polish(&config, &"字".repeat(100)));
+
+        let english_99_words = (0..99).map(|_| "word").collect::<Vec<_>>().join(" ");
+        let english_100_words = (0..100).map(|_| "word").collect::<Vec<_>>().join(" ");
+        assert!(!should_polish(&config, &english_99_words));
+        assert!(should_polish(&config, &english_100_words));
+
+        assert!(!should_polish(&config, &"a".repeat(100)));
     }
 
     #[test]

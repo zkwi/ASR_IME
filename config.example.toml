@@ -128,7 +128,7 @@ github_repo = "zkwi/VoxType"
 [llm_post_edit]
 # 是否启用大模型润色；关闭时只做 ASR
 enabled = false
-# 文字短于这个长度就不润色；0 表示所有文本都尝试润色，建议保持在 0 到 10000 之间
+# 文本短于这个触发长度就不润色；中文按单字计，英文和数字按连续词片段计；0 表示所有文本都尝试润色
 min_chars = 100
 # 是否在大模型润色时追加最近几段输入作为参考；默认关闭，仅在 [context].enable_recent_context 同时开启时生效
 use_recent_context = false
