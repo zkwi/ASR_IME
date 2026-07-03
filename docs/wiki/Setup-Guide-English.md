@@ -125,7 +125,7 @@ For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](.
 Recommendations:
 
 - Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; retest after changing Base URL or model.
-- Text below `min_chars = 100` is not polished by default. CJK characters count individually; English and numbers count by contiguous word-like segments; spaces and punctuation do not count.
+- Text below `min_chars = 40` is not polished by default. CJK characters count individually; English and numbers count by contiguous word-like segments; spaces and punctuation do not count.
 - Similar or identical model names can behave very differently across providers, so prefer the latency measured by API Config over the model name alone.
 - Code paths, filenames, and English identifiers are easy for an LLM to "correct" into plausible but wrong forms. Use screen OCR, hotwords, or a manual check for those terms.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
@@ -246,7 +246,7 @@ use_recent_context = false
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 api_key = ""
 model = "qwen3.5-plus"
-min_chars = 100
+min_chars = 40
 screen_context_max_chars = 400
 screen_context_max_lines = 12
 recent_context_max_chars = 200
@@ -282,7 +282,7 @@ The recently verified stable combination is to keep the default `200ms` ASR pack
 
 First-word acceleration is disabled by default with `enable_accelerate_text = false` and `accelerate_score = 0`; the old default `true + 8` migrates to off. If faster live-caption startup matters more, you can manually enable it in `config.toml`, but beginning-word accuracy may drop.
 
-Semantic smoothing `enable_ddc` is enabled by default for light ASR-side smoothing on short and medium text, reducing reliance on LLM polishing for short inputs. Old default combinations migrate to enabled together with the LLM threshold migration. After that, disable it manually when exact proper nouns, short commands, paths, or punctuation-sensitive dictation matter more.
+Semantic smoothing `enable_ddc` is enabled by default for light ASR-side smoothing on short and medium text, reducing reliance on LLM polishing for short inputs. Saved explicit values are preserved. Disable it manually when exact proper nouns, short commands, paths, or punctuation-sensitive dictation matter more.
 
 Triggers:
 

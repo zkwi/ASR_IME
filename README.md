@@ -146,7 +146,7 @@ API配置页还可以设置豆包 ASR 的输入语言。默认选择自动/服�
 ```toml
 [llm_post_edit]
 enabled = true
-min_chars = 100
+min_chars = 40
 use_recent_context = false
 screen_context_max_chars = 400
 screen_context_max_lines = 12
@@ -159,7 +159,7 @@ enable_thinking = false
 thinking_strategy = "auto"
 ```
 
-大模型配置走 OpenAI 兼容接口，默认示例使用阿里云百炼/DashScope 的北京地域地址 `https://dashscope.aliyuncs.com/compatible-mode/v1`。Base URL 可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址；例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。`api_key` 必须来自同一个大模型服务商，`model` 必须是该账号和地域可用的模型名。只需要语音识别时可以完全不配置大模型；开启润色后，短文本默认低于 `min_chars` 不会调用大模型，以减少延迟，旧默认 `25`、`40`、`80` 或 `120` 会迁移为 `100`。`min_chars` 使用润色触发长度：中文等 CJK 字符按单字计，英文和数字按连续词片段计，空格和标点不计；因此默认 `100` 约等于 100 个汉字或 100 个英文/数字片段。达到最小触发长度的最终识别文本会发送到你配置的大模型服务；用户词典、场景与产品偏好、按预算压缩后的屏幕 OCR 和可选最近上下文会作为参考信息追加。最近上下文进入大模型默认关闭，只有 `[context].enable_recent_context` 和 `[llm_post_edit].use_recent_context` 同时开启时才会发送，且默认限制为最近几段中的约 200 字。屏幕 OCR 发给大模型前会按行去空、去重，并默认限制为 12 行 / 400 字；热词参考默认最多 50 条。真实润色请求会按输入长度设置输出上限，减少模型生成过长导致的等待。`thinking_strategy = "auto"` 会按服务商选择关闭思考/推理的兼容写法，例如 DashScope 使用 `enable_thinking=false`，DeepSeek 和 MiMo 使用 `thinking.type=disabled`，OpenRouter 使用较低 reasoning effort；API配置页的大模型测试会使用较长的内置语音输入样例，尝试候选策略并保存最快的成功结果。测试不会读取本地最近上下文正文。
+大模型配置走 OpenAI 兼容接口，默认示例使用阿里云百炼/DashScope 的北京地域地址 `https://dashscope.aliyuncs.com/compatible-mode/v1`。Base URL 可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址；例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。`api_key` 必须来自同一个大模型服务商，`model` 必须是该账号和地域可用的模型名。只需要语音识别时可以完全不配置大模型；开启润色后，短文本默认低于 `min_chars` 不会调用大模型，以减少延迟；已保存的 `min_chars` 会按用户配置原样保留，不再按旧默认值猜测迁移。`min_chars` 使用润色触发长度：中文等 CJK 字符按单字计，英文和数字按连续词片段计，空格和标点不计；因此默认 `40` 约等于 40 个汉字或 40 个英文/数字片段。达到最小触发长度的最终识别文本会发送到你配置的大模型服务；用户词典、场景与产品偏好、按预算压缩后的屏幕 OCR 和可选最近上下文会作为参考信息追加。最近上下文进入大模型默认关闭，只有 `[context].enable_recent_context` 和 `[llm_post_edit].use_recent_context` 同时开启时才会发送，且默认限制为最近几段中的约 200 字。屏幕 OCR 发给大模型前会按行去空、去重，并默认限制为 12 行 / 400 字；热词参考默认最多 50 条。真实润色请求会按输入长度设置输出上限，减少模型生成过长导致的等待。`thinking_strategy = "auto"` 会按服务商选择关闭思考/推理的兼容写法，例如 DashScope 使用 `enable_thinking=false`，DeepSeek 和 MiMo 使用 `thinking.type=disabled`，OpenRouter 使用较低 reasoning effort；API配置页的大模型测试会使用较长的内置语音输入样例，尝试候选策略并保存最快的成功结果。测试不会读取本地最近上下文正文。
 
 DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](docs/audits/2026-05-28-llm-polishing-model-test.md)，其中 2026-05-30 复测修正了旧结论：日常仍优先考虑 `qwen3.7-max`；低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，但它对提示词样式文本和技术路径更容易改偏；不要仅因技术文本切换到 `deepseek-v4-pro`，当前简化 prompt 下它也会改写代码路径，路径、文件名和标识符应优先依赖屏幕 OCR、热词或人工确认。
 
@@ -224,7 +224,7 @@ VoxType 会把约 `50ms` 头部静音并入第一包真实音频，第一包总�
 
 首字返回加速默认关闭，`enable_accelerate_text = false` 且 `accelerate_score = 0`；旧默认 `true + 8` 会自动迁移为关闭。如果特别看重实时字幕起步速度，可在 `config.toml` 中手动开启，但首字准确率可能下降。
 
-语义顺滑 `enable_ddc` 默认开启，用于短文本和中等文本的 ASR 侧轻量顺滑，减少短文本依赖 LLM 润色带来的等待；旧默认组合会随 LLM 阈值迁移一并改为开启，之后如果更看重专有词、短命令、路径或标点敏感内容的原样识别，可以手动关闭。
+语义顺滑 `enable_ddc` 默认开启，用于短文本和中等文本的 ASR 侧轻量顺滑，减少短文本依赖 LLM 润色带来的等待；已保存的显式取值会保留，如果更看重专有词、短命令、路径或标点敏感内容的原样识别，可以手动关闭。
 
 录音过程中如果麦克风输入流报错，VoxType 会立即让本轮进入失败态，避免把缺帧或不完整音频识别出的低质量文本继续润色、粘贴或统计。
 

@@ -15,10 +15,6 @@ const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 const LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT: bool = true;
 const LEGACY_ACCELERATE_SCORE_DEFAULT: i64 = 8;
-const LEGACY_LLM_MIN_CHARS_DEFAULT: usize = 40;
-const PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT: usize = 25;
-const PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT: usize = 80;
-const PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT: usize = 120;
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 const APP_DATA_DIR_NAME: &str = "VoxType";
@@ -669,6 +665,10 @@ fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
 
 pub fn load_config() -> Result<LoadedConfig, String> {
     let path = resolve_config_path();
+    load_config_from_path(path)
+}
+
+fn load_config_from_path(path: PathBuf) -> Result<LoadedConfig, String> {
     if !path.exists() {
         return Ok(LoadedConfig {
             path: path.display().to_string(),
@@ -699,8 +699,6 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_result_type = migrate_result_type_default(&mut data);
     let migrated_asr_language = migrate_legacy_asr_language_default(&mut data);
     let migrated_acceleration = migrate_first_word_acceleration_default(&mut data);
-    let migrated_semantic_smoothing = migrate_semantic_smoothing_default(&mut data);
-    let migrated_llm_min_chars = migrate_llm_min_chars_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
         || migrated_silence_auto_stop
@@ -709,8 +707,6 @@ pub fn load_config() -> Result<LoadedConfig, String> {
         || migrated_result_type
         || migrated_asr_language
         || migrated_acceleration
-        || migrated_semantic_smoothing
-        || migrated_llm_min_chars
     {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
@@ -850,30 +846,6 @@ fn migrate_first_word_acceleration_default(config: &mut AppConfig) -> bool {
     {
         config.request.enable_accelerate_text = Some(DEFAULT_ENABLE_ACCELERATE_TEXT);
         config.request.accelerate_score = Some(DEFAULT_ACCELERATE_SCORE);
-        return true;
-    }
-    false
-}
-
-fn migrate_semantic_smoothing_default(config: &mut AppConfig) -> bool {
-    let min_chars_was_old_default = config.llm_post_edit.min_chars == LEGACY_LLM_MIN_CHARS_DEFAULT
-        || config.llm_post_edit.min_chars == PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT
-        || config.llm_post_edit.min_chars == PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT
-        || config.llm_post_edit.min_chars == PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT;
-    if !config.request.enable_ddc && min_chars_was_old_default {
-        config.request.enable_ddc = true;
-        return true;
-    }
-    false
-}
-
-fn migrate_llm_min_chars_default(config: &mut AppConfig) -> bool {
-    if config.llm_post_edit.min_chars == LEGACY_LLM_MIN_CHARS_DEFAULT
-        || config.llm_post_edit.min_chars == PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT
-        || config.llm_post_edit.min_chars == PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT
-        || config.llm_post_edit.min_chars == PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT
-    {
-        config.llm_post_edit.min_chars = default_min_chars();
         return true;
     }
     false
@@ -1071,7 +1043,7 @@ fn default_auto_hotword_max_candidates() -> usize {
     30
 }
 fn default_min_chars() -> usize {
-    100
+    40
 }
 fn default_llm_screen_context_max_chars() -> usize {
     400
@@ -1178,13 +1150,13 @@ fn default_close_behavior() -> String {
 mod tests {
     use super::{
         config_migration_candidate_for_target, contains_legacy_recent_context, effective_hotwords,
-        installed_config_path_from_appdata, migrate_auto_hotword_history_default,
-        migrate_first_word_acceleration_default, migrate_legacy_asr_language_default,
-        migrate_llm_min_chars_default, migrate_result_type_default,
-        migrate_semantic_smoothing_default, migrate_silence_auto_stop_default,
-        migrate_silence_level_threshold_default, migrate_stop_grace_default,
-        text_looks_like_voxtype_config, validate_config, AppConfig, TextContext,
-        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        installed_config_path_from_appdata, load_config_from_path,
+        migrate_auto_hotword_history_default, migrate_first_word_acceleration_default,
+        migrate_legacy_asr_language_default, migrate_result_type_default,
+        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
+        migrate_stop_grace_default, text_looks_like_voxtype_config, validate_config,
+        write_config_file, AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE,
+        DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
     use std::path::{Path, PathBuf};
 
@@ -1230,7 +1202,7 @@ mod tests {
         assert!(config.request.show_utterances);
         assert!(!config.context.enable_recent_context);
         assert!(!config.llm_post_edit.use_recent_context);
-        assert_eq!(config.llm_post_edit.min_chars, 100);
+        assert_eq!(config.llm_post_edit.min_chars, 40);
         assert_eq!(config.llm_post_edit.screen_context_max_chars, 400);
         assert_eq!(config.llm_post_edit.screen_context_max_lines, 12);
         assert_eq!(config.llm_post_edit.recent_context_max_chars, 200);
@@ -1318,21 +1290,6 @@ mod tests {
         assert!(text_looks_like_voxtype_config("app_key = \"demo\"\n"));
         assert!(!text_looks_like_voxtype_config("theme = \"dark\"\n"));
         assert!(!text_looks_like_voxtype_config("hotkey = \"Ctrl+Q\"\n"));
-    }
-
-    #[test]
-    fn migrates_legacy_semantic_smoothing_default_when_llm_threshold_was_default() {
-        let mut config = AppConfig::default();
-        config.request.enable_ddc = false;
-        config.llm_post_edit.min_chars = 80;
-
-        assert!(migrate_semantic_smoothing_default(&mut config));
-        assert!(config.request.enable_ddc);
-
-        config.request.enable_ddc = false;
-        config.llm_post_edit.min_chars = 100;
-        assert!(!migrate_semantic_smoothing_default(&mut config));
-        assert!(!config.request.enable_ddc);
     }
 
     #[test]
@@ -1668,33 +1625,35 @@ mod tests {
     }
 
     #[test]
-    fn migrates_legacy_llm_min_chars_defaults() {
+    fn load_config_preserves_configured_llm_min_chars_values() {
+        let dir = temp_test_dir("llm-min-chars-preserve");
+        let path = dir.join("config.toml");
+
+        for value in [0, 25, 40, 80, 100, 120, 150] {
+            let mut config = AppConfig::default();
+            config.llm_post_edit.min_chars = value;
+            write_config_file(&path, &config).unwrap();
+
+            let loaded = load_config_from_path(path.clone()).unwrap();
+            assert_eq!(loaded.data.llm_post_edit.min_chars, value);
+        }
+
+        remove_temp_dir(&dir);
+    }
+
+    #[test]
+    fn load_config_preserves_explicit_ddc_false_with_default_min_chars() {
+        let dir = temp_test_dir("ddc-explicit-false");
+        let path = dir.join("config.toml");
         let mut config = AppConfig::default();
+        config.request.enable_ddc = false;
         config.llm_post_edit.min_chars = 40;
+        write_config_file(&path, &config).unwrap();
 
-        assert!(migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 100);
-        assert!(!migrate_llm_min_chars_default(&mut config));
+        let loaded = load_config_from_path(path.clone()).unwrap();
 
-        config.llm_post_edit.min_chars = 25;
-        assert!(migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 100);
-
-        config.llm_post_edit.min_chars = 80;
-        assert!(migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 100);
-
-        config.llm_post_edit.min_chars = 120;
-        assert!(migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 100);
-
-        config.llm_post_edit.min_chars = 0;
-        assert!(!migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 0);
-
-        config.llm_post_edit.min_chars = 150;
-        assert!(!migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 150);
+        assert!(!loaded.data.request.enable_ddc);
+        remove_temp_dir(&dir);
     }
 
     #[test]

@@ -123,7 +123,7 @@ export const fallbackConfig: AppConfig = {
   },
   llm_post_edit: {
     enabled: false,
-    min_chars: 100,
+    min_chars: 40,
     use_recent_context: false,
     screen_context_max_chars: 400,
     screen_context_max_lines: 12,

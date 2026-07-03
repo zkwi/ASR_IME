@@ -838,13 +838,13 @@ mod tests {
         config.llm_post_edit.api_key = "test-key".to_string();
         config.llm_post_edit.model = "test-model".to_string();
 
-        assert!(!should_polish(&config, &"字".repeat(99)));
-        assert!(should_polish(&config, &"字".repeat(100)));
+        assert!(!should_polish(&config, &"字".repeat(39)));
+        assert!(should_polish(&config, &"字".repeat(40)));
 
-        let english_99_words = (0..99).map(|_| "word").collect::<Vec<_>>().join(" ");
-        let english_100_words = (0..100).map(|_| "word").collect::<Vec<_>>().join(" ");
-        assert!(!should_polish(&config, &english_99_words));
-        assert!(should_polish(&config, &english_100_words));
+        let english_39_words = (0..39).map(|_| "word").collect::<Vec<_>>().join(" ");
+        let english_40_words = (0..40).map(|_| "word").collect::<Vec<_>>().join(" ");
+        assert!(!should_polish(&config, &english_39_words));
+        assert!(should_polish(&config, &english_40_words));
 
         assert!(!should_polish(&config, &"a".repeat(100)));
     }

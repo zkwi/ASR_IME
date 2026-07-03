@@ -568,7 +568,7 @@ export const en = {
   "llmDescription": "AI polishing service.",
   "enablePolishing": "Enable polishing",
   "minChars": "Min polish length",
-  "minCharsHint": "Texts below this length skip AI polishing and use the speech recognition result directly. CJK characters count individually; English and numbers count by contiguous word-like segments. Default is 100; 0 means try polishing every text.",
+  "minCharsHint": "Texts below this length skip AI polishing and use the speech recognition result directly. CJK characters count individually; English and numbers count by contiguous word-like segments. Default is 40; 0 means try polishing every text.",
   "llmScreenContextMaxChars": "LLM screen OCR chars",
   "llmScreenContextMaxCharsHint": "Limits only the screen OCR reference sent to AI polishing. 0 means do not send screen OCR to polishing.",
   "llmScreenContextMaxLines": "LLM screen OCR lines",

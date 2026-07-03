@@ -130,7 +130,7 @@ github_repo = "zkwi/VoxType"
 # 是否启用大模型润色；关闭时只做 ASR
 enabled = false
 # 文本短于这个触发长度就不润色；中文按单字计，英文和数字按连续词片段计；0 表示所有文本都尝试润色
-min_chars = 100
+min_chars = 40
 # 是否在大模型润色时追加最近几段输入作为参考；默认关闭，仅在 [context].enable_recent_context 同时开启时生效
 use_recent_context = false
 # 以下 4 项只限制发给大模型润色的参考信息，不影响 ASR 使用的屏幕 OCR 上下文

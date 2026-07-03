@@ -130,7 +130,7 @@ DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../aud
 性能建议：
 
 - 语音输入润色通常不需要 thinking，默认会按服务商自动选择关闭方式以降低延迟；更换 Base URL 或模型后建议重新测试一次。
-- 短文本默认低于 `min_chars = 100` 不润色，减少延迟；中文按单字计，英文和数字按连续词片段计，空格和标点不计。
+- 短文本默认低于 `min_chars = 40` 不润色，减少延迟；中文按单字计，英文和数字按连续词片段计，空格和标点不计。
 - 不同服务商的同名或近似模型延迟差异很大，优先看 API 配置页实测延迟，不要只看模型名称。
 - 代码路径、文件名和英文标识符容易被大模型“纠正”成看似合理但错误的形式，建议配合屏幕 OCR、热词或人工确认。
 - 网络不稳定时，可在 `config.toml` 中调整 LLM 超时时间。
@@ -256,7 +256,7 @@ use_recent_context = false
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 api_key = ""
 model = "qwen3.5-plus"
-min_chars = 100
+min_chars = 40
 screen_context_max_chars = 400
 screen_context_max_lines = 12
 recent_context_max_chars = 200
@@ -292,7 +292,7 @@ VoxType 默认保持 `input_gain_db = 0.0`，不额外放大麦克风音频。�
 
 首字返回加速默认关闭，`enable_accelerate_text = false` 且 `accelerate_score = 0`；旧默认 `true + 8` 会自动迁移为关闭。如果特别看重实时字幕起步速度，可在 `config.toml` 中手动开启，但首字准确率可能下降。
 
-语义顺滑 `enable_ddc` 默认开启，用于短文本和中等文本的 ASR 侧轻量顺滑，减少短文本依赖 LLM 润色带来的等待；旧默认组合会随 LLM 阈值迁移一并改为开启。之后如果更看重专有词、短命令、路径或标点敏感内容的原样识别，可以手动关闭。
+语义顺滑 `enable_ddc` 默认开启，用于短文本和中等文本的 ASR 侧轻量顺滑，减少短文本依赖 LLM 润色带来的等待；已保存的显式取值会保留。之后如果更看重专有词、短命令、路径或标点敏感内容的原样识别，可以手动关闭。
 
 触发方式：
 
