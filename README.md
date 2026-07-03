@@ -268,6 +268,17 @@ github_repo = "zkwi/VoxType"
 
 `config.toml`、本地日志和统计文件已被 `.gitignore` 忽略。示例配置和文档只保留占位值，不应写入真实密钥、个人热词或自定义上下文。
 
+## 配置和日志在哪里
+
+开发运行时，VoxType 继续使用仓库根目录的 `config.toml` 和 `voice_input.log`，方便调试和版本管理。
+
+安装版默认使用 Windows 用户数据目录：
+
+- 配置文件：`%APPDATA%\VoxType\config.toml`
+- 日志文件：`%LOCALAPPDATA%\VoxType\logs\voice_input.log`
+
+如果安装版启动时发现旧位置已有 VoxType `config.toml`，且新默认位置还没有配置文件，主窗口会提示是否迁移。确认后只复制一次旧配置到新位置，不做复杂备份，也不会删除旧文件。
+
 ## 开发运行
 
 在仓库根目录执行：

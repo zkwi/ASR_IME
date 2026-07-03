@@ -91,6 +91,8 @@ impl ConnectionTestResult {
 
 #[derive(Serialize)]
 struct LocalDataStatus {
+    config_path: String,
+    log_path: String,
     recent_context_enabled: bool,
     recent_context_count: usize,
     auto_hotwords_enabled: bool,
@@ -197,6 +199,18 @@ fn load_app_config() -> Result<LoadedConfig, String> {
             Err(err)
         }
     }
+}
+
+#[tauri::command]
+fn get_config_migration_candidate() -> Result<Option<config::ConfigMigrationCandidate>, String> {
+    Ok(config::config_migration_candidate())
+}
+
+#[tauri::command]
+fn migrate_config_to_default_path() -> Result<LoadedConfig, String> {
+    let loaded = config::migrate_legacy_config_to_default_path()?;
+    app_log::info(format!("配置迁移检查完成: exists={}", loaded.exists));
+    Ok(loaded)
 }
 
 #[tauri::command]
@@ -612,6 +626,8 @@ fn get_local_data_status() -> Result<LocalDataStatus, String> {
     let loaded = config::load_config()?;
     let auto_hotword_status = hotword_history::status()?;
     Ok(LocalDataStatus {
+        config_path: loaded.path.clone(),
+        log_path: app_log::log_path().display().to_string(),
         recent_context_enabled: loaded.data.context.enable_recent_context,
         recent_context_count: config::recent_context_count(),
         auto_hotwords_enabled: auto_hotword_status.enabled,
@@ -787,6 +803,8 @@ pub fn run() {
             get_app_snapshot,
             get_setup_status,
             load_app_config,
+            get_config_migration_candidate,
+            migrate_config_to_default_path,
             save_app_config,
             test_asr_config,
             test_llm_config,

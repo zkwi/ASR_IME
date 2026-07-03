@@ -420,6 +420,8 @@ export const en = {
   "defaultInputDevice": "Default input device",
   "noAudioDevices": "No input devices found",
   "audioDeviceFallbackNotice": "Saved microphone is unavailable. Switched to default microphone: {device}",
+  "configMigrationConfirm": "An old VoxType config file was found. Migrate it to the installed app default location?\n\nOld location: {source}\nNew location: {target}",
+  "configMigrationCompleted": "Config migrated to the installed app default location.",
   "systemPrompt": "System Prompt",
   "userPromptTemplate": "User prompt template",
   "interface": "Interface",

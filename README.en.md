@@ -232,6 +232,17 @@ Local silence auto-stop is disabled by default with `silence_auto_stop_seconds =
 
 `config.toml`, local logs, local context files, and stats files are ignored by Git. Example config and docs should contain placeholders only.
 
+## Config and Log Locations
+
+In development, VoxType continues to use `config.toml` and `voice_input.log` in the repository root for simple debugging.
+
+Installed builds use Windows user data directories by default:
+
+- Config file: `%APPDATA%\VoxType\config.toml`
+- Log file: `%LOCALAPPDATA%\VoxType\logs\voice_input.log`
+
+If an installed build finds an old VoxType `config.toml` and the new default location does not have a config yet, the main window asks whether to migrate it. Confirming copies the old config to the new location once. VoxType does not create complex backups and does not delete the old file.
+
 ## First Use
 
 1. Install and start VoxType.

@@ -420,6 +420,8 @@ export const zhTW = {
   "defaultInputDevice": "預設輸入裝置",
   "noAudioDevices": "未發現輸入裝置",
   "audioDeviceFallbackNotice": "已儲存的麥克風不可用，已切換到預設麥克風：{device}",
+  "configMigrationConfirm": "發現舊位置已有 VoxType 配置檔案，是否遷移到安裝版預設位置？\n\n舊位置：{source}\n新位置：{target}",
+  "configMigrationCompleted": "配置已遷移到安裝版預設位置。",
   "systemPrompt": "系統提示詞",
   "userPromptTemplate": "使用者提示詞模板",
   "interface": "介面",

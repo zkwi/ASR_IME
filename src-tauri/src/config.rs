@@ -21,6 +21,7 @@ const PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT: usize = 80;
 const PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT: usize = 120;
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
+const APP_DATA_DIR_NAME: &str = "VoxType";
 
 use crate::config_validation::format_validation_errors;
 pub use crate::config_validation::validate_config;
@@ -297,6 +298,12 @@ pub struct LoadedConfig {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct ConfigMigrationCandidate {
+    pub source_path: String,
+    pub target_path: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ConfigValidationError {
     pub field: String,
     pub message: String,
@@ -490,6 +497,34 @@ impl Default for TrayConfig {
 }
 
 pub fn resolve_config_path() -> PathBuf {
+    if is_development_layout() {
+        return resolve_development_config_path();
+    }
+    installed_config_path().unwrap_or_else(resolve_development_config_path)
+}
+
+pub fn config_migration_candidate() -> Option<ConfigMigrationCandidate> {
+    if is_development_layout() {
+        return None;
+    }
+    let target = installed_config_path()?;
+    config_migration_candidate_for_target(&target, legacy_config_candidates())
+}
+
+pub fn migrate_legacy_config_to_default_path() -> Result<LoadedConfig, String> {
+    let Some(candidate) = config_migration_candidate() else {
+        return load_config();
+    };
+    let source = PathBuf::from(&candidate.source_path);
+    let target = PathBuf::from(&candidate.target_path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(error::context("创建配置目录失败"))?;
+    }
+    std::fs::copy(&source, &target).map_err(error::context("迁移配置失败"))?;
+    load_config()
+}
+
+fn resolve_development_config_path() -> PathBuf {
     let mut candidates = Vec::new();
     if let Ok(cwd) = std::env::current_dir() {
         candidates.push(cwd.join("config.toml"));
@@ -538,6 +573,98 @@ pub fn resolve_config_path() -> PathBuf {
     }
 
     normalize_path(PathBuf::from("config.toml"))
+}
+
+fn installed_config_path() -> Option<PathBuf> {
+    std::env::var_os("APPDATA")
+        .map(PathBuf::from)
+        .map(|base| installed_config_path_from_appdata(&base))
+}
+
+fn installed_config_path_from_appdata(base: &Path) -> PathBuf {
+    normalize_path(base.join(APP_DATA_DIR_NAME).join("config.toml"))
+}
+
+fn is_development_layout() -> bool {
+    if let Ok(cwd) = std::env::current_dir() {
+        if cwd.ancestors().any(looks_like_project_root) {
+            return true;
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            return dir.ancestors().any(looks_like_project_root);
+        }
+    }
+    false
+}
+
+fn legacy_config_candidates() -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("config.toml"));
+        candidates.push(cwd.join("..").join("config.toml"));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("config.toml"));
+            candidates.push(dir.join("..").join("..").join("..").join("config.toml"));
+            candidates.push(
+                dir.join("..")
+                    .join("..")
+                    .join("..")
+                    .join("..")
+                    .join("..")
+                    .join("config.toml"),
+            );
+        }
+    }
+    dedupe_paths(candidates)
+}
+
+fn config_migration_candidate_for_target(
+    target: &Path,
+    candidates: Vec<PathBuf>,
+) -> Option<ConfigMigrationCandidate> {
+    if target.exists() {
+        return None;
+    }
+    let target = normalize_path(target);
+    candidates
+        .into_iter()
+        .map(normalize_path)
+        .filter(|path| path != &target)
+        .find(|path| path.exists() && file_looks_like_voxtype_config(path))
+        .map(|source| ConfigMigrationCandidate {
+            source_path: source.display().to_string(),
+            target_path: target.display().to_string(),
+        })
+}
+
+fn file_looks_like_voxtype_config(path: &Path) -> bool {
+    std::fs::read_to_string(path)
+        .map(|text| text_looks_like_voxtype_config(&text))
+        .unwrap_or(false)
+}
+
+fn text_looks_like_voxtype_config(text: &str) -> bool {
+    text.contains("[auth]")
+        || text.contains("[request]")
+        || text.contains("[audio]")
+        || text.contains("app_key")
+        || text.contains("access_key")
+        || text.contains("ws_url")
+}
+
+fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut deduped = Vec::new();
+    for path in paths {
+        let normalized = normalize_path(path);
+        if !deduped.iter().any(|existing| existing == &normalized) {
+            deduped.push(normalized);
+        }
+    }
+    deduped
 }
 
 pub fn load_config() -> Result<LoadedConfig, String> {
@@ -1050,13 +1177,31 @@ fn default_close_behavior() -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
+        config_migration_candidate_for_target, contains_legacy_recent_context, effective_hotwords,
+        installed_config_path_from_appdata, migrate_auto_hotword_history_default,
         migrate_first_word_acceleration_default, migrate_legacy_asr_language_default,
         migrate_llm_min_chars_default, migrate_result_type_default,
         migrate_semantic_smoothing_default, migrate_silence_auto_stop_default,
-        migrate_silence_level_threshold_default, migrate_stop_grace_default, validate_config,
-        AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        migrate_silence_level_threshold_default, migrate_stop_grace_default,
+        text_looks_like_voxtype_config, validate_config, AppConfig, TextContext,
+        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
+    use std::path::{Path, PathBuf};
+
+    fn temp_test_dir(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "voxtype-config-test-{}-{}",
+            std::process::id(),
+            name
+        ));
+        let _ = std::fs::remove_dir_all(&path);
+        std::fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    fn remove_temp_dir(path: &Path) {
+        let _ = std::fs::remove_dir_all(path);
+    }
 
     #[test]
     fn defaults_are_conservative_for_consumer_use() {
@@ -1113,6 +1258,66 @@ mod tests {
 
         let explicit: AppConfig = toml::from_str("[request]\nenable_ddc = false\n").unwrap();
         assert!(!explicit.request.enable_ddc);
+    }
+
+    #[test]
+    fn installed_config_path_uses_appdata_voxtype_dir() {
+        let path =
+            installed_config_path_from_appdata(Path::new("C:\\Users\\Alice\\AppData\\Roaming"));
+        assert_eq!(
+            path,
+            PathBuf::from("C:\\Users\\Alice\\AppData\\Roaming")
+                .join("VoxType")
+                .join("config.toml")
+        );
+    }
+
+    #[test]
+    fn migration_candidate_prefers_existing_legacy_config_when_target_missing() {
+        let dir = temp_test_dir("migration-candidate");
+        let legacy = dir.join("old").join("config.toml");
+        let target = dir.join("AppData").join("VoxType").join("config.toml");
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(
+            &legacy,
+            "[auth]\napp_key = \"demo\"\naccess_key = \"demo\"\n",
+        )
+        .unwrap();
+
+        let candidate = config_migration_candidate_for_target(&target, vec![legacy.clone()])
+            .expect("legacy config should be detected");
+
+        assert_eq!(candidate.source_path, legacy.display().to_string());
+        assert_eq!(candidate.target_path, target.display().to_string());
+        remove_temp_dir(&dir);
+    }
+
+    #[test]
+    fn migration_candidate_ignores_unrelated_config_and_existing_target() {
+        let dir = temp_test_dir("migration-skip");
+        let unrelated = dir.join("config.toml");
+        let target = dir.join("AppData").join("VoxType").join("config.toml");
+        std::fs::write(&unrelated, "theme = \"dark\"\n").unwrap();
+
+        assert!(config_migration_candidate_for_target(&target, vec![unrelated]).is_none());
+
+        std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+        std::fs::write(&target, "[auth]\n").unwrap();
+        let legacy = dir.join("legacy-config.toml");
+        std::fs::write(&legacy, "[auth]\napp_key = \"demo\"\n").unwrap();
+
+        assert!(config_migration_candidate_for_target(&target, vec![legacy]).is_none());
+        remove_temp_dir(&dir);
+    }
+
+    #[test]
+    fn voxtype_config_detection_requires_known_fields() {
+        assert!(text_looks_like_voxtype_config(
+            "[request]\nws_url = \"wss://example\"\n"
+        ));
+        assert!(text_looks_like_voxtype_config("app_key = \"demo\"\n"));
+        assert!(!text_looks_like_voxtype_config("theme = \"dark\"\n"));
+        assert!(!text_looks_like_voxtype_config("hotkey = \"Ctrl+Q\"\n"));
     }
 
     #[test]

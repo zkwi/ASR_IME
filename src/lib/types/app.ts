@@ -78,6 +78,8 @@ export type AutoHotwordStatus = {
 };
 
 export type LocalDataStatus = {
+  config_path: string;
+  log_path: string;
   recent_context_enabled: boolean;
   recent_context_count: number;
   auto_hotwords_enabled: boolean;
@@ -121,6 +123,11 @@ export type LoadedConfig = {
   path: string;
   exists: boolean;
   data: AppConfig;
+};
+
+export type ConfigMigrationCandidate = {
+  source_path: string;
+  target_path: string;
 };
 
 export type SessionPhase =

@@ -89,6 +89,15 @@ Doubao official docs:
 
 Do not commit real keys, and do not share your local `config.toml`.
 
+### Config and Log Locations
+
+In development, VoxType continues to use `config.toml` and `voice_input.log` in the repository root. Installed builds use Windows user data directories by default:
+
+- Config file: `%APPDATA%\VoxType\config.toml`
+- Log file: `%LOCALAPPDATA%\VoxType\logs\voice_input.log`
+
+If an installed build finds an old VoxType `config.toml` and the new default location does not have a config yet, the main window asks whether to migrate it. Confirming copies the old config to the new location once. VoxType does not create complex backups and does not delete the old file. Privacy & local data shows the current actual config and log paths.
+
 ## 4. Optional: Configure LLM Polishing
 
 The LLM API is used for:

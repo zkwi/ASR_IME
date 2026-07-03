@@ -419,6 +419,8 @@ export const zhCN = {
   "defaultInputDevice": "默认输入设备",
   "noAudioDevices": "未发现输入设备",
   "audioDeviceFallbackNotice": "已保存的麦克风不可用，已切换到默认麦克风：{device}",
+  "configMigrationConfirm": "发现旧位置已有 VoxType 配置文件，是否迁移到安装版默认位置？\n\n旧位置：{source}\n新位置：{target}",
+  "configMigrationCompleted": "配置已迁移到安装版默认位置。",
   "systemPrompt": "系统提示词",
   "userPromptTemplate": "用户提示词模板",
   "interface": "界面",

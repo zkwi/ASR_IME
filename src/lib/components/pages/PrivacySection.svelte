@@ -116,7 +116,9 @@
           <tr>
             <td data-label={t("privacyDataType")}><strong>{t("privacyConfigData")}</strong></td>
             <td data-label={t("privacySavedColumn")}>{t("privacyConfigSaved")}</td>
-            <td class="location-cell" data-label={t("privacyLocationColumn")}><span class="location-value">config.toml</span></td>
+            <td class="location-cell" data-label={t("privacyLocationColumn")}>
+              <span class="location-value">{status?.config_path ?? "config.toml"}</span>
+            </td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadConfig")}</td>
             <td data-label={t("privacyActionColumn")}><span class="muted-action">{t("privacyNotApplicable")}</span></td>
           </tr>
@@ -126,7 +128,7 @@
             <td data-label={t("privacySavedColumn")}>{t("privacyLogsDiagnosticsSaved")}</td>
             <td class="location-cell" data-label={t("privacyLocationColumn")}>
               <span class="location-stack">
-                <span class="location-value">voice_input.log</span>
+                <span class="location-value">{status?.log_path ?? "voice_input.log"}</span>
                 <span>{t("privacyLocationLogsDiagnostics")}</span>
               </span>
             </td>

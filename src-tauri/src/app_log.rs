@@ -6,6 +6,7 @@ const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_ARCHIVE_FILES: usize = 3;
 const MAX_MESSAGE_CHARS: usize = 2000;
 const REDACTED: &str = "[redacted]";
+const APP_DATA_DIR_NAME: &str = "VoxType";
 const SENSITIVE_KEYS: &[&str] = &[
     "access_key",
     "app_key",
@@ -20,6 +21,13 @@ const SENSITIVE_KEYS: &[&str] = &[
 ];
 
 pub fn log_path() -> PathBuf {
+    if is_development_layout() {
+        return resolve_development_log_path();
+    }
+    installed_log_path().unwrap_or_else(resolve_development_log_path)
+}
+
+fn resolve_development_log_path() -> PathBuf {
     let mut candidates = Vec::new();
     if let Ok(cwd) = std::env::current_dir() {
         candidates.push(cwd.join("voice_input.log"));
@@ -40,6 +48,40 @@ pub fn log_path() -> PathBuf {
                 .and_then(|exe| exe.parent().map(|dir| dir.join("voice_input.log")))
         })
         .unwrap_or_else(|| PathBuf::from("voice_input.log"))
+}
+
+fn installed_log_path() -> Option<PathBuf> {
+    std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .map(|base| installed_log_path_from_localappdata(&base))
+}
+
+fn installed_log_path_from_localappdata(base: &Path) -> PathBuf {
+    dunce::simplified(
+        &base
+            .join(APP_DATA_DIR_NAME)
+            .join("logs")
+            .join("voice_input.log"),
+    )
+    .to_path_buf()
+}
+
+fn is_development_layout() -> bool {
+    if let Ok(cwd) = std::env::current_dir() {
+        if cwd.ancestors().any(looks_like_project_root) {
+            return true;
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            return dir.ancestors().any(looks_like_project_root);
+        }
+    }
+    false
+}
+
+fn looks_like_project_root(path: &Path) -> bool {
+    path.join("package.json").exists() && path.join("src-tauri").is_dir()
 }
 
 pub fn info(message: impl AsRef<str>) {
@@ -265,7 +307,8 @@ fn is_path_boundary(next: Option<char>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{redact_path_with_profile, sanitize_message};
+    use super::{installed_log_path_from_localappdata, redact_path_with_profile, sanitize_message};
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn redacts_common_secret_shapes() {
@@ -297,6 +340,19 @@ mod tests {
         assert_eq!(
             redact_path_with_profile("C:\\Users\\AliceBackup\\config.toml", "C:\\Users\\Alice"),
             "C:\\Users\\AliceBackup\\config.toml"
+        );
+    }
+
+    #[test]
+    fn installed_log_path_uses_localappdata_logs_dir() {
+        let path =
+            installed_log_path_from_localappdata(Path::new("C:\\Users\\Alice\\AppData\\Local"));
+        assert_eq!(
+            path,
+            PathBuf::from("C:\\Users\\Alice\\AppData\\Local")
+                .join("VoxType")
+                .join("logs")
+                .join("voice_input.log")
         );
     }
 }

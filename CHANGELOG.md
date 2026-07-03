@@ -6,6 +6,11 @@
 
 ## [未发布]
 
+### 改进
+
+- 安装版配置默认改为 `%APPDATA%\VoxType\config.toml`，日志默认改为 `%LOCALAPPDATA%\VoxType\logs\voice_input.log`；开发模式继续使用仓库根目录文件。
+- 安装版启动时如发现旧位置已有 VoxType `config.toml`，会提示用户是否复制迁移到新默认位置；隐私与本地数据页显示当前实际配置和日志路径。
+
 ## [0.3.0] - 2026-07-03
 
 ### 修复

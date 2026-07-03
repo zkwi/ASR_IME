@@ -97,6 +97,7 @@ import type {
   AudioQualityDiagnostic,
   CloseToTrayRequest,
   ConfigSaveError,
+  ConfigMigrationCandidate,
   ConfigValidationError,
   ConnectionTestResult,
   LastSessionOutcome,
@@ -115,6 +116,7 @@ import type {
 } from "$lib/types/app";
 
 const copyRecentInputCommand = "copy_recent_input_text_to_clipboard";
+const configMigrationDismissedPrefix = "voxtype-config-migration-dismissed:";
 type ConfigSaveState = "idle" | "pending" | "saving" | "saved";
 
 export function createVoxTypeController() {
@@ -426,6 +428,7 @@ export function createVoxTypeController() {
     const startedAt = performance.now();
     logFrontendEvent(`bootstrap started mode=${frontendMode()}`);
     try {
+      await maybeMigrateLegacyConfig();
       await loadAll();
       await hydrateSession();
       void updates.maybeAutoCheck();
@@ -487,6 +490,44 @@ export function createVoxTypeController() {
       return null;
     }
   }
+
+  function migrationDismissedKey(candidate: ConfigMigrationCandidate) {
+    return `${configMigrationDismissedPrefix}${candidate.source_path}->${candidate.target_path}`;
+  }
+
+  async function maybeMigrateLegacyConfig() {
+    if (!browser || isOverlay || isToast || !hasTauriApi()) return;
+    const candidate = await safeInvoke<ConfigMigrationCandidate | null>(
+      "get_config_migration_candidate",
+      undefined,
+      true,
+    );
+    if (!candidate) return;
+    const dismissedKey = migrationDismissedKey(candidate);
+    if (localStorage.getItem(dismissedKey) === "1") return;
+    const confirmed = window.confirm(
+      t("configMigrationConfirm", {
+        source: candidate.source_path,
+        target: candidate.target_path,
+      }),
+    );
+    if (!confirmed) {
+      localStorage.setItem(dismissedKey, "1");
+      return;
+    }
+    const migrated = await safeInvoke<LoadedConfig>(
+      "migrate_config_to_default_path",
+      undefined,
+      true,
+    );
+    if (migrated) {
+      localStorage.removeItem(dismissedKey);
+      notifications.show(t("configMigrationCompleted"), "success");
+    } else {
+      notifications.show(t("operationFailedGeneric"), "error");
+    }
+  }
+
   async function toggleRecordingFromUi() {
     if (requireAsrAuthGate()) return;
     if (isSessionBusy()) return;

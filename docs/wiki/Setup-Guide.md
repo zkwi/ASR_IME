@@ -94,6 +94,15 @@ API配置页还提供 **识别语言**。默认选择“自动 / 服务默认”
 
 请不要把真实密钥提交到 GitHub，也不要把本地 `config.toml` 分享给他人。
 
+### 配置和日志在哪里
+
+开发运行时，VoxType 继续使用仓库根目录的 `config.toml` 和 `voice_input.log`。安装版默认使用 Windows 用户数据目录：
+
+- 配置文件：`%APPDATA%\VoxType\config.toml`
+- 日志文件：`%LOCALAPPDATA%\VoxType\logs\voice_input.log`
+
+如果安装版启动时发现旧位置已有 VoxType `config.toml`，且新默认位置还没有配置文件，主窗口会提示是否迁移。确认后只复制一次旧配置到新位置，不做复杂备份，也不会删除旧文件。隐私与本地数据页会显示当前实际配置和日志路径。
+
 ## 4. 可选：配置大模型润色 API
 
 大模型 API 用于：
