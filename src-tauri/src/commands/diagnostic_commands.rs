@@ -246,8 +246,10 @@ mod tests {
 
     #[test]
     fn enabled_trigger_summary_lists_active_triggers() {
-        let mut config = AppConfig::default();
-        config.hotkey = "Ctrl+Q".to_string();
+        let mut config = AppConfig {
+            hotkey: "Ctrl+Q".to_string(),
+            ..Default::default()
+        };
         config.triggers.hotkey_enabled = true;
         config.triggers.right_alt_enabled = true;
         config.triggers.middle_mouse_enabled = false;
