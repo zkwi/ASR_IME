@@ -105,10 +105,9 @@ pub(crate) fn save_app_config(
     config: AppConfig,
 ) -> Result<LoadedConfig, ConfigSaveError> {
     let previous_config = crate::config::load_config().ok().map(|loaded| loaded.data);
-    if let Err(errors) = crate::config::validate_config(&config) {
-        let validation_error_count = errors.len();
-        let blocking_errors = blocking_validation_errors(errors, previous_config.as_ref(), &config);
-        if !blocking_errors.is_empty() {
+    let save_mode = match config_save_mode(previous_config.as_ref(), &config) {
+        Ok(mode) => mode,
+        Err(blocking_errors) => {
             app_log::warn(format!(
                 "配置保存失败: validation_errors={}",
                 blocking_errors.len()
@@ -118,10 +117,9 @@ pub(crate) fn save_app_config(
                 errors: blocking_errors,
             });
         }
-        app_log::warn(format!(
-            "配置存在未改动的隐藏高级字段错误，已保留原值并继续保存: validation_errors={}",
-            validation_error_count
-        ));
+    };
+    if save_mode == ConfigSaveMode::Unchecked {
+        app_log::warn("配置存在未改动的隐藏高级字段错误，已保留原值并继续保存。");
     }
     let side_effects = config_side_effects(previous_config.as_ref(), &config);
     if hotkey_registration_test_needed(previous_config.as_ref(), &config) {
@@ -139,7 +137,11 @@ pub(crate) fn save_app_config(
             });
         }
     }
-    match crate::config::save_config(config) {
+    let save_result = match save_mode {
+        ConfigSaveMode::Strict => crate::config::save_config(config),
+        ConfigSaveMode::Unchecked => crate::config::save_config_without_validation(config),
+    };
+    match save_result {
         Ok(loaded) => {
             apply_config_side_effects(app.clone(), &loaded, side_effects);
             app_log::info(format!(
@@ -163,6 +165,29 @@ pub(crate) fn save_app_config(
                 message: err,
                 errors: Vec::new(),
             })
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ConfigSaveMode {
+    Strict,
+    Unchecked,
+}
+
+fn config_save_mode(
+    previous_config: Option<&AppConfig>,
+    next_config: &AppConfig,
+) -> Result<ConfigSaveMode, Vec<crate::config::ConfigValidationError>> {
+    match crate::config::validate_config(next_config) {
+        Ok(()) => Ok(ConfigSaveMode::Strict),
+        Err(errors) => {
+            let blocking_errors = blocking_validation_errors(errors, previous_config, next_config);
+            if blocking_errors.is_empty() {
+                Ok(ConfigSaveMode::Unchecked)
+            } else {
+                Err(blocking_errors)
+            }
         }
     }
 }
@@ -462,9 +487,9 @@ fn apply_autostart_in_background(startup: config::StartupConfig) {
 #[cfg(test)]
 mod tests {
     use super::{
-        autostart_update_needed, blocking_validation_errors, build_setup_status,
+        autostart_update_needed, blocking_validation_errors, build_setup_status, config_save_mode,
         config_side_effects, hotkey_registration_test_needed, hotkey_runtime_update_needed,
-        ConfigSideEffects,
+        ConfigSaveMode, ConfigSideEffects,
     };
     use crate::config::{AppConfig, ConfigValidationError};
 
@@ -640,6 +665,20 @@ mod tests {
         );
 
         assert!(blocking.is_empty());
+    }
+
+    #[test]
+    fn unchanged_hidden_config_validation_errors_use_unchecked_save_mode() {
+        let mut previous = AppConfig::default();
+        previous.audio.sample_rate = 0;
+
+        let mut next = previous.clone();
+        next.ui.width += 10;
+
+        assert_eq!(
+            config_save_mode(Some(&previous), &next).unwrap(),
+            ConfigSaveMode::Unchecked
+        );
     }
 
     #[test]

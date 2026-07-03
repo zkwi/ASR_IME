@@ -3,18 +3,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
-const LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 10_000;
-const LEGACY_SILENCE_AUTO_STOP_SECONDS: u64 = 10;
-const PREVIOUS_DEFAULT_SILENCE_AUTO_STOP_SECONDS: u64 = 30;
-const LEGACY_SILENCE_LEVEL_THRESHOLD: f32 = 0.04;
-const LEGACY_STOP_GRACE_MS: u64 = 800;
-const PREVIOUS_SHORT_STOP_GRACE_MS: u64 = 150;
-const PREVIOUS_DEFAULT_STOP_GRACE_MS: u64 = 200;
-const PREVIOUS_FAST_STOP_GRACE_MS: u64 = 100;
 const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
-const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
-const LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT: bool = true;
-const LEGACY_ACCELERATE_SCORE_DEFAULT: i64 = 8;
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 const APP_DATA_DIR_NAME: &str = "VoxType";
@@ -692,22 +681,9 @@ fn load_config_from_path(path: PathBuf) -> Result<LoadedConfig, String> {
     } else {
         data.context.recent_context.clear();
     }
-    let migrated_auto_hotword_limit = migrate_auto_hotword_history_default(&mut data);
-    let migrated_silence_auto_stop = migrate_silence_auto_stop_default(&mut data);
-    let migrated_silence_level_threshold = migrate_silence_level_threshold_default(&mut data);
-    let migrated_stop_grace = migrate_stop_grace_default(&mut data);
     let migrated_result_type = migrate_result_type_default(&mut data);
     let migrated_asr_language = migrate_legacy_asr_language_default(&mut data);
-    let migrated_acceleration = migrate_first_word_acceleration_default(&mut data);
-    if contains_legacy_recent_context(&text)
-        || migrated_auto_hotword_limit
-        || migrated_silence_auto_stop
-        || migrated_silence_level_threshold
-        || migrated_stop_grace
-        || migrated_result_type
-        || migrated_asr_language
-        || migrated_acceleration
-    {
+    if contains_legacy_recent_context(&text) || migrated_result_type || migrated_asr_language {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
         write_config_file(&path, &cleaned)?;
@@ -721,6 +697,12 @@ fn load_config_from_path(path: PathBuf) -> Result<LoadedConfig, String> {
 
 pub fn save_config(config: AppConfig) -> Result<LoadedConfig, String> {
     validate_config(&config).map_err(format_validation_errors)?;
+    let path = resolve_config_path();
+    write_config_file(&path, &config)?;
+    load_config()
+}
+
+pub(crate) fn save_config_without_validation(config: AppConfig) -> Result<LoadedConfig, String> {
     let path = resolve_config_path();
     write_config_file(&path, &config)?;
     load_config()
@@ -784,46 +766,6 @@ fn contains_legacy_recent_context(text: &str) -> bool {
     })
 }
 
-fn migrate_auto_hotword_history_default(config: &mut AppConfig) -> bool {
-    if config.auto_hotwords.max_history_chars == LEGACY_AUTO_HOTWORD_MAX_HISTORY_CHARS {
-        config.auto_hotwords.max_history_chars = DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS;
-        return true;
-    }
-    false
-}
-
-fn migrate_silence_auto_stop_default(config: &mut AppConfig) -> bool {
-    if config.audio.silence_auto_stop_seconds == LEGACY_SILENCE_AUTO_STOP_SECONDS
-        || config.audio.silence_auto_stop_seconds == PREVIOUS_DEFAULT_SILENCE_AUTO_STOP_SECONDS
-    {
-        config.audio.silence_auto_stop_seconds = default_silence_auto_stop_seconds();
-        return true;
-    }
-    false
-}
-
-fn migrate_silence_level_threshold_default(config: &mut AppConfig) -> bool {
-    if (config.audio.silence_level_threshold - LEGACY_SILENCE_LEVEL_THRESHOLD).abs()
-        <= SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON
-    {
-        config.audio.silence_level_threshold = default_silence_level_threshold();
-        return true;
-    }
-    false
-}
-
-fn migrate_stop_grace_default(config: &mut AppConfig) -> bool {
-    if config.audio.stop_grace_ms == LEGACY_STOP_GRACE_MS
-        || config.audio.stop_grace_ms == PREVIOUS_SHORT_STOP_GRACE_MS
-        || config.audio.stop_grace_ms == PREVIOUS_DEFAULT_STOP_GRACE_MS
-        || config.audio.stop_grace_ms == PREVIOUS_FAST_STOP_GRACE_MS
-    {
-        config.audio.stop_grace_ms = default_stop_grace_ms();
-        return true;
-    }
-    false
-}
-
 fn migrate_result_type_default(config: &mut AppConfig) -> bool {
     if config.request.result_type == LEGACY_RESULT_TYPE_DEFAULT {
         config.request.result_type = default_result_type();
@@ -835,17 +777,6 @@ fn migrate_result_type_default(config: &mut AppConfig) -> bool {
 fn migrate_legacy_asr_language_default(config: &mut AppConfig) -> bool {
     if config.request.language.trim().eq_ignore_ascii_case("zh-CN") {
         config.request.language.clear();
-        return true;
-    }
-    false
-}
-
-fn migrate_first_word_acceleration_default(config: &mut AppConfig) -> bool {
-    if config.request.enable_accelerate_text == Some(LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT)
-        && config.request.accelerate_score == Some(LEGACY_ACCELERATE_SCORE_DEFAULT)
-    {
-        config.request.enable_accelerate_text = Some(DEFAULT_ENABLE_ACCELERATE_TEXT);
-        config.request.accelerate_score = Some(DEFAULT_ACCELERATE_SCORE);
         return true;
     }
     false
@@ -1151,12 +1082,9 @@ mod tests {
     use super::{
         config_migration_candidate_for_target, contains_legacy_recent_context, effective_hotwords,
         installed_config_path_from_appdata, load_config_from_path,
-        migrate_auto_hotword_history_default, migrate_first_word_acceleration_default,
         migrate_legacy_asr_language_default, migrate_result_type_default,
-        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
-        migrate_stop_grace_default, text_looks_like_voxtype_config, validate_config,
-        write_config_file, AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE,
-        DEFAULT_ENABLE_ACCELERATE_TEXT,
+        text_looks_like_voxtype_config, validate_config, write_config_file, AppConfig, TextContext,
+        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
     use std::path::{Path, PathBuf};
 
@@ -1563,20 +1491,6 @@ mod tests {
     }
 
     #[test]
-    fn migrates_legacy_auto_hotword_history_default() {
-        let mut config = AppConfig::default();
-        config.auto_hotwords.max_history_chars = 10_000;
-
-        assert!(migrate_auto_hotword_history_default(&mut config));
-        assert_eq!(config.auto_hotwords.max_history_chars, 5_000);
-        assert!(!migrate_auto_hotword_history_default(&mut config));
-
-        config.auto_hotwords.max_history_chars = 12_000;
-        assert!(!migrate_auto_hotword_history_default(&mut config));
-        assert_eq!(config.auto_hotwords.max_history_chars, 12_000);
-    }
-
-    #[test]
     fn migrates_legacy_result_type_default() {
         let mut config = AppConfig::default();
         config.request.result_type = "single".to_string();
@@ -1598,30 +1512,6 @@ mod tests {
         config.request.language = "en-US".to_string();
         assert!(!migrate_legacy_asr_language_default(&mut config));
         assert_eq!(config.request.language, "en-US");
-    }
-
-    #[test]
-    fn migrates_legacy_first_word_acceleration_default() {
-        let mut config = AppConfig::default();
-        config.request.enable_accelerate_text = Some(true);
-        config.request.accelerate_score = Some(8);
-
-        assert!(migrate_first_word_acceleration_default(&mut config));
-        assert_eq!(
-            config.request.enable_accelerate_text,
-            Some(DEFAULT_ENABLE_ACCELERATE_TEXT)
-        );
-        assert_eq!(
-            config.request.accelerate_score,
-            Some(DEFAULT_ACCELERATE_SCORE)
-        );
-        assert!(!migrate_first_word_acceleration_default(&mut config));
-
-        config.request.enable_accelerate_text = Some(true);
-        config.request.accelerate_score = Some(12);
-        assert!(!migrate_first_word_acceleration_default(&mut config));
-        assert_eq!(config.request.enable_accelerate_text, Some(true));
-        assert_eq!(config.request.accelerate_score, Some(12));
     }
 
     #[test]
@@ -1657,62 +1547,42 @@ mod tests {
     }
 
     #[test]
-    fn migrates_legacy_silence_auto_stop_default() {
+    fn load_config_preserves_configured_values_that_match_old_defaults() {
+        let dir = temp_test_dir("old-default-like-values");
+        let path = dir.join("config.toml");
+
         let mut config = AppConfig::default();
+        config.auto_hotwords.max_history_chars = 10_000;
         config.audio.silence_auto_stop_seconds = 10;
-
-        assert!(migrate_silence_auto_stop_default(&mut config));
-        assert_eq!(config.audio.silence_auto_stop_seconds, 0);
-
-        assert!(!migrate_silence_auto_stop_default(&mut config));
-
-        config.audio.silence_auto_stop_seconds = 30;
-        assert!(migrate_silence_auto_stop_default(&mut config));
-        assert_eq!(config.audio.silence_auto_stop_seconds, 0);
-
-        config.audio.silence_auto_stop_seconds = 45;
-        assert!(!migrate_silence_auto_stop_default(&mut config));
-        assert_eq!(config.audio.silence_auto_stop_seconds, 45);
-    }
-
-    #[test]
-    fn migrates_legacy_silence_level_threshold_default() {
-        let mut config = AppConfig::default();
         config.audio.silence_level_threshold = 0.04;
-
-        assert!(migrate_silence_level_threshold_default(&mut config));
-        assert_eq!(config.audio.silence_level_threshold, 0.03);
-
-        assert!(!migrate_silence_level_threshold_default(&mut config));
-
-        config.audio.silence_level_threshold = 0.02;
-        assert!(!migrate_silence_level_threshold_default(&mut config));
-        assert_eq!(config.audio.silence_level_threshold, 0.02);
-    }
-
-    #[test]
-    fn migrates_legacy_stop_grace_default() {
-        let mut config = AppConfig::default();
         config.audio.stop_grace_ms = 800;
+        config.request.enable_accelerate_text = Some(true);
+        config.request.accelerate_score = Some(8);
+        write_config_file(&path, &config).unwrap();
+        let loaded = load_config_from_path(path.clone()).unwrap();
+        assert_eq!(loaded.data.auto_hotwords.max_history_chars, 10_000);
+        assert_eq!(loaded.data.audio.silence_auto_stop_seconds, 10);
+        assert_eq!(loaded.data.audio.silence_level_threshold, 0.04);
+        assert_eq!(loaded.data.audio.stop_grace_ms, 800);
+        assert_eq!(loaded.data.request.enable_accelerate_text, Some(true));
+        assert_eq!(loaded.data.request.accelerate_score, Some(8));
 
-        assert!(migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 250);
-        assert!(!migrate_stop_grace_default(&mut config));
+        for stop_seconds in [10, 30] {
+            let mut config = AppConfig::default();
+            config.audio.silence_auto_stop_seconds = stop_seconds;
+            write_config_file(&path, &config).unwrap();
+            let loaded = load_config_from_path(path.clone()).unwrap();
+            assert_eq!(loaded.data.audio.silence_auto_stop_seconds, stop_seconds);
+        }
 
-        config.audio.stop_grace_ms = 500;
-        assert!(!migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 500);
+        for stop_grace_ms in [100, 150, 200, 800] {
+            let mut config = AppConfig::default();
+            config.audio.stop_grace_ms = stop_grace_ms;
+            write_config_file(&path, &config).unwrap();
+            let loaded = load_config_from_path(path.clone()).unwrap();
+            assert_eq!(loaded.data.audio.stop_grace_ms, stop_grace_ms);
+        }
 
-        config.audio.stop_grace_ms = 150;
-        assert!(migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 250);
-
-        config.audio.stop_grace_ms = 200;
-        assert!(migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 250);
-
-        config.audio.stop_grace_ms = 100;
-        assert!(migrate_stop_grace_default(&mut config));
-        assert_eq!(config.audio.stop_grace_ms, 250);
+        remove_temp_dir(&dir);
     }
 }

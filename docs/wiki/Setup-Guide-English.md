@@ -188,7 +188,7 @@ System Prompt stays in `config.toml` to keep the normal UI concise.
 
 Automatic hotword candidates are off by default. When enabled, VoxType saves final voice-input text locally. Only when the user clicks "Generate candidates" does it send a summary to the configured LLM service. Local history can be cleared from Hotwords & prompts or Privacy & local data.
 
-Candidates are not added automatically. The user must review and confirm them. The default local history limit is 5000 characters; old 10000-character defaults are migrated to 5000 on config load.
+Candidates are not added automatically. The user must review and confirm them. The default local history limit is 5000 characters; saved limits are preserved and are no longer rewritten by old default values.
 
 ## 6. Daily Options
 
@@ -280,7 +280,7 @@ Interim Doubao text is shown in the floating caption with a shorter local thrott
 
 The recently verified stable combination is to keep the default `200ms` ASR packet size and put perceived-speed work into `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. First-word acceleration is off by default to prioritize beginning-word accuracy. Final output still accepts only Doubao's final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording.
 
-First-word acceleration is disabled by default with `enable_accelerate_text = false` and `accelerate_score = 0`; the old default `true + 8` migrates to off. If faster live-caption startup matters more, you can manually enable it in `config.toml`, but beginning-word accuracy may drop.
+First-word acceleration is disabled by default with `enable_accelerate_text = false` and `accelerate_score = 0`; saved explicit values are preserved. If faster live-caption startup matters more, you can manually enable it in `config.toml`, but beginning-word accuracy may drop.
 
 Semantic smoothing `enable_ddc` is enabled by default for light ASR-side smoothing on short and medium text, reducing reliance on LLM polishing for short inputs. Saved explicit values are preserved. Disable it manually when exact proper nouns, short commands, paths, or punctuation-sensitive dictation matter more.
 
