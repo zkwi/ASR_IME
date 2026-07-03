@@ -615,6 +615,16 @@ export const zhTWUserErrorDetails = {
     "cause": "App Key 或 Access Key 未填寫或權限不正確；如果改過 Resource ID，也可能是資源權限不匹配。",
     "action": "在 API配置頁檢查豆包認證資訊；如果改過 Resource ID，請同時檢查 config.toml。自動儲存後點擊測試。"
   },
+  "ASR_CONNECT_TIMEOUT": {
+    "title": "連線識別服務逾時",
+    "cause": "網路、代理、防火牆或豆包服務回應過慢，正式識別連線沒有在限定時間內建立。",
+    "action": "檢查網路或代理後重試；下一次按快捷鍵會重新開始一輪識別。"
+  },
+  "ASR_CONNECT_FAILED": {
+    "title": "連線識別服務失敗",
+    "cause": "網路不可達、DNS/代理/TLS 異常，或豆包 ASR 服務暫時不可用。",
+    "action": "檢查網路、代理和防火牆後重試；如果剛修改認證資訊，請再點一次測試。"
+  },
   "ASR_NETWORK_FAILED": {
     "title": "無法連接識別服務",
     "cause": "網路、代理、防火牆或服務端暫時異常。",
@@ -624,6 +634,11 @@ export const zhTWUserErrorDetails = {
     "title": "識別結果等待逾時",
     "cause": "網路較慢，或豆包語音識別服務沒有及時返回最終結果。",
     "action": "稍後重試，必要時在 config.toml 中適當調大 request.final_result_timeout_seconds。"
+  },
+  "ASR_CONNECTION_CLOSED": {
+    "title": "識別連線提前關閉",
+    "cause": "豆包 ASR 連線已結束，但本輪沒有收到完整最終結果，可能是網路中斷或服務端主動關閉。",
+    "action": "重新發起語音輸入；如果頻繁出現，請檢查網路穩定性、代理和防火牆。"
   },
   "EMPTY_TRANSCRIPT": {
     "title": "沒有識別到文字",

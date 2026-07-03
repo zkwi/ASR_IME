@@ -14,6 +14,7 @@
 - `enable_ddc=true` 默认用于短文本和中等文本的 ASR 侧轻量顺滑，减少短文本依赖 LLM 润色带来的等待；如果回归中发现专有词、短命令、代码标识符、路径或标点敏感口述被改写，应优先建议用户手动关闭 DDC，而不是改 ASR 音频分片。
 - 屏幕 OCR 上下文默认等待 `500ms`，超时只跳过上下文，不阻断录音、ASR 最终结果、LLM 润色或粘贴。
 - ASR 使用的屏幕 OCR 上下文和 LLM 润色使用的屏幕 OCR 参考预算应分开处理；优化 LLM 速度时优先压缩 LLM 参考信息，不要回退 OCR 等待或 ASR 最终包策略。
+- 正式 ASR WebSocket 建连必须有明确超时，连接超时、连接失败、最终包等待超时和连接提前关闭应返回不同错误码并进入失败态；异常重置后下一次热键必须能重新开始。
 
 ## 不应回退的做法
 
@@ -39,6 +40,8 @@
 
 ```powershell
 cargo test asr_ws::tests::final_output_
+cargo test asr_ws::tests::formal_connect_
+cargo test session::tests::reset_recognition_failure
 cargo test audio::tests
 cargo test session::tests
 cargo test asr::tests

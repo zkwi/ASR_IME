@@ -132,6 +132,8 @@ Common Doubao ASR test failures:
 | Language-related failure | Switch Recognition language back to Auto/service default and test again |
 | Test passes but recording is empty | Windows microphone permission, input device, mic volume, and background noise |
 
+The production recording path also separates connection timeout, connection failure, final-result timeout, and early connection close. A failed session enters the failed state with a short error hint, and the next shortcut press starts a fresh recognition session instead of staying in "waiting for final result".
+
 Settings edited in the UI auto-save. The title bar briefly shows pending, saving, and saved states so you can tell when a change has taken effect.
 
 Optional LLM polishing:

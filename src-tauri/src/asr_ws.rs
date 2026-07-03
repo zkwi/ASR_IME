@@ -6,6 +6,7 @@ use crate::{
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use std::collections::VecDeque;
+use std::future::Future;
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -35,8 +36,10 @@ const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 const FINAL_PACKET_SETTLE: Duration = Duration::from_millis(300);
 // 头部保护并入第一包真实音频，避免独立短包破坏豆包推荐的发包节奏。
 const INITIAL_AUDIO_SILENCE_PADDING_MS: u64 = 50;
+const ASR_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+const ASR_CONNECT_TIMEOUT_MESSAGE: &str = "连接豆包 ASR 超时，请检查网络或代理后重试。";
 const ASR_FINAL_TIMEOUT_MESSAGE: &str = "等待豆包 ASR 最终结果超时，请检查网络后重试。";
-const ASR_FINAL_INCOMPLETE_MESSAGE: &str =
+const ASR_CONNECTION_CLOSED_MESSAGE: &str =
     "豆包 ASR 连接已结束，但未返回完整最终结果。请重试，或检查网络稳定性。";
 
 pub fn spawn_asr_worker(
@@ -187,10 +190,12 @@ pub fn spawn_asr_worker(
                                 } else {
                                     "PASTE_FAILED"
                                 };
-                                if session.abort_generation_from_worker_with_code(
-                                    &app, generation, &err, error_code,
-                                ) {
-                                    emit_error(&app, &session, generation, error_code, err);
+                                if let Some(guard_generation) = session
+                                    .reset_generation_from_worker_with_code(
+                                        &app, generation, &err, error_code,
+                                    )
+                                {
+                                    emit_error(&app, &session, guard_generation, error_code, err);
                                 }
                                 return;
                             }
@@ -244,10 +249,10 @@ pub fn spawn_asr_worker(
             }
             Err(err) => {
                 let error_code = classify_asr_error(&err);
-                if session
-                    .abort_generation_from_worker_with_code(&app, generation, &err, error_code)
+                if let Some(guard_generation) = session
+                    .reset_generation_from_worker_with_code(&app, generation, &err, error_code)
                 {
-                    emit_error(&app, &session, generation, error_code, err);
+                    emit_error(&app, &session, guard_generation, error_code, err);
                 }
             }
         }
@@ -411,15 +416,7 @@ async fn run_websocket_session(
         request.headers_mut().insert(name, value);
     }
 
-    let (mut websocket, _) = connect_async(request).await.map_err(|err| {
-        let detail = err.to_string();
-        let message = friendly_asr_connection_error(&detail);
-        app_log::warn(format!(
-            "连接 ASR WebSocket 失败: {}; user_message={}",
-            detail, message
-        ));
-        message
-    })?;
+    let (mut websocket, _) = await_asr_connect(connect_async(request), ASR_CONNECT_TIMEOUT).await?;
     app_log::info("ASR WebSocket 已连接");
     websocket
         .send(Message::Binary(
@@ -578,7 +575,7 @@ async fn run_websocket_session(
                 break;
             }
             Ok(Some(Ok(_))) | Err(_) => {}
-            Ok(Some(Err(err))) => return Err(format!("接收 ASR 响应失败: {}", err)),
+            Ok(Some(Err(err))) => return Err(format!("豆包 ASR 连接已中断: {}", err)),
             Ok(None) => {
                 connection_closed_before_final = final_packet_text.is_none();
                 break;
@@ -603,11 +600,7 @@ async fn run_websocket_session(
     }
 
     if final_packet_text.is_none() {
-        return Err(if connection_closed_before_final {
-            ASR_FINAL_INCOMPLETE_MESSAGE.to_string()
-        } else {
-            ASR_FINAL_TIMEOUT_MESSAGE.to_string()
-        });
+        return Err(missing_final_result_error(connection_closed_before_final));
     }
 
     select_final_output_text(
@@ -616,6 +609,25 @@ async fn run_websocket_session(
         &display_text,
         remove_trailing_period,
     )
+}
+
+async fn await_asr_connect<F, T, E>(connect_future: F, timeout: Duration) -> Result<T, String>
+where
+    F: Future<Output = Result<T, E>>,
+    E: std::fmt::Display,
+{
+    tokio::time::timeout(timeout, connect_future)
+        .await
+        .map_err(|_| ASR_CONNECT_TIMEOUT_MESSAGE.to_string())?
+        .map_err(|err| {
+            let detail = err.to_string();
+            let message = friendly_asr_connection_error(&detail);
+            app_log::warn(format!(
+                "连接 ASR WebSocket 失败: {}; user_message={}",
+                detail, message
+            ));
+            message
+        })
 }
 
 fn upsert_definite_segment(
@@ -833,6 +845,14 @@ fn select_final_output_text(
     }
 
     Ok(final_text)
+}
+
+fn missing_final_result_error(connection_closed_before_final: bool) -> String {
+    if connection_closed_before_final {
+        ASR_CONNECTION_CLOSED_MESSAGE.to_string()
+    } else {
+        ASR_FINAL_TIMEOUT_MESSAGE.to_string()
+    }
 }
 
 // 最终输出仍必须来自豆包最终包；definite 分句用于稳定性，但不能压掉更完整的最终包。
@@ -1096,6 +1116,7 @@ fn emit_error(
 }
 
 fn classify_asr_error(error: &str) -> &'static str {
+    let lower = error.to_ascii_lowercase();
     if error.contains("认证")
         || error.contains("权限")
         || error.contains("App Key")
@@ -1103,7 +1124,33 @@ fn classify_asr_error(error: &str) -> &'static str {
         || error.contains("Resource ID")
     {
         "ASR_AUTH_MISSING"
-    } else if error.contains("超时") || error.to_ascii_lowercase().contains("timeout") {
+    } else if error == ASR_CONNECT_TIMEOUT_MESSAGE {
+        "ASR_CONNECT_TIMEOUT"
+    } else if error == ASR_FINAL_TIMEOUT_MESSAGE || error.contains("最终结果超时") {
+        "ASR_FINAL_TIMEOUT"
+    } else if error == ASR_CONNECTION_CLOSED_MESSAGE
+        || error.contains("连接已结束")
+        || error.contains("连接已关闭")
+        || error.contains("连接已中断")
+        || lower.contains("connection closed")
+        || lower.contains("connection reset")
+        || lower.contains("already closed")
+        || lower.contains("reset without closing handshake")
+        || lower.contains("reset by peer")
+        || lower.contains("broken pipe")
+        || lower.contains("unexpected eof")
+    {
+        "ASR_CONNECTION_CLOSED"
+    } else if error.contains("无法连接豆包 ASR")
+        || error.contains("连接豆包 ASR 失败")
+        || lower.contains("dns")
+        || lower.contains("resolve")
+        || lower.contains("connect")
+        || lower.contains("proxy")
+        || lower.contains("tls")
+    {
+        "ASR_CONNECT_FAILED"
+    } else if error.contains("超时") || lower.contains("timeout") || lower.contains("timed out") {
         "ASR_FINAL_TIMEOUT"
     } else {
         "ASR_NETWORK_FAILED"
@@ -1154,12 +1201,13 @@ fn friendly_asr_service_error(code: i32) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        asr_pcm_bytes_for_ms, finish_output_sent_session, friendly_asr_connection_error,
-        friendly_asr_service_error, is_success_code, select_final_output_text,
-        should_finish_final_packet_settle, should_hold_overlay_for_output_warning,
-        should_timeout_waiting_final, silent_test_audio, upsert_definite_segment,
-        websocket_response_poll_timeout, AsrAudioQueue, AudioSendPacer, PartialTextLimiter,
-        PARTIAL_TEXT_MIN_INTERVAL, RESPONSE_POLL_TIMEOUT,
+        asr_pcm_bytes_for_ms, await_asr_connect, classify_asr_error, finish_output_sent_session,
+        friendly_asr_connection_error, friendly_asr_service_error, is_success_code,
+        missing_final_result_error, select_final_output_text, should_finish_final_packet_settle,
+        should_hold_overlay_for_output_warning, should_timeout_waiting_final, silent_test_audio,
+        upsert_definite_segment, websocket_response_poll_timeout, AsrAudioQueue, AudioSendPacer,
+        PartialTextLimiter, ASR_CONNECTION_CLOSED_MESSAGE, ASR_CONNECT_TIMEOUT_MESSAGE,
+        ASR_FINAL_TIMEOUT_MESSAGE, PARTIAL_TEXT_MIN_INTERVAL, RESPONSE_POLL_TIMEOUT,
     };
     use crate::text_output::WARNING_CLIPBOARD_PARTIAL_RESTORE;
     use crate::{asr::DefiniteSegment, config::AppConfig};
@@ -1177,6 +1225,65 @@ mod tests {
         assert!(friendly_asr_connection_error("HTTP error: 401 Unauthorized").contains("认证失败"));
         assert!(friendly_asr_connection_error("dns error").contains("无法连接"));
         assert!(friendly_asr_service_error(40_000_001).contains("权限"));
+    }
+
+    #[test]
+    fn formal_connect_timeout_uses_specific_error_code() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap();
+        let result = runtime.block_on(await_asr_connect(
+            async {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+                Ok::<(), &str>(())
+            },
+            Duration::from_millis(1),
+        ));
+
+        let error = result.unwrap_err();
+        assert_eq!(error, ASR_CONNECT_TIMEOUT_MESSAGE);
+        assert_eq!(classify_asr_error(&error), "ASR_CONNECT_TIMEOUT");
+    }
+
+    #[test]
+    fn formal_connect_failure_uses_specific_error_code() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap();
+        let result = runtime.block_on(await_asr_connect(
+            async { Err::<(), _>("dns lookup failed") },
+            Duration::from_secs(1),
+        ));
+
+        let error = result.unwrap_err();
+        assert!(error.contains("无法连接"));
+        assert_eq!(classify_asr_error(&error), "ASR_CONNECT_FAILED");
+    }
+
+    #[test]
+    fn final_timeout_and_connection_closed_use_distinct_error_codes() {
+        assert_eq!(
+            classify_asr_error(ASR_FINAL_TIMEOUT_MESSAGE),
+            "ASR_FINAL_TIMEOUT"
+        );
+        assert_eq!(
+            missing_final_result_error(false),
+            ASR_FINAL_TIMEOUT_MESSAGE.to_string()
+        );
+        assert_eq!(
+            missing_final_result_error(true),
+            ASR_CONNECTION_CLOSED_MESSAGE.to_string()
+        );
+        assert_eq!(
+            classify_asr_error(&missing_final_result_error(true)),
+            "ASR_CONNECTION_CLOSED"
+        );
+        assert_eq!(
+            classify_asr_error("豆包 ASR 连接已中断: connection closed"),
+            "ASR_CONNECTION_CLOSED"
+        );
     }
 
     #[test]

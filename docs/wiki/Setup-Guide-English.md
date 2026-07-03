@@ -79,6 +79,8 @@ API Config also includes **Recognition language**. The default is Auto/service d
 | Failure after changing language | Switch Recognition language back to Auto/service default and test again |
 | Test passes but recording returns no text | Windows microphone permission, selected input device, mic volume, and actual speech |
 
+The production recording path also separates connection timeout, connection failure, final-result timeout, and early connection close. A failed session enters the failed state with a short error hint, and the next shortcut press starts a fresh recognition session instead of staying in "waiting for final result".
+
 If it still fails, open **Options -> Updates and diagnostics -> Copy diagnostic report** and include the redacted error code/status in an Issue. Do not paste real keys, full logs, or transcript text.
 
 Doubao official docs:

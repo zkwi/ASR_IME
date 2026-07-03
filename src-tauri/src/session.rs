@@ -426,11 +426,30 @@ impl SessionController {
         message: &str,
         error_code: &str,
     ) -> Option<(SessionState, u64)> {
-        let Ok(mut inner) = self.inner.lock() else {
-            app_log::warn("终止异常录音失败：session mutex poisoned");
+        let Ok(inner) = self.inner.lock() else {
+            app_log::warn("重置异常识别失败：session mutex poisoned");
             return None;
         };
         if !inner.recording || inner.generation != generation {
+            return None;
+        }
+        drop(inner);
+        self.reset_generation_to_failed_and_invalidate(generation, message, error_code)
+    }
+
+    fn reset_generation_to_failed_and_invalidate(
+        &self,
+        generation: u64,
+        message: &str,
+        error_code: &str,
+    ) -> Option<(SessionState, u64)> {
+        let Ok(mut inner) = self.inner.lock() else {
+            app_log::warn("重置异常识别失败：session mutex poisoned");
+            return None;
+        };
+        if inner.generation != generation
+            || matches!(inner.phase, SessionPhase::Idle | SessionPhase::Succeeded)
+        {
             return None;
         }
         inner.recording = false;
@@ -532,6 +551,28 @@ impl SessionController {
                     generation, error_code
                 ));
                 false
+            }
+        }
+    }
+
+    pub fn reset_generation_from_worker_with_code(
+        &self,
+        app: &AppHandle,
+        generation: u64,
+        message: &str,
+        error_code: &str,
+    ) -> Option<u64> {
+        match self.reset_generation_to_failed_and_invalidate(generation, message, error_code) {
+            Some((state, guard_generation)) => {
+                emit_state(Some(app), &state);
+                Some(guard_generation)
+            }
+            None => {
+                app_log::info(format!(
+                    "忽略过期 ASR worker 重置请求: generation={}, error_code={}",
+                    generation, error_code
+                ));
+                None
             }
         }
     }
@@ -876,6 +917,45 @@ mod tests {
         assert!(controller.is_current_generation(guard_generation));
         assert!(controller
             .set_phase_for_generation(9, None, SessionPhase::Pasting, "Stale output.", None)
+            .is_none());
+    }
+
+    #[test]
+    fn reset_recognition_failure_invalidates_processing_generation() {
+        let controller = SessionController::default();
+        {
+            let mut inner = controller.inner.lock().unwrap();
+            inner.recording = false;
+            inner.phase = SessionPhase::WaitingFinalResult;
+            inner.message = "Waiting for final ASR result.".to_string();
+            inner.generation = 11;
+        }
+
+        let (state, guard_generation) = controller
+            .reset_generation_to_failed_and_invalidate(
+                11,
+                "ASR final timed out.",
+                "ASR_FINAL_TIMEOUT",
+            )
+            .unwrap();
+
+        assert!(!state.recording);
+        assert_eq!(state.phase, SessionPhase::Failed);
+        assert_eq!(state.error_code.as_deref(), Some("ASR_FINAL_TIMEOUT"));
+        assert!(!super::is_processing_phase(state.phase));
+        assert!(!controller.is_current_generation(11));
+        assert!(controller.is_current_generation(guard_generation));
+        assert!(controller
+            .set_phase_for_generation(
+                11,
+                None,
+                SessionPhase::PostEditing,
+                "Stale post-editing.",
+                None,
+            )
+            .is_none());
+        assert!(controller
+            .set_phase_for_generation(11, None, SessionPhase::Pasting, "Stale pasting.", None,)
             .is_none());
     }
 

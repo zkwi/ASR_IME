@@ -615,6 +615,16 @@ export const enUserErrorDetails = {
     "cause": "App Key or Access Key is missing or lacks permission. If you changed Resource ID, resource permission may not match.",
     "action": "Check Doubao keys in API Config. If you changed Resource ID, also check config.toml. Wait for auto-save, then run Test."
   },
+  "ASR_CONNECT_TIMEOUT": {
+    "title": "Recognition connection timed out",
+    "cause": "The network, proxy, firewall, or Doubao service was too slow, so the production ASR connection was not established in time.",
+    "action": "Check the network or proxy and retry. The next shortcut press starts a fresh recognition session."
+  },
+  "ASR_CONNECT_FAILED": {
+    "title": "Recognition connection failed",
+    "cause": "The network may be unreachable, DNS/proxy/TLS may have failed, or Doubao ASR may be temporarily unavailable.",
+    "action": "Check the network, proxy, and firewall, then retry. If you just changed credentials, run Test again."
+  },
   "ASR_NETWORK_FAILED": {
     "title": "Cannot reach recognition service",
     "cause": "Network, proxy, firewall, or a temporary service issue.",
@@ -624,6 +634,11 @@ export const enUserErrorDetails = {
     "title": "Speech recognition timed out",
     "cause": "The network is slow, or Doubao speech recognition did not return the final result in time.",
     "action": "Retry later, or increase request.final_result_timeout_seconds in config.toml."
+  },
+  "ASR_CONNECTION_CLOSED": {
+    "title": "Recognition connection closed early",
+    "cause": "The Doubao ASR connection ended before this session received a complete final result, likely due to an interrupted network or server-side close.",
+    "action": "Start voice input again. If this repeats, check network stability, proxy, and firewall settings."
   },
   "EMPTY_TRANSCRIPT": {
     "title": "No speech was recognized",

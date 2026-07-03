@@ -5,8 +5,11 @@ export function actionsForUserError(code?: string | null): UserErrorAction[] {
     case "CONFIG_MISSING":
     case "ASR_AUTH_MISSING":
       return ["open_api_config", "open_setup_guide"];
+    case "ASR_CONNECT_TIMEOUT":
+    case "ASR_CONNECT_FAILED":
     case "ASR_NETWORK_FAILED":
     case "ASR_FINAL_TIMEOUT":
+    case "ASR_CONNECTION_CLOSED":
       return ["retry_recording", "copy_diagnostic_report"];
     case "EMPTY_TRANSCRIPT":
       return ["retry_recording"];

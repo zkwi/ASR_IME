@@ -614,6 +614,16 @@ export const zhCNUserErrorDetails = {
     "cause": "App Key 或 Access Key 未填写或权限不正确；如果改过 Resource ID，也可能是资源权限不匹配。",
     "action": "在 API配置页检查豆包认证信息；如果改过 Resource ID，请同时检查 config.toml。自动保存后点击测试。"
   },
+  "ASR_CONNECT_TIMEOUT": {
+    "title": "连接识别服务超时",
+    "cause": "网络、代理、防火墙或豆包服务响应过慢，正式识别连接没有在限定时间内建立。",
+    "action": "检查网络或代理后重试；下一次按快捷键会重新开始一轮识别。"
+  },
+  "ASR_CONNECT_FAILED": {
+    "title": "连接识别服务失败",
+    "cause": "网络不可达、DNS/代理/TLS 异常，或豆包 ASR 服务暂时不可用。",
+    "action": "检查网络、代理和防火墙后重试；如果刚修改认证信息，请再点一次测试。"
+  },
   "ASR_NETWORK_FAILED": {
     "title": "无法连接识别服务",
     "cause": "网络、代理、防火墙或服务端临时异常。",
@@ -623,6 +633,11 @@ export const zhCNUserErrorDetails = {
     "title": "识别结果等待超时",
     "cause": "网络较慢，或豆包语音识别服务没有及时返回最终结果。",
     "action": "稍后重试，必要时在 config.toml 中适当调大 request.final_result_timeout_seconds。"
+  },
+  "ASR_CONNECTION_CLOSED": {
+    "title": "识别连接提前关闭",
+    "cause": "豆包 ASR 连接已结束，但本轮没有收到完整最终结果，可能是网络中断或服务端主动关闭。",
+    "action": "重新发起语音输入；如果频繁出现，请检查网络稳定性、代理和防火墙。"
   },
   "EMPTY_TRANSCRIPT": {
     "title": "没有识别到文字",

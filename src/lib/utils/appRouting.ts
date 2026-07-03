@@ -101,8 +101,11 @@ export function userErrorMessage(
 export function isErrorStatus(message: string) {
   return (
     isConfigError(message) ||
+    message.includes("连接豆包 ASR 超时") ||
     message.includes("无法连接豆包 ASR") ||
     message.includes("连接豆包 ASR 失败") ||
+    message.includes("豆包 ASR 连接已结束") ||
+    message.includes("豆包 ASR 连接已中断") ||
     message.includes("豆包 ASR 服务返回错误码") ||
     message.includes("开机自启动设置失败") ||
     message.includes("启动录音失败") ||
