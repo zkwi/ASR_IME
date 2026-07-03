@@ -105,7 +105,7 @@ Open **API Config -> LLM API**:
 | Model | For example `qwen3.5-plus`; must be available to the current account |
 | Thinking adapter | Auto by default; the test tries candidate strategies and saves the fastest successful one |
 
-Click **Test** after configuration. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
+Click **Test** after configuration. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default. Screen OCR is trimmed by line, deduplicated, and capped to 12 lines / 400 chars before AI polishing by default; term references are capped to 50 entries.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
@@ -114,7 +114,7 @@ For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](.
 Recommendations:
 
 - Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; retest after changing Base URL or model.
-- Text shorter than `min_chars = 40` is not polished by default.
+- Text shorter than `min_chars = 80` is not polished by default.
 - Similar or identical model names can behave very differently across providers, so prefer the latency measured by API Config over the model name alone.
 - Code paths, filenames, and English identifiers are easy for an LLM to "correct" into plausible but wrong forms. Use screen OCR, hotwords, or a manual check for those terms.
 - If the network is unstable, adjust LLM timeout in `config.toml`.
@@ -167,7 +167,7 @@ VoxType includes a default voice-input AI prompt. It marks the text-to-polish bl
 The Hotwords page lets you:
 
 - Restore the default prompt.
-- Preview the final prompt, including reference-information rules, the current screen OCR policy, and whether recent context enters the AI prompt.
+- Preview the final prompt, including reference-information rules, the current screen OCR policy and LLM budgets, and whether recent context enters the AI prompt.
 - Edit the User Prompt template.
 - Adjust the minimum polishing length from 0 to 10000.
 
@@ -193,9 +193,9 @@ Options is grouped into Common settings, Enhancements, and Maintenance so daily 
 
 To review or clear local data, open Privacy & local data from the sidebar.
 
-Screen OCR context is on by default. It captures the current display by default, which helps when you reference one document while typing into another window. You can switch it to the current window only in Options. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. Switch to current-window-only or disable it when the screen contains sensitive content.
+Screen OCR context is on by default. It captures the current display by default, which helps when you reference one document while typing into another window. You can switch it to the current window only in Options. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. OCR sent to ASR is controlled by the screen OCR character limit; OCR sent to AI polishing has a separate LLM budget. Switch to current-window-only or disable it when the screen contains sensitive content.
 
-Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, stop grace milliseconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters.
+Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, stop grace milliseconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters. The LLM minimum polishing length and reference budgets are adjustable on Hotwords & prompts.
 
 ## 7. Recommended Defaults
 
@@ -235,7 +235,11 @@ use_recent_context = false
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 api_key = ""
 model = "qwen3.5-plus"
-min_chars = 40
+min_chars = 80
+screen_context_max_chars = 400
+screen_context_max_lines = 12
+recent_context_max_chars = 200
+reference_hotwords_limit = 50
 enable_thinking = false
 thinking_strategy = "auto"
 ```
@@ -337,4 +341,4 @@ They save voice-input text history locally. VoxType keeps them off by default to
 
 Recent context contains real dictated text, so VoxType does not save it or send it to an AI service by default. When local recent context is enabled, it helps Doubao ASR with continuous dictation; it reaches the AI service only when "use recent context for polishing" is also enabled and polishing actually runs.
 
-Screen OCR context is on by default, but it does not save transcript history. It reads the current display at recording start by default, lightly normalizes OCR text, and attaches it temporarily to the current ASR/LLM request. It does not cache recent OCR screenshots or text. Use current-window-only or turn it off when the screen contains sensitive content.
+Screen OCR context is on by default, but it does not save transcript history. It reads the current display at recording start by default, lightly normalizes OCR text, and attaches it temporarily to the current ASR/LLM request. It does not cache recent OCR screenshots or text, and OCR sent to the LLM is compacted by budget. Use current-window-only or turn it off when the screen contains sensitive content.

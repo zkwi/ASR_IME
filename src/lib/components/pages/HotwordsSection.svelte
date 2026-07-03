@@ -142,6 +142,30 @@
           {#if fieldError("llm_post_edit.min_chars")}<small class="field-error">{fieldError("llm_post_edit.min_chars")}</small>{/if}
           <small class="field-hint">{t("minCharsHint")}</small>
         </label>
+        <label class:field-invalid={Boolean(fieldError("llm_post_edit.screen_context_max_chars"))}>
+          <span>{t("llmScreenContextMaxChars")}</span>
+          <input type="number" min="0" max="2000" step="1" bind:value={config.llm_post_edit.screen_context_max_chars} />
+          {#if fieldError("llm_post_edit.screen_context_max_chars")}<small class="field-error">{fieldError("llm_post_edit.screen_context_max_chars")}</small>{/if}
+          <small class="field-hint">{t("llmScreenContextMaxCharsHint")}</small>
+        </label>
+        <label class:field-invalid={Boolean(fieldError("llm_post_edit.screen_context_max_lines"))}>
+          <span>{t("llmScreenContextMaxLines")}</span>
+          <input type="number" min="0" max="100" step="1" bind:value={config.llm_post_edit.screen_context_max_lines} />
+          {#if fieldError("llm_post_edit.screen_context_max_lines")}<small class="field-error">{fieldError("llm_post_edit.screen_context_max_lines")}</small>{/if}
+          <small class="field-hint">{t("llmScreenContextMaxLinesHint")}</small>
+        </label>
+        <label class:field-invalid={Boolean(fieldError("llm_post_edit.recent_context_max_chars"))}>
+          <span>{t("llmRecentContextMaxChars")}</span>
+          <input type="number" min="0" max="2000" step="1" bind:value={config.llm_post_edit.recent_context_max_chars} />
+          {#if fieldError("llm_post_edit.recent_context_max_chars")}<small class="field-error">{fieldError("llm_post_edit.recent_context_max_chars")}</small>{/if}
+          <small class="field-hint">{t("llmRecentContextMaxCharsHint")}</small>
+        </label>
+        <label class:field-invalid={Boolean(fieldError("llm_post_edit.reference_hotwords_limit"))}>
+          <span>{t("llmReferenceHotwordsLimit")}</span>
+          <input type="number" min="0" max="500" step="1" bind:value={config.llm_post_edit.reference_hotwords_limit} />
+          {#if fieldError("llm_post_edit.reference_hotwords_limit")}<small class="field-error">{fieldError("llm_post_edit.reference_hotwords_limit")}</small>{/if}
+          <small class="field-hint">{t("llmReferenceHotwordsLimitHint")}</small>
+        </label>
       </div>
     </div>
     <div id="settings-auto-hotwords" class="form-panel auto-hotwords-panel">

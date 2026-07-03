@@ -260,6 +260,10 @@ export type AppConfig = {
     enabled: boolean;
     min_chars: number;
     use_recent_context: boolean;
+    screen_context_max_chars: number;
+    screen_context_max_lines: number;
+    recent_context_max_chars: number;
+    reference_hotwords_limit: number;
     base_url: string;
     api_key: string;
     model: string;

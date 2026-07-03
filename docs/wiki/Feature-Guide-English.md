@@ -120,8 +120,9 @@ Defaults:
 - ASR only unless LLM polishing is enabled.
 - Short text below `min_chars` is not polished.
 - Thinking is disabled with provider-specific adapters where supported, and the LLM test saves the fastest successful adapter.
-- When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, screen OCR, and optional recent context are appended as reference information.
-- Recent context for AI is off by default. It is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 600 chars from the latest snippets.
+- When polishing is enabled and the text reaches the minimum length, the final transcript is sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information.
+- Recent context for AI is off by default. It is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default.
+- Before AI polishing, screen OCR is trimmed by line, deduplicated, and capped to 12 lines / 400 chars by default; term references are capped to 50 entries.
 
 Tips:
 
@@ -157,7 +158,7 @@ In daily use, start with hotwords and scene notes. Edit the prompt only when you
 - User Prompt template is available from the default page.
 - Minimum polishing length is available on Hotwords & prompts.
 - System Prompt stays in `config.toml`.
-- Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as reference information.
+- Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as budgeted reference information.
 - The default prompt separates short and long text: short messages, one-line commands, and questions get light correction, with natural punctuation allowed but no expansion; long spoken notes, records, retrospectives, explanations, meeting notes, product feedback, and investment reviews are polished into publishable prose, usually as 2-4 natural paragraphs.
 - The default prompt preserves proper nouns, English abbreviations, finance terms, and programming terms.
 - The default prompt preserves the original facts, judgment, intensity, and stance, and avoids adding headings, lists, Markdown, or backticks.
@@ -190,7 +191,7 @@ Privacy and stability:
 
 - On by default, with the current display as the capture range. You can switch to current-window-only in Options.
 - OCR text is used only for the current request and is not written to logs, stats, config, or cache.
-- When included in LLM polishing, OCR is appended as a separate reference-information block and explicitly marked as not text to polish or user instructions.
+- When included in LLM polishing, OCR is trimmed, deduplicated, budget-capped, and appended as a separate reference-information block that is explicitly marked as not text to polish or user instructions.
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
 - Switch to current-window-only or disable it in Options or Privacy & local data when the screen contains sensitive content.
 

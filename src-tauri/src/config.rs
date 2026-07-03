@@ -15,6 +15,8 @@ const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 const SILENCE_LEVEL_THRESHOLD_MIGRATION_EPSILON: f32 = 0.000_001;
 const LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT: bool = true;
 const LEGACY_ACCELERATE_SCORE_DEFAULT: i64 = 8;
+const LEGACY_LLM_MIN_CHARS_DEFAULT: usize = 40;
+const PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT: usize = 25;
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 
@@ -221,6 +223,14 @@ pub struct LlmPostEditConfig {
     pub min_chars: usize,
     #[serde(default)]
     pub use_recent_context: bool,
+    #[serde(default = "default_llm_screen_context_max_chars")]
+    pub screen_context_max_chars: usize,
+    #[serde(default = "default_llm_screen_context_max_lines")]
+    pub screen_context_max_lines: usize,
+    #[serde(default = "default_llm_recent_context_max_chars")]
+    pub recent_context_max_chars: usize,
+    #[serde(default = "default_llm_reference_hotwords_limit")]
+    pub reference_hotwords_limit: usize,
     #[serde(default = "default_llm_base_url")]
     pub base_url: String,
     #[serde(default)]
@@ -433,6 +443,10 @@ impl Default for LlmPostEditConfig {
             enabled: false,
             min_chars: default_min_chars(),
             use_recent_context: false,
+            screen_context_max_chars: default_llm_screen_context_max_chars(),
+            screen_context_max_lines: default_llm_screen_context_max_lines(),
+            recent_context_max_chars: default_llm_recent_context_max_chars(),
+            reference_hotwords_limit: default_llm_reference_hotwords_limit(),
             base_url: default_llm_base_url(),
             api_key: String::new(),
             model: default_llm_model(),
@@ -553,6 +567,7 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_result_type = migrate_result_type_default(&mut data);
     let migrated_asr_language = migrate_legacy_asr_language_default(&mut data);
     let migrated_acceleration = migrate_first_word_acceleration_default(&mut data);
+    let migrated_llm_min_chars = migrate_llm_min_chars_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
         || migrated_silence_auto_stop
@@ -561,6 +576,7 @@ pub fn load_config() -> Result<LoadedConfig, String> {
         || migrated_result_type
         || migrated_asr_language
         || migrated_acceleration
+        || migrated_llm_min_chars
     {
         let mut cleaned = data.clone();
         cleaned.context.recent_context.clear();
@@ -700,6 +716,16 @@ fn migrate_first_word_acceleration_default(config: &mut AppConfig) -> bool {
     {
         config.request.enable_accelerate_text = Some(DEFAULT_ENABLE_ACCELERATE_TEXT);
         config.request.accelerate_score = Some(DEFAULT_ACCELERATE_SCORE);
+        return true;
+    }
+    false
+}
+
+fn migrate_llm_min_chars_default(config: &mut AppConfig) -> bool {
+    if config.llm_post_edit.min_chars == LEGACY_LLM_MIN_CHARS_DEFAULT
+        || config.llm_post_edit.min_chars == PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT
+    {
+        config.llm_post_edit.min_chars = default_min_chars();
         return true;
     }
     false
@@ -897,7 +923,19 @@ fn default_auto_hotword_max_candidates() -> usize {
     30
 }
 fn default_min_chars() -> usize {
-    40
+    80
+}
+fn default_llm_screen_context_max_chars() -> usize {
+    400
+}
+fn default_llm_screen_context_max_lines() -> usize {
+    12
+}
+fn default_llm_recent_context_max_chars() -> usize {
+    200
+}
+fn default_llm_reference_hotwords_limit() -> usize {
+    50
 }
 fn default_llm_base_url() -> String {
     "https://dashscope.aliyuncs.com/compatible-mode/v1".to_string()
@@ -993,9 +1031,10 @@ mod tests {
     use super::{
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
         migrate_first_word_acceleration_default, migrate_legacy_asr_language_default,
-        migrate_result_type_default, migrate_silence_auto_stop_default,
-        migrate_silence_level_threshold_default, migrate_stop_grace_default, validate_config,
-        AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        migrate_llm_min_chars_default, migrate_result_type_default,
+        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
+        migrate_stop_grace_default, validate_config, AppConfig, TextContext,
+        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
 
     #[test]
@@ -1025,6 +1064,11 @@ mod tests {
         assert!(config.request.show_utterances);
         assert!(!config.context.enable_recent_context);
         assert!(!config.llm_post_edit.use_recent_context);
+        assert_eq!(config.llm_post_edit.min_chars, 80);
+        assert_eq!(config.llm_post_edit.screen_context_max_chars, 400);
+        assert_eq!(config.llm_post_edit.screen_context_max_lines, 12);
+        assert_eq!(config.llm_post_edit.recent_context_max_chars, 200);
+        assert_eq!(config.llm_post_edit.reference_hotwords_limit, 50);
         assert!(config.screen_context.enabled);
         assert_eq!(config.screen_context.capture_scope, "screen");
         assert_eq!(config.screen_context.timeout_ms, 500);
@@ -1203,6 +1247,10 @@ mod tests {
         config.auto_hotwords.max_candidates = 101;
         config.screen_context.capture_scope = "all_screens".to_string();
         config.llm_post_edit.thinking_strategy = "reasoning_none".to_string();
+        config.llm_post_edit.screen_context_max_chars = 2_001;
+        config.llm_post_edit.screen_context_max_lines = 101;
+        config.llm_post_edit.recent_context_max_chars = 2_001;
+        config.llm_post_edit.reference_hotwords_limit = 501;
 
         let errors = validate_config(&config).expect_err("invalid config should fail");
         let fields = errors
@@ -1231,6 +1279,10 @@ mod tests {
         assert!(fields.contains(&"auto_hotwords.max_candidates"));
         assert!(fields.contains(&"screen_context.capture_scope"));
         assert!(fields.contains(&"llm_post_edit.thinking_strategy"));
+        assert!(fields.contains(&"llm_post_edit.screen_context_max_chars"));
+        assert!(fields.contains(&"llm_post_edit.screen_context_max_lines"));
+        assert!(fields.contains(&"llm_post_edit.recent_context_max_chars"));
+        assert!(fields.contains(&"llm_post_edit.reference_hotwords_limit"));
     }
 
     #[test]
@@ -1255,6 +1307,10 @@ mod tests {
         config.llm_post_edit.model = " ".to_string();
         config.llm_post_edit.user_prompt_template = "polish this".to_string();
         config.llm_post_edit.thinking_strategy = "bad_strategy".to_string();
+        config.llm_post_edit.screen_context_max_chars = 2_001;
+        config.llm_post_edit.screen_context_max_lines = 101;
+        config.llm_post_edit.recent_context_max_chars = 2_001;
+        config.llm_post_edit.reference_hotwords_limit = 501;
 
         let errors = validate_config(&config).expect_err("invalid llm config should fail");
         let fields = errors
@@ -1268,6 +1324,10 @@ mod tests {
         assert!(fields.contains(&"llm_post_edit.model"));
         assert!(fields.contains(&"llm_post_edit.user_prompt_template"));
         assert!(fields.contains(&"llm_post_edit.thinking_strategy"));
+        assert!(fields.contains(&"llm_post_edit.screen_context_max_chars"));
+        assert!(fields.contains(&"llm_post_edit.screen_context_max_lines"));
+        assert!(fields.contains(&"llm_post_edit.recent_context_max_chars"));
+        assert!(fields.contains(&"llm_post_edit.reference_hotwords_limit"));
     }
 
     #[test]
@@ -1364,6 +1424,28 @@ mod tests {
         assert!(!migrate_first_word_acceleration_default(&mut config));
         assert_eq!(config.request.enable_accelerate_text, Some(true));
         assert_eq!(config.request.accelerate_score, Some(12));
+    }
+
+    #[test]
+    fn migrates_legacy_llm_min_chars_defaults() {
+        let mut config = AppConfig::default();
+        config.llm_post_edit.min_chars = 40;
+
+        assert!(migrate_llm_min_chars_default(&mut config));
+        assert_eq!(config.llm_post_edit.min_chars, 80);
+        assert!(!migrate_llm_min_chars_default(&mut config));
+
+        config.llm_post_edit.min_chars = 25;
+        assert!(migrate_llm_min_chars_default(&mut config));
+        assert_eq!(config.llm_post_edit.min_chars, 80);
+
+        config.llm_post_edit.min_chars = 0;
+        assert!(!migrate_llm_min_chars_default(&mut config));
+        assert_eq!(config.llm_post_edit.min_chars, 0);
+
+        config.llm_post_edit.min_chars = 120;
+        assert!(!migrate_llm_min_chars_default(&mut config));
+        assert_eq!(config.llm_post_edit.min_chars, 120);
     }
 
     #[test]

@@ -61,17 +61,11 @@ pub fn spawn_capture(config: &ScreenContextConfig) -> Option<ScreenContextReceiv
         return None;
     }
     let started_at = Instant::now();
-    let image = match capture_context_bitmap(config) {
-        Ok(image) => image,
-        Err(err) => {
-            app_log::warn(format!("屏幕 OCR 截图失败，已跳过: {}", err));
-            return None;
-        }
-    };
     let config = config.clone();
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
-        let result = recognize_image_context(image, &config, started_at);
+        let result = capture_context_bitmap(&config)
+            .and_then(|image| recognize_image_context(image, &config, started_at));
         match &result {
             Ok(snapshot) => app_log::info(format!(
                 "屏幕 OCR 上下文已生成: chars={}, elapsed_ms={}, language={}, image={}x{}",
@@ -81,7 +75,7 @@ pub fn spawn_capture(config: &ScreenContextConfig) -> Option<ScreenContextReceiv
                 snapshot.image_width,
                 snapshot.image_height
             )),
-            Err(err) => app_log::warn(format!("屏幕 OCR 识别失败，已跳过: {}", err)),
+            Err(err) => app_log::warn(format!("屏幕 OCR 捕获或识别失败，已跳过: {}", err)),
         }
         let _ = tx.send(result);
     });
@@ -585,6 +579,23 @@ mod tests {
     fn limits_ocr_text_length() {
         let text = normalize_screen_context_text("abcdef", 3);
         assert_eq!(text, "abc");
+    }
+
+    #[test]
+    fn wait_for_context_times_out_without_result() {
+        let (_tx, rx) = mpsc::channel::<Result<ScreenContextSnapshot, String>>();
+        let started = Instant::now();
+
+        assert!(wait_for_context(Some(rx), 1).is_none());
+        assert!(started.elapsed() < Duration::from_millis(100));
+    }
+
+    #[test]
+    fn wait_for_context_skips_worker_error() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(Err("Windows OCR unavailable".to_string())).unwrap();
+
+        assert!(wait_for_context(Some(rx), 500).is_none());
     }
 
     #[test]

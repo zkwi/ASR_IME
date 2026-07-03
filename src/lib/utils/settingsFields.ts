@@ -6,7 +6,11 @@ export function settingsPanelForField(field: string) {
   if (
     field === "llm_post_edit.system_prompt" ||
     field === "llm_post_edit.user_prompt_template" ||
-    field === "llm_post_edit.min_chars"
+    field === "llm_post_edit.min_chars" ||
+    field === "llm_post_edit.screen_context_max_chars" ||
+    field === "llm_post_edit.screen_context_max_lines" ||
+    field === "llm_post_edit.recent_context_max_chars" ||
+    field === "llm_post_edit.reference_hotwords_limit"
   ) {
     return "settings-llm-prompt";
   }

@@ -255,6 +255,38 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         10_000,
         "大模型最少润色字数需在 0 到 10000 之间。",
     );
+    validate_usize_range(
+        &mut errors,
+        "llm_post_edit.screen_context_max_chars",
+        config.llm_post_edit.screen_context_max_chars,
+        0,
+        2_000,
+        "大模型屏幕 OCR 参考字数上限需在 0 到 2000 之间。",
+    );
+    validate_usize_range(
+        &mut errors,
+        "llm_post_edit.screen_context_max_lines",
+        config.llm_post_edit.screen_context_max_lines,
+        0,
+        100,
+        "大模型屏幕 OCR 参考行数上限需在 0 到 100 之间。",
+    );
+    validate_usize_range(
+        &mut errors,
+        "llm_post_edit.recent_context_max_chars",
+        config.llm_post_edit.recent_context_max_chars,
+        0,
+        2_000,
+        "大模型最近上下文字数上限需在 0 到 2000 之间。",
+    );
+    validate_usize_range(
+        &mut errors,
+        "llm_post_edit.reference_hotwords_limit",
+        config.llm_post_edit.reference_hotwords_limit,
+        0,
+        500,
+        "大模型热词参考数量上限需在 0 到 500 之间。",
+    );
     if !is_valid_thinking_strategy(&config.llm_post_edit.thinking_strategy) {
         push_validation_error(
             &mut errors,

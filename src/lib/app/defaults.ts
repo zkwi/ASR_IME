@@ -122,8 +122,12 @@ export const fallbackConfig: AppConfig = {
   },
   llm_post_edit: {
     enabled: false,
-    min_chars: 40,
+    min_chars: 80,
     use_recent_context: false,
+    screen_context_max_chars: 400,
+    screen_context_max_lines: 12,
+    recent_context_max_chars: 200,
+    reference_hotwords_limit: 50,
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     api_key: "",
     model: "qwen3.5-plus",

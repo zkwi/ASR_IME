@@ -311,6 +311,22 @@ fn unchanged_hidden_config_field(
             previous_config.llm_post_edit.timeout_seconds
                 == next_config.llm_post_edit.timeout_seconds
         }
+        "llm_post_edit.screen_context_max_chars" => {
+            previous_config.llm_post_edit.screen_context_max_chars
+                == next_config.llm_post_edit.screen_context_max_chars
+        }
+        "llm_post_edit.screen_context_max_lines" => {
+            previous_config.llm_post_edit.screen_context_max_lines
+                == next_config.llm_post_edit.screen_context_max_lines
+        }
+        "llm_post_edit.recent_context_max_chars" => {
+            previous_config.llm_post_edit.recent_context_max_chars
+                == next_config.llm_post_edit.recent_context_max_chars
+        }
+        "llm_post_edit.reference_hotwords_limit" => {
+            previous_config.llm_post_edit.reference_hotwords_limit
+                == next_config.llm_post_edit.reference_hotwords_limit
+        }
         "ui.width" => previous_config.ui.width == next_config.ui.width,
         "ui.height" => previous_config.ui.height == next_config.ui.height,
         "ui.background_color" => {

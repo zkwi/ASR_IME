@@ -129,9 +129,14 @@ github_repo = "zkwi/VoxType"
 # 是否启用大模型润色；关闭时只做 ASR
 enabled = false
 # 文字短于这个长度就不润色；0 表示所有文本都尝试润色，建议保持在 0 到 10000 之间
-min_chars = 40
+min_chars = 80
 # 是否在大模型润色时追加最近几段输入作为参考；默认关闭，仅在 [context].enable_recent_context 同时开启时生效
 use_recent_context = false
+# 以下 4 项只限制发给大模型润色的参考信息，不影响 ASR 使用的屏幕 OCR 上下文
+screen_context_max_chars = 400
+screen_context_max_lines = 12
+recent_context_max_chars = 200
+reference_hotwords_limit = 50
 # OpenAI 兼容接口地址；可填服务根地址、/v1 地址或完整 /chat/completions 地址
 # 例如 https://api.deepseek.com、https://api.deepseek.com/v1/、https://api.deepseek.com/v1/chat/completions 等价
 # DashScope / 阿里云百炼北京地域示例为 compatible-mode/v1

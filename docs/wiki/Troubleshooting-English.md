@@ -160,6 +160,7 @@ Try:
 
 - Rerun the LLM test in API Config so VoxType saves the fastest thinking adapter, and keep thinking disabled.
 - Increase `min_chars` so short text skips polishing.
+- Lower the LLM reference budgets for terms, recent context, and screen OCR to send less context.
 - Use a faster model.
 - Increase timeout only for slow networks or models; timeout does not make polishing faster.
 - If the same model is faster in another client, compare whether thinking/reasoning is disabled, whether the Base URL is the same, and whether that client uses a small output limit.
