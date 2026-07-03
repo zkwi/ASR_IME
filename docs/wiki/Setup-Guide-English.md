@@ -256,7 +256,12 @@ silence_auto_stop_seconds = 0
 silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
+# Optional: prefer matching by device name; legacy input_device index is kept only for old configs.
+# input_device_name = "Microphone Array"
+# input_device = 1
 ```
+
+When you choose a microphone in Options, VoxType saves both the device name and the legacy numeric index. Recording startup prefers the saved name, so Bluetooth reconnects or device-order changes are less likely to pick the wrong microphone. If the saved microphone is unavailable, VoxType falls back to the system default input device and shows a non-blocking notice.
 
 VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet.
 

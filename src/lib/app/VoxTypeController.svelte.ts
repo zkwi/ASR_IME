@@ -92,6 +92,7 @@ import type {
   AsrConnectionStatus,
   AsrFinalText,
   AudioDeviceInfo,
+  AudioDeviceFallbackNotice,
   AudioLevel,
   AudioQualityDiagnostic,
   CloseToTrayRequest,
@@ -319,6 +320,10 @@ export function createVoxTypeController() {
       const unlistenAudioQuality = listen<AudioQualityDiagnostic>("audio-quality-diagnostic", (event) => {
         lastAudioQualityDiagnostic = event.payload;
       });
+      const unlistenAudioDeviceFallback = listen<AudioDeviceFallbackNotice>("audio-device-fallback", (event) => {
+        notifications.show(t("audioDeviceFallbackNotice", { device: event.payload.selected_name }), "warning");
+        void refreshSetupStatus(false);
+      });
       const unlistenClosePrompt = listen<CloseToTrayRequest>("close-to-tray-requested", (event) => {
         windows.showClosePrompt(event.payload);
       });
@@ -333,6 +338,7 @@ export function createVoxTypeController() {
         unlistenStats,
         unlistenAudioLevel,
         unlistenAudioQuality,
+        unlistenAudioDeviceFallback,
         unlistenClosePrompt,
         unlistenTrayUpdateCheck,
       ];
@@ -824,6 +830,12 @@ export function createVoxTypeController() {
   }
   function currentAudioDevice() {
     if (audioDevices.length === 0) return null;
+    const configuredName = config.audio.input_device_name?.trim();
+    if (configuredName) {
+      const configured = audioDevices.find((device) => device.name.trim().toLowerCase() === configuredName.toLowerCase());
+      if (configured) return configured;
+      return audioDevices.find((device) => device.is_default) ?? audioDevices[0];
+    }
     if (config.audio.input_device !== null && config.audio.input_device !== undefined) {
       const configured = audioDevices.find((device) => device.index === config.audio.input_device);
       if (configured) return configured;
@@ -1016,9 +1028,13 @@ export function createVoxTypeController() {
   function setInputDevice(value: string | number | null) {
     if (value === null || value === "") {
       config.audio.input_device = null;
+      config.audio.input_device_name = null;
       return;
     }
-    config.audio.input_device = Number(value);
+    const index = Number(value);
+    const device = audioDevices.find((item) => item.index === index);
+    config.audio.input_device = index;
+    config.audio.input_device_name = device?.name ?? null;
   }
 
   function formatNumber(value: number) {

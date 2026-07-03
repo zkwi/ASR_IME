@@ -31,7 +31,8 @@ silence_level_threshold = 0.03
 input_gain_db = 0.0
 # 录音时是否自动静音系统音量；可减少回声，但可能影响会议、视频或系统提示音
 mute_system_volume_while_recording = false
-# 指定麦克风设备；不用时保持注释掉或留空
+# 指定麦克风设备；优先按设备名称匹配，旧 input_device index 仅用于兼容旧配置。不用时保持注释掉或留空
+# input_device_name = "Microphone Array"
 # input_device = 1
 
 [request]

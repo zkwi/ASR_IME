@@ -22,6 +22,7 @@ const AUDIO_QUALITY_MIN_LEVEL_COUNT: usize = 3;
 #[derive(Debug, Clone, Serialize)]
 pub struct AudioCaptureInfo {
     pub device_name: String,
+    pub device_fallback: Option<AudioDeviceFallbackNotice>,
     pub sample_rate: u32,
     pub channels: u16,
     pub chunks: usize,
@@ -33,6 +34,12 @@ pub struct AudioDeviceInfo {
     pub index: u32,
     pub name: String,
     pub is_default: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AudioDeviceFallbackNotice {
+    pub configured_name: Option<String>,
+    pub selected_name: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -63,12 +70,20 @@ struct CaptureOutputs {
     silence_level_threshold: f32,
 }
 
-type CaptureStartResult = (Stream, String, u32, u16, Option<Arc<Mutex<PcmSink>>>);
+type CaptureStartResult = (
+    Stream,
+    String,
+    u32,
+    u16,
+    Option<Arc<Mutex<PcmSink>>>,
+    Option<AudioDeviceFallbackNotice>,
+);
 
 pub struct AudioCapture {
     stop_tx: mpsc::Sender<()>,
     join_handle: Option<JoinHandle<()>>,
     device_name: String,
+    device_fallback: Option<AudioDeviceFallbackNotice>,
     sample_rate: u32,
     channels: u16,
     counters: CaptureCounters,
@@ -79,6 +94,7 @@ impl AudioCapture {
     pub fn info(&self) -> AudioCaptureInfo {
         AudioCaptureInfo {
             device_name: self.device_name.clone(),
+            device_fallback: self.device_fallback.clone(),
             sample_rate: self.sample_rate,
             channels: self.channels,
             chunks: self.counters.chunks.load(Ordering::Relaxed),
@@ -113,7 +129,7 @@ pub fn start_capture(
             silence_auto_stop_seconds: audio.silence_auto_stop_seconds,
             silence_level_threshold: audio.silence_level_threshold,
         };
-        let (stream, device_name, sample_rate, channels, pcm_sink) =
+        let (stream, device_name, sample_rate, channels, pcm_sink, device_fallback) =
             match start_capture_in_thread(&audio, worker_counters, outputs) {
                 Ok(result) => result,
                 Err(err) => {
@@ -122,7 +138,13 @@ pub fn start_capture(
                 }
             };
         if ready_tx
-            .send(Ok((device_name, sample_rate, channels, pcm_sink)))
+            .send(Ok((
+                device_name,
+                sample_rate,
+                channels,
+                pcm_sink,
+                device_fallback,
+            )))
             .is_err()
         {
             return;
@@ -131,7 +153,7 @@ pub fn start_capture(
         drop(stream);
     });
 
-    let (device_name, sample_rate, channels, pcm_sink) = ready_rx
+    let (device_name, sample_rate, channels, pcm_sink, device_fallback) = ready_rx
         .recv_timeout(Duration::from_secs(5))
         .map_err(|_| "启动麦克风采集超时".to_string())??;
 
@@ -139,6 +161,7 @@ pub fn start_capture(
         stop_tx,
         join_handle: Some(join_handle),
         device_name,
+        device_fallback,
         sample_rate,
         channels,
         counters,
@@ -219,7 +242,9 @@ fn start_capture_in_thread(
     mut outputs: CaptureOutputs,
 ) -> Result<CaptureStartResult, String> {
     let host = cpal::default_host();
-    let device = select_input_device(&host, audio.input_device)?;
+    let selected = select_input_device(&host, audio)?;
+    let device_fallback = selected.fallback;
+    let device = selected.device;
     let device_name = device
         .description()
         .map(|description| description.name().to_string())
@@ -284,19 +309,144 @@ fn start_capture_in_thread(
         ASR_OUTPUT_SAMPLE_RATE,
         ASR_OUTPUT_CHANNELS,
         pcm_sink,
+        device_fallback,
     ))
 }
 
-fn select_input_device(host: &cpal::Host, input_device: Option<u32>) -> Result<Device, String> {
-    if let Some(index) = input_device {
-        return host
-            .input_devices()
-            .map_err(|err| format!("枚举输入设备失败: {}", err))?
-            .nth(index as usize)
-            .ok_or_else(|| format!("找不到配置中的输入设备: {}", index));
+struct SelectedInputDevice {
+    device: Device,
+    fallback: Option<AudioDeviceFallbackNotice>,
+}
+
+#[derive(Debug, Clone)]
+struct InputDeviceCandidate {
+    index: u32,
+    name: String,
+    is_default: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct InputDeviceResolution {
+    index: u32,
+    fallback: bool,
+    configured_name: Option<String>,
+}
+
+fn select_input_device(
+    host: &cpal::Host,
+    audio: &AudioConfig,
+) -> Result<SelectedInputDevice, String> {
+    let default_name = host
+        .default_input_device()
+        .and_then(|device| device.description().ok())
+        .map(|description| description.name().to_string());
+    let devices = host
+        .input_devices()
+        .map_err(|err| format!("枚举输入设备失败: {}", err))?
+        .enumerate()
+        .map(|(index, device)| {
+            let name = device
+                .description()
+                .map(|description| description.name().to_string())
+                .unwrap_or_else(|_| format!("Input device {}", index));
+            let candidate = InputDeviceCandidate {
+                index: index as u32,
+                is_default: default_name.as_deref() == Some(name.as_str()),
+                name,
+            };
+            (candidate, device)
+        })
+        .collect::<Vec<_>>();
+    let candidates = devices
+        .iter()
+        .map(|(candidate, _)| candidate.clone())
+        .collect::<Vec<_>>();
+    let resolution = resolve_input_device(
+        &candidates,
+        audio.input_device_name.as_deref(),
+        audio.input_device,
+    )?;
+    let selected = devices
+        .into_iter()
+        .find(|(candidate, _)| candidate.index == resolution.index)
+        .ok_or_else(|| "找不到可用麦克风输入设备".to_string())?;
+    let fallback = resolution.fallback.then(|| AudioDeviceFallbackNotice {
+        configured_name: resolution.configured_name,
+        selected_name: selected.0.name.clone(),
+    });
+    if let Some(fallback) = fallback.as_ref() {
+        app_log::warn(format!(
+            "已保存的麦克风不可用，回退默认输入设备: configured={:?}, selected=\"{}\"",
+            fallback.configured_name, fallback.selected_name
+        ));
     }
-    host.default_input_device()
-        .ok_or_else(|| "未找到默认麦克风输入设备".to_string())
+    Ok(SelectedInputDevice {
+        device: selected.1,
+        fallback,
+    })
+}
+
+fn resolve_input_device(
+    devices: &[InputDeviceCandidate],
+    input_device_name: Option<&str>,
+    legacy_input_device: Option<u32>,
+) -> Result<InputDeviceResolution, String> {
+    if devices.is_empty() {
+        return Err("未找到默认麦克风输入设备".to_string());
+    }
+    let saved_name = input_device_name
+        .map(str::trim)
+        .filter(|name| !name.is_empty());
+    if let Some(name) = saved_name {
+        if let Some(device) = devices
+            .iter()
+            .find(|device| same_device_name(&device.name, name))
+        {
+            return Ok(InputDeviceResolution {
+                index: device.index,
+                fallback: false,
+                configured_name: Some(name.to_string()),
+            });
+        }
+        let fallback = preferred_default_device(devices);
+        return Ok(InputDeviceResolution {
+            index: fallback.index,
+            fallback: true,
+            configured_name: Some(name.to_string()),
+        });
+    }
+    if let Some(index) = legacy_input_device {
+        if let Some(device) = devices.iter().find(|device| device.index == index) {
+            return Ok(InputDeviceResolution {
+                index: device.index,
+                fallback: false,
+                configured_name: None,
+            });
+        }
+        let fallback = preferred_default_device(devices);
+        return Ok(InputDeviceResolution {
+            index: fallback.index,
+            fallback: true,
+            configured_name: Some(format!("index {}", index)),
+        });
+    }
+    let fallback = preferred_default_device(devices);
+    Ok(InputDeviceResolution {
+        index: fallback.index,
+        fallback: false,
+        configured_name: None,
+    })
+}
+
+fn preferred_default_device(devices: &[InputDeviceCandidate]) -> &InputDeviceCandidate {
+    devices
+        .iter()
+        .find(|device| device.is_default)
+        .unwrap_or(&devices[0])
+}
+
+fn same_device_name(left: &str, right: &str) -> bool {
+    left.trim().to_lowercase() == right.trim().to_lowercase()
 }
 
 fn select_input_config(
@@ -1011,8 +1161,9 @@ fn build_f32_stream(
 mod tests {
     use super::{
         apply_input_gain_to_pcm, apply_level_gain, effective_asr_segment_ms, input_gain_factor,
-        target_chunk_bytes, AudioQualityAccumulator, CaptureErrorReporter, PcmNormalizer, PcmSink,
-        SegmentedAudioBuffer, SilenceAutoStopper, ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
+        resolve_input_device, target_chunk_bytes, AudioQualityAccumulator, CaptureErrorReporter,
+        InputDeviceCandidate, PcmNormalizer, PcmSink, SegmentedAudioBuffer, SilenceAutoStopper,
+        ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
     };
     use std::sync::mpsc;
 
@@ -1084,6 +1235,70 @@ mod tests {
         assert_eq!(effective_asr_segment_ms(500), 200);
         assert_eq!(target_chunk_bytes(16_000, 1, 20), 3_200);
         assert_eq!(target_chunk_bytes(16_000, 1, 500), 6_400);
+    }
+
+    #[test]
+    fn input_device_name_survives_index_change() {
+        let devices = vec![
+            InputDeviceCandidate {
+                index: 0,
+                name: "Webcam Mic".to_string(),
+                is_default: false,
+            },
+            InputDeviceCandidate {
+                index: 1,
+                name: "USB Microphone".to_string(),
+                is_default: true,
+            },
+        ];
+
+        let selected = resolve_input_device(&devices, Some("usb microphone"), Some(0)).unwrap();
+
+        assert_eq!(selected.index, 1);
+        assert!(!selected.fallback);
+    }
+
+    #[test]
+    fn missing_saved_input_device_falls_back_to_default() {
+        let devices = vec![
+            InputDeviceCandidate {
+                index: 0,
+                name: "Webcam Mic".to_string(),
+                is_default: false,
+            },
+            InputDeviceCandidate {
+                index: 3,
+                name: "System Default Mic".to_string(),
+                is_default: true,
+            },
+        ];
+
+        let selected = resolve_input_device(&devices, Some("USB Microphone"), Some(1)).unwrap();
+
+        assert_eq!(selected.index, 3);
+        assert!(selected.fallback);
+        assert_eq!(selected.configured_name.as_deref(), Some("USB Microphone"));
+    }
+
+    #[test]
+    fn default_input_device_is_used_when_no_device_is_saved() {
+        let devices = vec![
+            InputDeviceCandidate {
+                index: 0,
+                name: "Webcam Mic".to_string(),
+                is_default: false,
+            },
+            InputDeviceCandidate {
+                index: 2,
+                name: "Default Array".to_string(),
+                is_default: true,
+            },
+        ];
+
+        let selected = resolve_input_device(&devices, None, None).unwrap();
+
+        assert_eq!(selected.index, 2);
+        assert!(!selected.fallback);
     }
 
     #[test]

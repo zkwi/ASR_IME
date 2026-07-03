@@ -92,6 +92,8 @@ pub struct AudioConfig {
     #[serde(default)]
     pub mute_system_volume_while_recording: bool,
     #[serde(default)]
+    pub input_device_name: Option<String>,
+    #[serde(default)]
     pub input_device: Option<u32>,
 }
 
@@ -344,6 +346,7 @@ impl Default for AudioConfig {
             silence_level_threshold: default_silence_level_threshold(),
             input_gain_db: default_input_gain_db(),
             mute_system_volume_while_recording: false,
+            input_device_name: None,
             input_device: None,
         }
     }

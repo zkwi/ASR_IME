@@ -266,7 +266,12 @@ silence_auto_stop_seconds = 0
 silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
+# 可选：优先按设备名称匹配；旧 input_device index 仅用于兼容旧配置
+# input_device_name = "Microphone Array"
+# input_device = 1
 ```
+
+在选项页选择麦克风后，VoxType 会同时保存设备名称和旧版数字 index；下次启动录音时优先按名称匹配，蓝牙耳机重连或设备枚举顺序变化时更不容易选错。若保存的麦克风已不可用，会自动回退系统默认输入设备并显示非阻塞提示。
 
 VoxType 会把 ASR 实际发送分片限制在豆包建议的 `100-200ms`，默认 `200ms`。约 `50ms` 头部静音会并入第一包真实音频，但第一包总时长仍按当前分片配置发送，默认约 `200ms`，帮助豆包稳定识别开头几个字，同时避免发送独立 50ms 小包；如果没有采集到真实音频，则不会额外发送静音包。
 

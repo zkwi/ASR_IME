@@ -418,6 +418,7 @@ export const zhCN = {
   "inputDevice": "输入设备",
   "defaultInputDevice": "默认输入设备",
   "noAudioDevices": "未发现输入设备",
+  "audioDeviceFallbackNotice": "已保存的麦克风不可用，已切换到默认麦克风：{device}",
   "systemPrompt": "系统提示词",
   "userPromptTemplate": "用户提示词模板",
   "interface": "界面",

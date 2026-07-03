@@ -220,6 +220,9 @@ impl SessionController {
             "麦克风采集已启动: device=\"{}\", rate={}Hz, channels={}",
             audio_info.device_name, audio_info.sample_rate, audio_info.channels
         ));
+        if let (Some(app), Some(fallback)) = (app.as_ref(), audio_info.device_fallback.clone()) {
+            let _ = app.emit("audio-device-fallback", fallback);
+        }
         if let (Some(app_for_level), Some(level_rx)) = (app.clone(), level_rx) {
             spawn_audio_level_emitter(app_for_level, level_rx);
         }

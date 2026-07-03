@@ -419,6 +419,7 @@ export const zhTW = {
   "inputDevice": "輸入裝置",
   "defaultInputDevice": "預設輸入裝置",
   "noAudioDevices": "未發現輸入裝置",
+  "audioDeviceFallbackNotice": "已儲存的麥克風不可用，已切換到預設麥克風：{device}",
   "systemPrompt": "系統提示詞",
   "userPromptTemplate": "使用者提示詞模板",
   "interface": "介面",

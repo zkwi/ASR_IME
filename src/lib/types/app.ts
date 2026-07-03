@@ -178,6 +178,7 @@ export type AudioQualityDiagnostic = {
   status: "ok" | "low_volume" | "clipping" | "low_activity" | string;
 };
 export type AudioDeviceInfo = { index: number; name: string; is_default: boolean };
+export type AudioDeviceFallbackNotice = { configured_name: string | null; selected_name: string };
 export type OverlayMode = "single" | "double";
 export type AsrConnectionStatus =
   | "missing_auth"
@@ -201,6 +202,7 @@ export type AppConfig = {
     silence_level_threshold: number;
     input_gain_db: number;
     mute_system_volume_while_recording: boolean;
+    input_device_name: string | null;
     input_device: number | null;
   };
   request: {

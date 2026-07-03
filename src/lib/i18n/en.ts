@@ -419,6 +419,7 @@ export const en = {
   "inputDevice": "Input device",
   "defaultInputDevice": "Default input device",
   "noAudioDevices": "No input devices found",
+  "audioDeviceFallbackNotice": "Saved microphone is unavailable. Switched to default microphone: {device}",
   "systemPrompt": "System Prompt",
   "userPromptTemplate": "User prompt template",
   "interface": "Interface",

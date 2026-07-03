@@ -102,6 +102,17 @@
     onTestScreenContext,
     onScrollToSettingsPanel,
   }: Props = $props();
+
+  let selectedInputDeviceValue = $derived.by(() => {
+    const configuredName = config.audio.input_device_name?.trim();
+    if (configuredName) {
+      const namedDevice = audioDevices.find((device) => device.name.trim().toLowerCase() === configuredName.toLowerCase());
+      if (namedDevice) return String(namedDevice.index);
+      const defaultDevice = audioDevices.find((device) => device.is_default) ?? audioDevices[0];
+      return defaultDevice ? String(defaultDevice.index) : "";
+    }
+    return config.audio.input_device === null || config.audio.input_device === undefined ? "" : String(config.audio.input_device);
+  });
 </script>
 
 <section class="settings-stack">
@@ -152,7 +163,7 @@
       <div class="form-grid">
         <label>
           <span>{t("inputDevice")}</span>
-          <select value={config.audio.input_device ?? ""} onchange={(event) => onSetInputDevice(event.currentTarget.value)}>
+          <select value={selectedInputDeviceValue} onchange={(event) => onSetInputDevice(event.currentTarget.value)}>
             <option value="">{t("defaultInputDevice")}</option>
             {#if audioDevices.length === 0}
               <option value="" disabled>{t("noAudioDevices")}</option>

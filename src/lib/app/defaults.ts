@@ -69,6 +69,7 @@ export const fallbackConfig: AppConfig = {
     silence_level_threshold: 0.03,
     input_gain_db: 0,
     mute_system_volume_while_recording: false,
+    input_device_name: null,
     input_device: null,
   },
   request: {
