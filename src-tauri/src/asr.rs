@@ -58,7 +58,7 @@ pub fn build_request_payload(config: &AppConfig, context_payload: Option<String>
     request.insert("enable_nonstream".to_string(), json!(true));
     request.insert("enable_itn".to_string(), json!(config.request.enable_itn));
     request.insert("enable_punc".to_string(), json!(config.request.enable_punc));
-    // DDC 偏“语义顺滑”，实测会增加专有词、短命令或标点敏感口述被改写的风险，默认保持关闭。
+    // DDC 用于短文本和中等文本的 ASR 侧顺滑，默认开启；用户仍可在配置中手动关闭。
     request.insert("enable_ddc".to_string(), json!(config.request.enable_ddc));
     request.insert("show_utterances".to_string(), json!(true));
     request.insert("result_type".to_string(), json!("full"));
@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(payload["request"]["enable_nonstream"], true);
         assert_eq!(payload["request"]["show_utterances"], true);
         assert_eq!(payload["request"]["result_type"], "full");
-        assert_eq!(payload["request"]["enable_ddc"], false);
+        assert_eq!(payload["request"]["enable_ddc"], true);
         assert_eq!(payload["request"]["enable_accelerate_text"], false);
         assert!(payload["request"].get("accelerate_score").is_none());
     }

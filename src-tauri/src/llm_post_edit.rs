@@ -11,9 +11,13 @@ use serde_json::{json, Value};
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
-const LLM_CONNECTION_TEST_MAX_TOKENS: u32 = 128;
-const LLM_CONNECTION_TEST_TEXT: &str =
-    "今天下午三点开会，顺便确认 VoxType 的大模型 API 延迟和配置体验。";
+const LLM_CONNECTION_TEST_MAX_TOKENS: u32 = 256;
+const LLM_CONNECTION_TEST_TEXT: &str = concat!(
+    "今天下午三点开会，先确认 VoxType 的大模型 API 延迟和配置体验。",
+    "然后我想把最近几次语音输入的体验复盘一下，主要问题是短句还可以接受，",
+    "但是长段口述在润色阶段会等待比较久，尤其是带有产品名、文件路径、",
+    "英文缩写和屏幕 OCR 参考信息的时候，希望测试结果能更接近真实使用场景。"
+);
 
 pub struct PolishOutcome {
     pub text: String,
@@ -65,11 +69,16 @@ pub async fn polish(config: &AppConfig, text: &str, screen_context: Option<&str>
 
     let user_prompt = build_polish_user_prompt(config, text, screen_context);
 
+    let max_tokens = polish_max_tokens_for_request(base_url, input_chars);
     app_log::info(format!(
-        "LLM polish started: model={}, chars={}",
-        model, input_chars
+        "LLM polish started: model={}, chars={}, max_tokens={}",
+        model,
+        input_chars,
+        max_tokens
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "provider_default".to_string())
     ));
-    match call_openai_compatible(config, base_url, api_key, model, &user_prompt).await {
+    match call_openai_compatible(config, base_url, api_key, model, &user_prompt, max_tokens).await {
         Ok(polished) if !polished.trim().is_empty() => {
             let polished = polished.trim().to_string();
             app_log::info(format!(
@@ -317,6 +326,7 @@ async fn call_openai_compatible(
     api_key: &str,
     model: &str,
     user_prompt: &str,
+    max_tokens: Option<u32>,
 ) -> Result<String, String> {
     let timeout = Duration::from_secs_f64(config.llm_post_edit.timeout_seconds.max(1.0));
     let client = reqwest::Client::builder()
@@ -330,10 +340,26 @@ async fn call_openai_compatible(
         base_url,
         config.llm_post_edit.enable_thinking,
         &config.llm_post_edit.thinking_strategy,
-        None,
+        max_tokens,
     );
     let result = post_chat_json(&client, base_url, api_key, &body).await?;
     Ok(extract_message_content(&result.value))
+}
+
+fn polish_max_tokens_for_request(base_url: &str, input_chars: usize) -> Option<u32> {
+    if base_url.to_ascii_lowercase().contains("stepfun") {
+        None
+    } else {
+        Some(polish_max_tokens_for_input(input_chars))
+    }
+}
+
+fn polish_max_tokens_for_input(input_chars: usize) -> u32 {
+    match input_chars {
+        0..=160 => 192,
+        161..=400 => 384,
+        _ => 1_024,
+    }
 }
 
 async fn post_chat_json(
@@ -540,7 +566,8 @@ mod tests {
     use super::{
         build_polish_user_prompt, build_recent_context_reference, chat_body,
         compact_screen_context_for_llm, connection_test_chat_body, extract_message_content,
-        friendly_llm_error, friendly_llm_test_error, has_connection_test_output, should_polish,
+        friendly_llm_error, friendly_llm_test_error, has_connection_test_output,
+        polish_max_tokens_for_input, polish_max_tokens_for_request, should_polish,
         system_prompt_for_request, LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT,
     };
     use crate::config::{AppConfig, TextContext};
@@ -646,7 +673,26 @@ mod tests {
             body.get("max_tokens")
                 .and_then(|item| item.as_u64())
                 .unwrap_or_default()
-                >= 64
+                >= 192
+        );
+    }
+
+    #[test]
+    fn polish_output_budget_scales_with_input_length() {
+        assert_eq!(polish_max_tokens_for_input(90), 192);
+        assert_eq!(polish_max_tokens_for_input(300), 384);
+        assert_eq!(polish_max_tokens_for_input(900), 1_024);
+    }
+
+    #[test]
+    fn polish_output_budget_skips_stepfun_compatible_endpoint() {
+        assert_eq!(
+            polish_max_tokens_for_request("https://api.stepfun.com/v1", 90),
+            None
+        );
+        assert_eq!(
+            polish_max_tokens_for_request("https://dashscope.aliyuncs.com/compatible-mode/v1", 90),
+            Some(192)
         );
     }
 
@@ -672,6 +718,7 @@ mod tests {
             .and_then(|item| item.as_str())
             .unwrap_or_default();
 
+        assert!(LLM_CONNECTION_TEST_TEXT.chars().count() >= 120);
         assert!(system_prompt.contains("文本润色器"));
         assert!(user_prompt.contains(LLM_CONNECTION_TEST_TEXT));
         assert!(user_prompt.contains("ASR 文本"));
@@ -720,6 +767,18 @@ mod tests {
         config.llm_post_edit.enabled = true;
         config.llm_post_edit.api_key.clear();
         assert!(!should_polish(&config, "hello"));
+    }
+
+    #[test]
+    fn default_min_chars_skips_medium_short_polish_requests() {
+        let mut config = AppConfig::default();
+        config.llm_post_edit.enabled = true;
+        config.llm_post_edit.base_url = "https://api.example.test/v1".to_string();
+        config.llm_post_edit.api_key = "test-key".to_string();
+        config.llm_post_edit.model = "test-model".to_string();
+
+        assert!(!should_polish(&config, &"a".repeat(99)));
+        assert!(should_polish(&config, &"a".repeat(100)));
     }
 
     #[test]

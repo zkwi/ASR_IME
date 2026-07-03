@@ -46,8 +46,8 @@ language = ""
 enable_nonstream = true
 enable_itn = true
 enable_punc = true
-# 语义顺滑默认关闭，贴近豆包默认值，避免为可读性改写专有词或短命令
-enable_ddc = false
+# 语义顺滑默认开启，用于短文本和中等文本的 ASR 侧轻量顺滑；如需更严格原样识别可关闭
+enable_ddc = true
 show_utterances = true
 # full 返回累计结果，最终包可兜底补齐开头或尾部分句；中间结果只用于字幕反馈
 result_type = "full"
@@ -129,7 +129,7 @@ github_repo = "zkwi/VoxType"
 # 是否启用大模型润色；关闭时只做 ASR
 enabled = false
 # 文字短于这个长度就不润色；0 表示所有文本都尝试润色，建议保持在 0 到 10000 之间
-min_chars = 80
+min_chars = 100
 # 是否在大模型润色时追加最近几段输入作为参考；默认关闭，仅在 [context].enable_recent_context 同时开启时生效
 use_recent_context = false
 # 以下 4 项只限制发给大模型润色的参考信息，不影响 ASR 使用的屏幕 OCR 上下文

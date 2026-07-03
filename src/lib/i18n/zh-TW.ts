@@ -565,7 +565,7 @@ export const zhTW = {
   "llmDescription": "OpenAI 相容介面的潤飾回退。",
   "enablePolishing": "啟用潤飾",
   "minChars": "最少字元數",
-  "minCharsHint": "低於該字數時直接使用語音識別文字，不呼叫大模型；預設 80，0 表示所有文字都嘗試潤飾。",
+  "minCharsHint": "低於該字數時直接使用語音識別文字，不呼叫大模型；預設 100，0 表示所有文字都嘗試潤飾。",
   "llmScreenContextMaxChars": "LLM 螢幕 OCR 字數",
   "llmScreenContextMaxCharsHint": "僅限制送給大模型的螢幕 OCR 參考文字；0 表示潤飾時不送螢幕 OCR。",
   "llmScreenContextMaxLines": "LLM 螢幕 OCR 行數",

@@ -69,7 +69,7 @@ Tips:
 
 VoxType uses Doubao `bigmodel_async` WebSocket by default.
 
-It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is disabled by default to prioritize beginning-word accuracy, while DDC semantic smoothing remains disabled by default to reduce readability-oriented rewrites.
+It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is disabled by default to prioritize beginning-word accuracy, while DDC semantic smoothing is enabled by default for light ASR-side smoothing on short and medium text.
 
 Quality and latency factors:
 
@@ -79,7 +79,7 @@ Quality and latency factors:
 | Microphone input gain | Default 0 dB; quiet but clear mics can try a small +3 dB or +6 dB boost |
 | Server endpointing | `end_window_size` defaults to 800ms; existing manual config is preserved |
 | First-word return | `enable_accelerate_text` defaults to off with `accelerate_score = 0`; enable it manually only when faster live-caption startup matters more |
-| Semantic smoothing | `enable_ddc` is newly off by default; enable it manually when smoother long-form prose matters more |
+| Semantic smoothing | `enable_ddc` is on by default; disable it manually when exact proper nouns, short commands, paths, or punctuation-sensitive dictation matter more |
 | Result type | The main workflow forces `full` so the final package contains the complete cumulative text; interim captions are feedback only |
 | Local silence fallback | Off by default; set a positive value only for unattended long recording |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |

@@ -565,7 +565,7 @@ export const en = {
   "llmDescription": "AI polishing service.",
   "enablePolishing": "Enable polishing",
   "minChars": "Min chars",
-  "minCharsHint": "Texts shorter than this skip AI polishing and use the speech recognition result directly. Default is 80; 0 means try polishing every text.",
+  "minCharsHint": "Texts shorter than this skip AI polishing and use the speech recognition result directly. Default is 100; 0 means try polishing every text.",
   "llmScreenContextMaxChars": "LLM screen OCR chars",
   "llmScreenContextMaxCharsHint": "Limits only the screen OCR reference sent to AI polishing. 0 means do not send screen OCR to polishing.",
   "llmScreenContextMaxLines": "LLM screen OCR lines",

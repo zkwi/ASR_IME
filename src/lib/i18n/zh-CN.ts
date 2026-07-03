@@ -564,7 +564,7 @@ export const zhCN = {
   "llmDescription": "OpenAI 兼容接口的润色回退。",
   "enablePolishing": "启用润色",
   "minChars": "最少字符数",
-  "minCharsHint": "低于该字数时直接使用语音识别文本，不调用大模型；默认 80，0 表示所有文本都尝试润色。",
+  "minCharsHint": "低于该字数时直接使用语音识别文本，不调用大模型；默认 100，0 表示所有文本都尝试润色。",
   "llmScreenContextMaxChars": "LLM 屏幕 OCR 字数",
   "llmScreenContextMaxCharsHint": "仅限制发给大模型的屏幕 OCR 参考文本；0 表示润色时不发送屏幕 OCR。",
   "llmScreenContextMaxLines": "LLM 屏幕 OCR 行数",

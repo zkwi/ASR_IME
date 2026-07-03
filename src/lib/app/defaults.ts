@@ -78,7 +78,7 @@ export const fallbackConfig: AppConfig = {
     enable_nonstream: true,
     enable_itn: true,
     enable_punc: true,
-    enable_ddc: false,
+    enable_ddc: true,
     show_utterances: true,
     result_type: "full",
     enable_accelerate_text: false,
@@ -122,7 +122,7 @@ export const fallbackConfig: AppConfig = {
   },
   llm_post_edit: {
     enabled: false,
-    min_chars: 80,
+    min_chars: 100,
     use_recent_context: false,
     screen_context_max_chars: 400,
     screen_context_max_lines: 12,

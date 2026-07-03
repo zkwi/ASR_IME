@@ -17,6 +17,8 @@ const LEGACY_ENABLE_ACCELERATE_TEXT_DEFAULT: bool = true;
 const LEGACY_ACCELERATE_SCORE_DEFAULT: i64 = 8;
 const LEGACY_LLM_MIN_CHARS_DEFAULT: usize = 40;
 const PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT: usize = 25;
+const PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT: usize = 80;
+const PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT: usize = 120;
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 
@@ -107,7 +109,7 @@ pub struct RequestConfig {
     pub enable_itn: bool,
     #[serde(default = "default_true")]
     pub enable_punc: bool,
-    #[serde(default = "default_false")]
+    #[serde(default = "default_enable_ddc")]
     pub enable_ddc: bool,
     #[serde(default = "default_true")]
     pub show_utterances: bool,
@@ -356,7 +358,7 @@ impl Default for RequestConfig {
             enable_nonstream: true,
             enable_itn: true,
             enable_punc: true,
-            enable_ddc: default_false(),
+            enable_ddc: default_enable_ddc(),
             show_utterances: true,
             result_type: default_result_type(),
             enable_accelerate_text: Some(DEFAULT_ENABLE_ACCELERATE_TEXT),
@@ -567,6 +569,7 @@ pub fn load_config() -> Result<LoadedConfig, String> {
     let migrated_result_type = migrate_result_type_default(&mut data);
     let migrated_asr_language = migrate_legacy_asr_language_default(&mut data);
     let migrated_acceleration = migrate_first_word_acceleration_default(&mut data);
+    let migrated_semantic_smoothing = migrate_semantic_smoothing_default(&mut data);
     let migrated_llm_min_chars = migrate_llm_min_chars_default(&mut data);
     if contains_legacy_recent_context(&text)
         || migrated_auto_hotword_limit
@@ -576,6 +579,7 @@ pub fn load_config() -> Result<LoadedConfig, String> {
         || migrated_result_type
         || migrated_asr_language
         || migrated_acceleration
+        || migrated_semantic_smoothing
         || migrated_llm_min_chars
     {
         let mut cleaned = data.clone();
@@ -721,9 +725,23 @@ fn migrate_first_word_acceleration_default(config: &mut AppConfig) -> bool {
     false
 }
 
+fn migrate_semantic_smoothing_default(config: &mut AppConfig) -> bool {
+    let min_chars_was_old_default = config.llm_post_edit.min_chars == LEGACY_LLM_MIN_CHARS_DEFAULT
+        || config.llm_post_edit.min_chars == PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT
+        || config.llm_post_edit.min_chars == PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT
+        || config.llm_post_edit.min_chars == PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT;
+    if !config.request.enable_ddc && min_chars_was_old_default {
+        config.request.enable_ddc = true;
+        return true;
+    }
+    false
+}
+
 fn migrate_llm_min_chars_default(config: &mut AppConfig) -> bool {
     if config.llm_post_edit.min_chars == LEGACY_LLM_MIN_CHARS_DEFAULT
         || config.llm_post_edit.min_chars == PREVIOUS_LOW_LLM_MIN_CHARS_DEFAULT
+        || config.llm_post_edit.min_chars == PREVIOUS_MEDIUM_LLM_MIN_CHARS_DEFAULT
+        || config.llm_post_edit.min_chars == PREVIOUS_HIGH_LLM_MIN_CHARS_DEFAULT
     {
         config.llm_post_edit.min_chars = default_min_chars();
         return true;
@@ -865,8 +883,8 @@ fn default_end_window_size() -> Option<u64> {
 fn default_true() -> bool {
     true
 }
-fn default_false() -> bool {
-    false
+fn default_enable_ddc() -> bool {
+    true
 }
 fn default_ws_url() -> String {
     "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async".to_string()
@@ -923,7 +941,7 @@ fn default_auto_hotword_max_candidates() -> usize {
     30
 }
 fn default_min_chars() -> usize {
-    80
+    100
 }
 fn default_llm_screen_context_max_chars() -> usize {
     400
@@ -1032,9 +1050,9 @@ mod tests {
         contains_legacy_recent_context, effective_hotwords, migrate_auto_hotword_history_default,
         migrate_first_word_acceleration_default, migrate_legacy_asr_language_default,
         migrate_llm_min_chars_default, migrate_result_type_default,
-        migrate_silence_auto_stop_default, migrate_silence_level_threshold_default,
-        migrate_stop_grace_default, validate_config, AppConfig, TextContext,
-        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        migrate_semantic_smoothing_default, migrate_silence_auto_stop_default,
+        migrate_silence_level_threshold_default, migrate_stop_grace_default, validate_config,
+        AppConfig, TextContext, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
 
     #[test]
@@ -1060,11 +1078,11 @@ mod tests {
             Some(DEFAULT_ACCELERATE_SCORE)
         );
         assert!(config.request.enable_nonstream);
-        assert!(!config.request.enable_ddc);
+        assert!(config.request.enable_ddc);
         assert!(config.request.show_utterances);
         assert!(!config.context.enable_recent_context);
         assert!(!config.llm_post_edit.use_recent_context);
-        assert_eq!(config.llm_post_edit.min_chars, 80);
+        assert_eq!(config.llm_post_edit.min_chars, 100);
         assert_eq!(config.llm_post_edit.screen_context_max_chars, 400);
         assert_eq!(config.llm_post_edit.screen_context_max_lines, 12);
         assert_eq!(config.llm_post_edit.recent_context_max_chars, 200);
@@ -1086,12 +1104,27 @@ mod tests {
     }
 
     #[test]
-    fn request_ddc_defaults_to_false_but_preserves_explicit_true() {
+    fn request_ddc_defaults_to_true_but_allows_explicit_false() {
         let missing: AppConfig = toml::from_str("[request]\n").unwrap();
-        assert!(!missing.request.enable_ddc);
+        assert!(missing.request.enable_ddc);
 
-        let explicit: AppConfig = toml::from_str("[request]\nenable_ddc = true\n").unwrap();
-        assert!(explicit.request.enable_ddc);
+        let explicit: AppConfig = toml::from_str("[request]\nenable_ddc = false\n").unwrap();
+        assert!(!explicit.request.enable_ddc);
+    }
+
+    #[test]
+    fn migrates_legacy_semantic_smoothing_default_when_llm_threshold_was_default() {
+        let mut config = AppConfig::default();
+        config.request.enable_ddc = false;
+        config.llm_post_edit.min_chars = 80;
+
+        assert!(migrate_semantic_smoothing_default(&mut config));
+        assert!(config.request.enable_ddc);
+
+        config.request.enable_ddc = false;
+        config.llm_post_edit.min_chars = 100;
+        assert!(!migrate_semantic_smoothing_default(&mut config));
+        assert!(!config.request.enable_ddc);
     }
 
     #[test]
@@ -1432,20 +1465,28 @@ mod tests {
         config.llm_post_edit.min_chars = 40;
 
         assert!(migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 80);
+        assert_eq!(config.llm_post_edit.min_chars, 100);
         assert!(!migrate_llm_min_chars_default(&mut config));
 
         config.llm_post_edit.min_chars = 25;
         assert!(migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 80);
+        assert_eq!(config.llm_post_edit.min_chars, 100);
+
+        config.llm_post_edit.min_chars = 80;
+        assert!(migrate_llm_min_chars_default(&mut config));
+        assert_eq!(config.llm_post_edit.min_chars, 100);
+
+        config.llm_post_edit.min_chars = 120;
+        assert!(migrate_llm_min_chars_default(&mut config));
+        assert_eq!(config.llm_post_edit.min_chars, 100);
 
         config.llm_post_edit.min_chars = 0;
         assert!(!migrate_llm_min_chars_default(&mut config));
         assert_eq!(config.llm_post_edit.min_chars, 0);
 
-        config.llm_post_edit.min_chars = 120;
+        config.llm_post_edit.min_chars = 150;
         assert!(!migrate_llm_min_chars_default(&mut config));
-        assert_eq!(config.llm_post_edit.min_chars, 120);
+        assert_eq!(config.llm_post_edit.min_chars, 150);
     }
 
     #[test]
