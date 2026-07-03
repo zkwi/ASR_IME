@@ -1,12 +1,19 @@
 import { onMount } from "svelte";
 import { browser } from "$app/environment";
 import { createAutoHotwordsController } from "$lib/app/autoHotwordsController.svelte";
+import { createConfigController } from "$lib/app/configController.svelte";
 import { createDiagnosticsController } from "$lib/app/diagnosticsController.svelte";
 import { createHotkeyCaptureController } from "$lib/app/hotkeyCaptureController.svelte";
 import { createNotificationController } from "$lib/app/notificationController.svelte";
 import { createOverlayController } from "$lib/app/overlayController.svelte";
 import { createPrivacyController } from "$lib/app/privacyController.svelte";
 import { createSettingsNavigationController } from "$lib/app/settingsNavigationController.svelte";
+import {
+  disposeNativeEventController,
+  registerNativeEventController,
+} from "$lib/app/nativeEventController.svelte";
+import { createSessionController } from "$lib/app/sessionController.svelte";
+import { createSetupController } from "$lib/app/setupController.svelte";
 import { createStatsController } from "$lib/app/statsController.svelte";
 import { createUpdateController } from "$lib/app/updateController.svelte";
 import { createWindowController } from "$lib/app/windowController.svelte";
@@ -36,7 +43,7 @@ import {
   userErrorMessage as getUserErrorMessage,
 } from "$lib/utils/appRouting";
 import { actionsForUserError } from "$lib/utils/errorActions";
-import { clonePlain, configFingerprint, validationErrorMap } from "$lib/utils/config";
+import { clonePlain, configFingerprint } from "$lib/utils/config";
 import {
   clampAudioLevel,
   micBarHeight as getMicBarHeight,
@@ -59,8 +66,6 @@ import {
 import { formatHotkey } from "$lib/utils/hotkeys";
 import { overlayOpacityLabel } from "$lib/utils/overlayAppearance";
 import {
-  isBlockingSessionPhase,
-  isQuietAsrWarningCode,
   sessionPhaseMessageKey,
 } from "$lib/utils/sessionState";
 import { userFacingInvokeFailure } from "$lib/utils/userFacingErrors";
@@ -85,26 +90,16 @@ import {
   type SetupStatus,
 } from "$lib/utils/setupStatus";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import type {
   AppConfig,
   AppSnapshot,
   AsrConnectionStatus,
-  AsrFinalText,
   AudioDeviceInfo,
-  AudioDeviceFallbackNotice,
-  AudioLevel,
   AudioQualityDiagnostic,
-  CloseToTrayRequest,
-  ConfigSaveError,
   ConfigMigrationCandidate,
-  ConfigValidationError,
-  ConnectionTestResult,
   LastSessionOutcome,
   LoadedConfig,
   LocalDataStatus,
-  OverlayConfig,
-  OverlayText,
   PersistConfigOptions,
   ScreenContextTestResult,
   SelectableHotwordCandidate,
@@ -117,7 +112,6 @@ import type {
 
 const copyRecentInputCommand = "copy_recent_input_text_to_clipboard";
 const configMigrationDismissedPrefix = "voxtype-config-migration-dismissed:";
-type ConfigSaveState = "idle" | "pending" | "saving" | "saved";
 
 export function createVoxTypeController() {
 
@@ -133,8 +127,6 @@ export function createVoxTypeController() {
   let language = $state<Language>("zh-CN");
   let statusMessage = $state(copy["zh-CN"].bridgeLoading);
   let promptPreviewText = $state("");
-  let saving = $state(false);
-  let configSavedRecently = $state(false);
   let configExists = $state(true);
   let configLoaded = $state(false);
   let audioLevel = $state(0);
@@ -220,8 +212,6 @@ export function createVoxTypeController() {
     safeInvoke,
   });
   let succeededIdleTimer: number | undefined;
-  let autoSaveTimer: number | undefined;
-  let configSavedIndicatorTimer: number | undefined;
   let setupStatusLoading = $state(false);
   const hotkeyCapture = createHotkeyCaptureController({
     getConfig: () => config,
@@ -234,6 +224,128 @@ export function createVoxTypeController() {
   const settingsNav = createSettingsNavigationController({
     isBrowser: () => browser,
     requiresAsrAuth,
+  });
+  const configController = createConfigController({
+    autoSaveDelayMs,
+    t,
+    getConfig: () => config,
+    setConfig: (value) => {
+      config = value;
+    },
+    setSavedConfigFingerprint: (fingerprint) => {
+      savedConfigFingerprint = fingerprint;
+    },
+    getSettingsDirty: () => settingsDirty,
+    getConfigLoaded: () => configLoaded,
+    setConfigLoaded: (value) => {
+      configLoaded = value;
+    },
+    setConfigExists: (value) => {
+      configExists = value;
+    },
+    setSnapshotHotkey: (hotkey) => {
+      snapshot = { ...snapshot, hotkey };
+    },
+    getValidationErrors: () => validationErrors,
+    setValidationErrors: (errors) => {
+      validationErrors = errors;
+    },
+    validateHotkey: hotkeyCapture.validate,
+    requireAuthFields,
+    syncSetupStatusFromConfig,
+    scrollToSettingsPanel: settingsNav.scrollToSettingsPanel,
+    focusFirstValidationError: settingsNav.focusFirstValidationError,
+    setStatusMessage: (message) => {
+      statusMessage = message;
+    },
+    hasTauriApi,
+    canAutoSave: () =>
+      configLoaded &&
+      hotkeyCapture.isIdle &&
+      !isOverlay &&
+      !isToast &&
+      hasTauriApi(),
+    logFrontendError,
+  });
+  const setup = createSetupController({
+    t,
+    safeInvoke,
+    notify: notifications.show,
+    getConfig: () => config,
+    getStatusMessage: () => statusMessage,
+    setStatusMessage: (message) => {
+      statusMessage = message;
+    },
+    formatNumber,
+    requireAuthFields,
+    persistConfig,
+    asrConfigFingerprint,
+    localSetupStatusFromConfig,
+    getSetupStatus: () => setupStatus,
+    setSetupStatus: applySetupStatus,
+    setSetupStatusLoading: (loading) => {
+      setupStatusLoading = loading;
+    },
+    getAudioDevices: () => audioDevices,
+    setAudioDevices: (devices) => {
+      audioDevices = devices;
+    },
+    getTestingAsr: () => testingAsr,
+    setTestingAsr: (testing) => {
+      testingAsr = testing;
+    },
+    setAsrConnectionStatus: (status) => {
+      asrConnectionStatus = status;
+    },
+    setAsrTestedConfigFingerprint: (fingerprint) => {
+      asrTestedConfigFingerprint = fingerprint;
+    },
+    getTestingLlm: () => testingLlm,
+    setTestingLlm: (testing) => {
+      testingLlm = testing;
+    },
+    getTestingScreenContext: () => testingScreenContext,
+    setTestingScreenContext: (testing) => {
+      testingScreenContext = testing;
+    },
+    setScreenContextTestResult: (result) => {
+      screenContextTestResult = result;
+    },
+  });
+  const session = createSessionController({
+    t,
+    safeInvoke,
+    notify: notifications.show,
+    requireAsrAuthGate,
+    userErrorMessage,
+    shouldOpenSettingsForError,
+    scrollToSettingsPanel: settingsNav.scrollToSettingsPanel,
+    settingsPanelForError,
+    isConfigError,
+    sessionPhaseMessage,
+    scheduleSucceededIdleHint,
+    getPhase: () => sessionPhase,
+    setRecording: (value) => {
+      recording = value;
+    },
+    setPhase: (value) => {
+      sessionPhase = value;
+    },
+    setErrorCode: (value) => {
+      sessionErrorCode = value ?? null;
+    },
+    setLastOutcome: (value) => {
+      lastSessionOutcome = value;
+    },
+    setLastAudioQualityDiagnostic: (value) => {
+      lastAudioQualityDiagnostic = value;
+    },
+    setAudioLevel: (value) => {
+      audioLevel = value;
+    },
+    setStatusMessage: (value) => {
+      statusMessage = value;
+    },
   });
   onMount(() => {
     const onError = (event: ErrorEvent) => {
@@ -273,94 +385,52 @@ export function createVoxTypeController() {
         void overlay.refreshConfig();
       }, 250);
     }
-    let unlisteners: Array<Promise<() => void>> = [];
+    let unlisteners: ReturnType<typeof registerNativeEventController> = [];
     if (hasTauriApi()) {
-      const unlistenSession = listen<SessionState>("session-state-changed", (event) => {
-        applySessionState(event.payload);
-      });
-      const unlistenAsr = listen<AsrFinalText>("asr-final-text", (event) => {
-        if (event.payload.error) {
-          sessionErrorCode = event.payload.error_code;
-          statusMessage = userErrorMessage(event.payload.error_code, event.payload.error);
-          notifications.show(statusMessage, "error");
-          if (shouldOpenSettingsForError(event.payload.error, event.payload.error_code)) {
-            settingsNav.scrollToSettingsPanel(settingsPanelForError(event.payload.error, event.payload.error_code));
+      unlisteners = registerNativeEventController({
+        applySessionState,
+        applyAsrFinalText: session.applyAsrFinalText,
+        applyOverlayText: (payload) => {
+          overlay.applyText(payload.text);
+        },
+        applyOverlayConfig: (payload) => {
+          overlay.applyConfig(payload.ui);
+        },
+        applyStats: (payload) => {
+          if (!isOverlay && !isToast) {
+            stats.apply(payload);
+            void autoHotwords.refreshStatus();
           }
-          return;
-        }
-        const visibleWarning = event.payload.warning && !isQuietAsrWarningCode(event.payload.warning_code)
-          ? event.payload.warning
-          : null;
-        if (visibleWarning) {
-          notifications.show(visibleWarning, "warning");
-        }
-        lastSessionOutcome = {
-          kind: "success",
-          text: event.payload.text,
-          warning: visibleWarning,
-          warningCode: visibleWarning ? event.payload.warning_code : null,
-          createdAt: Date.now(),
-        };
-        statusMessage = visibleWarning ?? t("sessionSucceeded");
-        if (sessionPhase === "succeeded") scheduleSucceededIdleHint();
+        },
+        applyAudioLevel: (payload) => {
+          audioLevel = clampAudioLevel(payload.level);
+        },
+        applyAudioQuality: (payload) => {
+          lastAudioQualityDiagnostic = payload;
+        },
+        handleAudioDeviceFallback: (payload) => {
+          notifications.show(t("audioDeviceFallbackNotice", { device: payload.selected_name }), "warning");
+          void refreshSetupStatus(false);
+        },
+        showClosePrompt: windows.showClosePrompt,
+        checkForUpdate: () => {
+          void updates.check(true);
+        },
       });
-      const unlistenOverlay = listen<OverlayText>("overlay-text", (event) => {
-        overlay.applyText(event.payload.text);
-      });
-      const unlistenOverlayConfig = listen<OverlayConfig>("overlay-config", (event) => {
-        overlay.applyConfig(event.payload.ui);
-      });
-      const unlistenStats = listen<StatsSnapshot>("usage-stats-updated", (event) => {
-        if (!isOverlay && !isToast) {
-          stats.apply(event.payload);
-          void autoHotwords.refreshStatus();
-        }
-      });
-      const unlistenAudioLevel = listen<AudioLevel>("audio-level", (event) => {
-        audioLevel = clampAudioLevel(event.payload.level);
-      });
-      const unlistenAudioQuality = listen<AudioQualityDiagnostic>("audio-quality-diagnostic", (event) => {
-        lastAudioQualityDiagnostic = event.payload;
-      });
-      const unlistenAudioDeviceFallback = listen<AudioDeviceFallbackNotice>("audio-device-fallback", (event) => {
-        notifications.show(t("audioDeviceFallbackNotice", { device: event.payload.selected_name }), "warning");
-        void refreshSetupStatus(false);
-      });
-      const unlistenClosePrompt = listen<CloseToTrayRequest>("close-to-tray-requested", (event) => {
-        windows.showClosePrompt(event.payload);
-      });
-      const unlistenTrayUpdateCheck = listen("check-update-requested", () => {
-        void updates.check(true);
-      });
-      unlisteners = [
-        unlistenSession,
-        unlistenAsr,
-        unlistenOverlay,
-        unlistenOverlayConfig,
-        unlistenStats,
-        unlistenAudioLevel,
-        unlistenAudioQuality,
-        unlistenAudioDeviceFallback,
-        unlistenClosePrompt,
-        unlistenTrayUpdateCheck,
-      ];
       logFrontendEvent(`listeners registered mode=${frontendMode()}`);
     }
     return () => {
       if (overlayPoll !== undefined) window.clearInterval(overlayPoll);
       notifications.dispose();
       if (succeededIdleTimer !== undefined) window.clearTimeout(succeededIdleTimer);
-      clearAutoSaveTimer();
-      clearConfigSavedIndicatorTimer();
+      configController.dispose();
       overlay.dispose();
       clearDocumentMode();
       window.removeEventListener("resize", refreshMainDensity);
       window.removeEventListener("resize", overlay.refreshLayout);
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onUnhandledRejection);
-      void Promise.all(unlisteners).then((disposers) => {
-        for (const dispose of disposers) dispose();
-      });
+      disposeNativeEventController(unlisteners);
     };
   });
 
@@ -382,40 +452,10 @@ export function createVoxTypeController() {
   });
 
   function clearAutoSaveTimer() {
-    if (autoSaveTimer !== undefined && browser) window.clearTimeout(autoSaveTimer);
-    autoSaveTimer = undefined;
-  }
-  function clearConfigSavedIndicatorTimer() {
-    if (configSavedIndicatorTimer !== undefined && browser) window.clearTimeout(configSavedIndicatorTimer);
-    configSavedIndicatorTimer = undefined;
-  }
-  function markConfigSavedRecently() {
-    if (!browser) return;
-    clearConfigSavedIndicatorTimer();
-    configSavedRecently = true;
-    configSavedIndicatorTimer = window.setTimeout(() => {
-      configSavedRecently = false;
-      configSavedIndicatorTimer = undefined;
-    }, 2400);
-  }
-  function canAutoSaveConfig() {
-    return configLoaded && !isOverlay && !isToast && hasTauriApi() && hotkeyCapture.isIdle;
+    configController.clearAutoSaveTimer();
   }
   function scheduleAutoSaveConfig() {
-    if (!canAutoSaveConfig()) return;
-    clearAutoSaveTimer();
-    autoSaveTimer = window.setTimeout(() => {
-      autoSaveTimer = undefined;
-      void autoSaveConfig();
-    }, autoSaveDelayMs);
-  }
-  async function autoSaveConfig() {
-    if (!canAutoSaveConfig() || !settingsDirty) return;
-    if (saving) {
-      scheduleAutoSaveConfig();
-      return;
-    }
-    await persistConfig({ enforceAuth: false, focusErrors: false });
+    configController.scheduleAutoSaveConfig();
   }
   function refreshMainDensity() {
     if (isOverlay || isToast) {
@@ -529,14 +569,7 @@ export function createVoxTypeController() {
   }
 
   async function toggleRecordingFromUi() {
-    if (requireAsrAuthGate()) return;
-    if (isSessionBusy()) return;
-    if (!recording) {
-      lastSessionOutcome = null;
-      lastAudioQualityDiagnostic = null;
-    }
-    const result = await safeInvoke<SessionState>("toggle_recording");
-    if (result) applySessionState(result);
+    await session.toggleRecordingFromUi(recording);
   }
 
   async function copyLastOutcomeText(text: string) {
@@ -560,7 +593,7 @@ export function createVoxTypeController() {
   }
 
   function isSessionBusy() {
-    return isBlockingSessionPhase(sessionPhase);
+    return session.isBusy(sessionPhase);
   }
 
   function rememberSetupStatus(status: SetupStatus) {
@@ -583,9 +616,7 @@ export function createVoxTypeController() {
   }
 
   function applyLoadedConfig(loaded: LoadedConfig) {
-    config = loaded.data;
-    savedConfigFingerprint = configFingerprint(loaded.data);
-    configExists = loaded.exists;
+    configController.applyLoadedConfig(loaded);
   }
 
   async function loadAll() {
@@ -641,32 +672,12 @@ export function createVoxTypeController() {
   }
 
   function applySessionState(state: SessionState) {
-    recording = state.recording;
-    sessionPhase = state.phase ?? (state.recording ? "recording" : "idle");
-    sessionErrorCode = state.error_code;
-    if (sessionPhase === "starting" || sessionPhase === "recording") {
-      lastSessionOutcome = null;
-      lastAudioQualityDiagnostic = null;
-    }
-    if (sessionPhase !== "succeeded" && succeededIdleTimer !== undefined) {
+    const nextPhase = state.phase ?? (state.recording ? "recording" : "idle");
+    if (nextPhase !== "succeeded" && succeededIdleTimer !== undefined) {
       window.clearTimeout(succeededIdleTimer);
       succeededIdleTimer = undefined;
     }
-    if (!state.recording) audioLevel = 0;
-    if (state.phase === "failed" && state.error_code) {
-      statusMessage = userErrorMessage(state.error_code, state.message);
-      if (shouldOpenSettingsForError(state.message, state.error_code)) {
-        settingsNav.scrollToSettingsPanel(settingsPanelForError(state.message, state.error_code));
-      }
-      return;
-    }
-    if (isConfigError(state.message)) {
-      statusMessage = userErrorMessage(state.error_code, state.message);
-      settingsNav.scrollToSettingsPanel(settingsPanelForError(state.message, state.error_code));
-      return;
-    }
-    statusMessage = state.phase === "failed" && state.message ? userErrorMessage(state.error_code, state.message) : sessionPhaseMessage(sessionPhase);
-    if (sessionPhase === "succeeded") scheduleSucceededIdleHint();
+    session.applyState(state);
   }
   function scheduleSucceededIdleHint() {
     if (succeededIdleTimer !== undefined) window.clearTimeout(succeededIdleTimer);
@@ -688,66 +699,10 @@ export function createVoxTypeController() {
   }
 
   async function persistConfig(options: PersistConfigOptions = {}) {
-    const { enforceAuth = true, focusErrors = true } = options;
-    if (saving) return null;
-    const configToSave = clonePlain(config);
-    const saveFingerprint = configFingerprint(configToSave);
-    saving = true;
-    try {
-      validationErrors = {};
-      const hotkeyError = hotkeyCapture.validate(configToSave.hotkey);
-      if (hotkeyError) {
-        validationErrors = { hotkey: hotkeyError };
-        statusMessage = hotkeyError;
-        if (focusErrors) settingsNav.scrollToSettingsPanel("settings-output");
-        return null;
-      }
-      if (enforceAuth && !requireAuthFields(focusErrors, focusErrors)) return null;
-      if (!hasTauriApi()) {
-        statusMessage = t("browserPreview");
-        return null;
-      }
-      const result = await invoke<LoadedConfig>("save_app_config", { config: configToSave });
-      if (result) {
-        const resultFingerprint = configFingerprint(result.data);
-        const currentFingerprint = configFingerprint(config);
-        savedConfigFingerprint = resultFingerprint;
-        if (currentFingerprint === saveFingerprint) config = result.data;
-        snapshot = { ...snapshot, hotkey: result.data.hotkey };
-        syncSetupStatusFromConfig(result.data);
-        configExists = result.exists;
-        configLoaded = true;
-        statusMessage = t("configSaved");
-        markConfigSavedRecently();
-      }
-      return result;
-    } catch (error) {
-      const saveError = parseConfigSaveError(error);
-      const errors = saveError.errors ?? [];
-      validationErrors = validationErrorMap(errors);
-      if (focusErrors) settingsNav.focusFirstValidationError(errors);
-      statusMessage = saveError.message || t("validationFailed");
-      logFrontendError(`save config failed: ${formatFrontendError(error)}`);
-      return null;
-    } finally {
-      saving = false;
-    }
-  }
-  function parseConfigSaveError(error: unknown): ConfigSaveError {
-    if (typeof error === "object" && error !== null) {
-      const maybeError = error as { message?: unknown; errors?: unknown };
-      return {
-        message: typeof maybeError.message === "string" ? maybeError.message : t("validationFailed"),
-        errors: Array.isArray(maybeError.errors) ? (maybeError.errors as ConfigValidationError[]) : [],
-      };
-    }
-    return {
-      message: typeof error === "string" ? error : t("validationFailed"),
-      errors: [],
-    };
+    return configController.persistConfig(options);
   }
   function fieldError(field: string) {
-    return validationErrors[field] ?? "";
+    return configController.fieldError(field);
   }
   function syncSetupStatusFromConfig(nextConfig: AppConfig) {
     const currentStatus = setupStatus ?? localSetupStatusFromConfig(nextConfig);
@@ -778,77 +733,13 @@ export function createVoxTypeController() {
     return false;
   }
   async function testAsrConfig() {
-    if (testingAsr) return;
-    if (!requireAuthFields()) return;
-    testingAsr = true;
-    asrConnectionStatus = "testing";
-    try {
-      const result = await safeInvoke<ConnectionTestResult>("test_asr_config", { config: clonePlain(config) });
-      if (result) {
-        asrConnectionStatus = "tested_ok";
-        asrTestedConfigFingerprint = asrConfigFingerprint();
-        statusMessage = t("asrTestSucceeded");
-        notifications.show(statusMessage, "success");
-      } else if (statusMessage) {
-        asrConnectionStatus = "tested_failed";
-        asrTestedConfigFingerprint = asrConfigFingerprint();
-        notifications.show(statusMessage, "error");
-      }
-    } finally {
-      testingAsr = false;
-    }
+    await setup.testAsrConfig();
   }
   async function testLlmConfig() {
-    if (testingLlm) return;
-    testingLlm = true;
-    try {
-      const result = await safeInvoke<ConnectionTestResult>("test_llm_config", { config: clonePlain(config) });
-      if (result) {
-        let savedStrategy = false;
-        if (
-          typeof result.thinking_strategy === "string" &&
-          result.thinking_strategy &&
-          config.llm_post_edit.thinking_strategy !== result.thinking_strategy
-        ) {
-          config.llm_post_edit.thinking_strategy = result.thinking_strategy;
-          savedStrategy = Boolean(await persistConfig({ enforceAuth: false, focusErrors: false }));
-        }
-        statusMessage =
-          typeof result.elapsed_ms === "number" && savedStrategy
-            ? t("llmTestSucceededWithLatencyAndStrategy", {
-                ms: formatNumber(result.elapsed_ms),
-                strategy: result.thinking_strategy ?? "",
-              })
-            : typeof result.elapsed_ms === "number"
-              ? t("llmTestSucceededWithLatency", { ms: formatNumber(result.elapsed_ms) })
-              : t("llmTestSucceeded");
-        notifications.show(statusMessage, "success");
-      } else if (statusMessage) {
-        notifications.show(statusMessage, "error");
-      }
-    } finally {
-      testingLlm = false;
-    }
+    await setup.testLlmConfig();
   }
   async function testScreenContext() {
-    if (testingScreenContext) return;
-    testingScreenContext = true;
-    screenContextTestResult = null;
-    try {
-      const result = await safeInvoke<ScreenContextTestResult>("test_screen_context", { config: clonePlain(config) });
-      if (result) {
-        screenContextTestResult = result;
-        statusMessage = t("screenContextTestSucceeded", {
-          chars: formatNumber(result.text_chars),
-          ms: formatNumber(result.elapsed_ms),
-        });
-        notifications.show(statusMessage, result.warning ? "warning" : "success");
-      } else if (statusMessage) {
-        notifications.show(statusMessage, "error");
-      }
-    } finally {
-      testingScreenContext = false;
-    }
+    await setup.testScreenContext();
   }
   function optionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     if (!enabled) return "";
@@ -884,18 +775,7 @@ export function createVoxTypeController() {
     return audioDevices.find((device) => device.is_default) ?? audioDevices[0];
   }
   async function refreshSetupStatus(showLoading = true) {
-    if (showLoading || !setupStatus) setupStatusLoading = true;
-    const [devicesResult, setupResult] = await Promise.all([
-      safeInvoke<AudioDeviceInfo[]>("list_audio_input_devices", undefined, true),
-      safeInvoke<SetupStatus>("get_setup_status", undefined, true),
-    ]);
-    if (devicesResult) audioDevices = devicesResult;
-    if (setupResult) {
-      applySetupStatus(setupResult);
-    } else if (!setupStatus) {
-      setupStatus = localSetupStatusFromConfig(config, devicesResult ?? audioDevices);
-    }
-    setupStatusLoading = false;
+    await setup.refreshSetupStatus(showLoading);
   }
   function setupStatusItems(): SetupStatusItem[] {
     const localStatus = localSetupStatusFromConfig(config);
@@ -1101,12 +981,8 @@ export function createVoxTypeController() {
     if (status === "error") return statusMessage;
     return sessionPhaseMessage(sessionPhase);
   }
-  function configSaveState(): ConfigSaveState {
-    if (!configLoaded || !hasTauriApi() || isOverlay || isToast) return "idle";
-    if (saving) return "saving";
-    if (settingsDirty) return "pending";
-    if (configSavedRecently) return "saved";
-    return "idle";
+  function configSaveState() {
+    return configController.configSaveState(isOverlay, isToast);
   }
   function formatSavedHours(hours: number) {
     return formatSavedHoursForLanguage(hours, language);
@@ -1219,7 +1095,7 @@ export function createVoxTypeController() {
       t,
       uiCompact,
       recording,
-      saving,
+      saving: configController.saving,
       inputStatus: inputStatus(),
       inputStatusLabel: inputStatusLabel(),
       inputStatusDesc: inputStatusDesc(),
