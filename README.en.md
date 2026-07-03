@@ -218,7 +218,7 @@ Semantic smoothing `enable_ddc` is enabled by default for light ASR-side smoothi
 
 Doubao's documentation does not require client-side automatic gain control and does not define a separate gain request parameter. VoxType keeps `input_gain_db = 0.0` by default and does not boost microphone audio. Only raise input gain slightly in recording troubleshooting when the recording quality card repeatedly reports low volume and the system microphone level and distance already look correct; try `+3 dB` or `+6 dB` first to avoid clipping speech or amplifying room noise.
 
-After each recording, Home shows a lightweight recording quality card with the latest RMS, peak, active speech ratio, and a suggestion. These metrics contain no recognized text and are not written to the main stats table.
+After recording, Home shows a lightweight recording quality card when it is useful, with the latest RMS, peak, active speech ratio, and a suggestion. If the session already recognized and output text successfully, low-active-speech warnings are hidden to avoid flagging a usable result as a problem. These metrics contain no recognized text and are not written to the main stats table.
 
 If the microphone input stream reports an error during recording, VoxType now fails the session immediately instead of polishing, pasting, or counting text recognized from incomplete audio.
 

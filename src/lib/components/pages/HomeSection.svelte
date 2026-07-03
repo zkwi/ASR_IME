@@ -100,6 +100,11 @@
   let lastOutcomeCopied = $state(false);
   let copyingLastOutcome = $state(false);
   let lastOutcomeCreatedAt = $state<number | null>(null);
+  let visibleAudioQualityDiagnostic = $derived(
+    lastAudioQualityDiagnostic?.status === "low_activity" && lastSessionOutcome?.kind === "success"
+      ? null
+      : lastAudioQualityDiagnostic,
+  );
 
   $effect(() => {
     const createdAt = lastSessionOutcome?.createdAt ?? null;
@@ -303,25 +308,25 @@
     </p>
   </section>
 {/if}
-{#if lastAudioQualityDiagnostic}
+{#if visibleAudioQualityDiagnostic}
   <section
-    class:issue={lastAudioQualityDiagnostic.status !== "ok"}
+    class:issue={visibleAudioQualityDiagnostic.status !== "ok"}
     class="audio-quality-card"
     aria-live="polite"
   >
     <div class="audio-quality-copy">
-      <strong>{audioQualityTitle(lastAudioQualityDiagnostic)}</strong>
-      <p>{audioQualityDescription(lastAudioQualityDiagnostic)}</p>
+      <strong>{audioQualityTitle(visibleAudioQualityDiagnostic)}</strong>
+      <p>{audioQualityDescription(visibleAudioQualityDiagnostic)}</p>
       <small>
         {t("audioQualityMetrics", {
-          rms: formatDbfs(lastAudioQualityDiagnostic.rms_dbfs),
-          peak: formatDbfs(lastAudioQualityDiagnostic.peak_dbfs),
-          active: `${Math.round(lastAudioQualityDiagnostic.active_ratio * 100)}%`,
-          duration: formatDuration(lastAudioQualityDiagnostic.duration_ms)
+          rms: formatDbfs(visibleAudioQualityDiagnostic.rms_dbfs),
+          peak: formatDbfs(visibleAudioQualityDiagnostic.peak_dbfs),
+          active: `${Math.round(visibleAudioQualityDiagnostic.active_ratio * 100)}%`,
+          duration: formatDuration(visibleAudioQualityDiagnostic.duration_ms)
         })}
       </small>
     </div>
-    {#if lastAudioQualityDiagnostic.status !== "ok"}
+    {#if visibleAudioQualityDiagnostic.status !== "ok"}
       <button type="button" class="link-action compact" onclick={onOpenRecordingTroubleshooting}>
         {t("audioQualityOpenTroubleshooting")} <ChevronRight size={14} />
       </button>
