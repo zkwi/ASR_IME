@@ -105,13 +105,18 @@
 
   let selectedInputDeviceValue = $derived.by(() => {
     const configuredName = config.audio.input_device_name?.trim();
-    if (configuredName) {
-      const namedDevice = audioDevices.find((device) => device.name.trim().toLowerCase() === configuredName.toLowerCase());
-      if (namedDevice) return String(namedDevice.index);
-      const defaultDevice = audioDevices.find((device) => device.is_default) ?? audioDevices[0];
-      return defaultDevice ? String(defaultDevice.index) : "";
+    if (config.audio.input_device !== null && config.audio.input_device !== undefined) {
+      const indexedDevice = audioDevices.find((device) => device.index === config.audio.input_device);
+      if (indexedDevice && (!configuredName || indexedDevice.name.trim().toLowerCase() === configuredName.toLowerCase())) {
+        return String(indexedDevice.index);
+      }
     }
-    return config.audio.input_device === null || config.audio.input_device === undefined ? "" : String(config.audio.input_device);
+    if (configuredName) {
+      const namedDevices = audioDevices.filter((device) => device.name.trim().toLowerCase() === configuredName.toLowerCase());
+      if (namedDevices.length === 1) return String(namedDevices[0].index);
+      return "";
+    }
+    return "";
   });
 </script>
 
@@ -169,7 +174,7 @@
               <option value="" disabled>{t("noAudioDevices")}</option>
             {/if}
             {#each audioDevices as device}
-              <option value={device.index}>{device.index}: {device.name}</option>
+              <option value={String(device.index)}>{device.index}: {device.name}</option>
             {/each}
           </select>
         </label>

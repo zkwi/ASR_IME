@@ -336,8 +336,24 @@ fn select_input_device(
     host: &cpal::Host,
     audio: &AudioConfig,
 ) -> Result<SelectedInputDevice, String> {
-    let default_name = host
-        .default_input_device()
+    let mut default_device = host.default_input_device();
+    if audio
+        .input_device_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .is_none()
+        && audio.input_device.is_none()
+    {
+        if let Some(device) = default_device.take() {
+            return Ok(SelectedInputDevice {
+                device,
+                fallback: None,
+            });
+        }
+    }
+    let default_name = default_device
+        .as_ref()
         .and_then(|device| device.description().ok())
         .map(|description| description.name().to_string());
     let devices = host
@@ -366,6 +382,26 @@ fn select_input_device(
         audio.input_device_name.as_deref(),
         audio.input_device,
     )?;
+    if resolution.fallback {
+        if let Some(device) = default_device.take() {
+            let selected_name = device
+                .description()
+                .map(|description| description.name().to_string())
+                .unwrap_or_else(|_| "Unknown input device".to_string());
+            let fallback = AudioDeviceFallbackNotice {
+                configured_name: resolution.configured_name,
+                selected_name,
+            };
+            app_log::warn(format!(
+                "已保存的麦克风不可用，回退默认输入设备: configured={:?}, selected=\"{}\"",
+                fallback.configured_name, fallback.selected_name
+            ));
+            return Ok(SelectedInputDevice {
+                device,
+                fallback: Some(fallback),
+            });
+        }
+    }
     let selected = devices
         .into_iter()
         .find(|(candidate, _)| candidate.index == resolution.index)
@@ -398,10 +434,23 @@ fn resolve_input_device(
         .map(str::trim)
         .filter(|name| !name.is_empty());
     if let Some(name) = saved_name {
-        if let Some(device) = devices
+        if let Some(index) = legacy_input_device {
+            if let Some(device) = devices
+                .iter()
+                .find(|device| device.index == index && same_device_name(&device.name, name))
+            {
+                return Ok(InputDeviceResolution {
+                    index: device.index,
+                    fallback: false,
+                    configured_name: Some(name.to_string()),
+                });
+            }
+        }
+        let named_devices = devices
             .iter()
-            .find(|device| same_device_name(&device.name, name))
-        {
+            .filter(|device| same_device_name(&device.name, name))
+            .collect::<Vec<_>>();
+        if let [device] = named_devices.as_slice() {
             return Ok(InputDeviceResolution {
                 index: device.index,
                 fallback: false,
@@ -1256,6 +1305,59 @@ mod tests {
 
         assert_eq!(selected.index, 1);
         assert!(!selected.fallback);
+    }
+
+    #[test]
+    fn saved_index_disambiguates_duplicate_device_names() {
+        let devices = vec![
+            InputDeviceCandidate {
+                index: 0,
+                name: "Microphone".to_string(),
+                is_default: false,
+            },
+            InputDeviceCandidate {
+                index: 1,
+                name: "Headset Microphone".to_string(),
+                is_default: true,
+            },
+            InputDeviceCandidate {
+                index: 2,
+                name: "Microphone".to_string(),
+                is_default: false,
+            },
+        ];
+
+        let selected = resolve_input_device(&devices, Some("Microphone"), Some(2)).unwrap();
+
+        assert_eq!(selected.index, 2);
+        assert!(!selected.fallback);
+    }
+
+    #[test]
+    fn duplicate_saved_name_without_matching_index_falls_back() {
+        let devices = vec![
+            InputDeviceCandidate {
+                index: 0,
+                name: "Microphone".to_string(),
+                is_default: false,
+            },
+            InputDeviceCandidate {
+                index: 1,
+                name: "Headset Microphone".to_string(),
+                is_default: true,
+            },
+            InputDeviceCandidate {
+                index: 2,
+                name: "Microphone".to_string(),
+                is_default: false,
+            },
+        ];
+
+        let selected = resolve_input_device(&devices, Some("Microphone"), Some(9)).unwrap();
+
+        assert_eq!(selected.index, 1);
+        assert!(selected.fallback);
+        assert_eq!(selected.configured_name.as_deref(), Some("Microphone"));
     }
 
     #[test]

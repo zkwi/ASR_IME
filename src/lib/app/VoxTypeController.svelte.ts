@@ -763,14 +763,16 @@ export function createVoxTypeController() {
   function currentAudioDevice() {
     if (audioDevices.length === 0) return null;
     const configuredName = config.audio.input_device_name?.trim();
-    if (configuredName) {
-      const configured = audioDevices.find((device) => device.name.trim().toLowerCase() === configuredName.toLowerCase());
-      if (configured) return configured;
-      return audioDevices.find((device) => device.is_default) ?? audioDevices[0];
-    }
     if (config.audio.input_device !== null && config.audio.input_device !== undefined) {
       const configured = audioDevices.find((device) => device.index === config.audio.input_device);
-      if (configured) return configured;
+      if (configured && (!configuredName || configured.name.trim().toLowerCase() === configuredName.toLowerCase())) {
+        return configured;
+      }
+    }
+    if (configuredName) {
+      const configured = audioDevices.filter((device) => device.name.trim().toLowerCase() === configuredName.toLowerCase());
+      if (configured.length === 1) return configured[0];
+      return audioDevices.find((device) => device.is_default) ?? audioDevices[0];
     }
     return audioDevices.find((device) => device.is_default) ?? audioDevices[0];
   }
