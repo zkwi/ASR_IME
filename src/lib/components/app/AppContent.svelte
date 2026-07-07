@@ -129,6 +129,7 @@
     onRefreshSetupStatus: () => void;
     onSetupAction: (action: string) => void;
     onOpenDoubaoAsrDocs: () => void;
+    onOpenAliyunAsrDocs: () => void;
     onTestAsrConfig: () => void;
     onTestLlmConfig: () => void;
     onTestScreenContext: () => void;
@@ -249,6 +250,7 @@
     onRefreshSetupStatus,
     onSetupAction,
     onOpenDoubaoAsrDocs,
+    onOpenAliyunAsrDocs,
     onTestAsrConfig,
     onTestLlmConfig,
     onTestScreenContext,
@@ -358,6 +360,7 @@
     onScrollToSettingsPanel={onScrollToSettingsPanel}
     onOpenSetupGuide={onOpenSetupGuide}
     onOpenDoubaoAsrDocs={onOpenDoubaoAsrDocs}
+    onOpenAliyunAsrDocs={onOpenAliyunAsrDocs}
     onRefreshSetupStatus={onRefreshSetupStatus}
     onSetupAction={onSetupAction}
     onTestAsrConfig={onTestAsrConfig}

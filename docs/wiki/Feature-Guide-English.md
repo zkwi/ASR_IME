@@ -2,14 +2,14 @@
 
 This page is the repository draft mirror for the GitHub Wiki `Feature-Guide-English` page, so the Wiki and repository docs do not drift apart.
 
-This page explains VoxType's Windows voice typing, speech-to-text, Doubao streaming ASR, automatic paste, clipboard restore, and optional LLM polishing features. It focuses on when each feature is useful and how to tune it for speed, latency, and recognition quality.
+This page explains VoxType's Windows voice typing, speech-to-text, selectable ASR service, automatic paste, clipboard restore, and optional LLM polishing features. It focuses on when each feature is useful and how to tune it for speed, latency, and recognition quality.
 
 简体中文版本：[功能特性与使用优化](Feature-Guide)
 
 ## 1. Core Workflow
 
 ```text
-Trigger recording → Capture microphone audio → Doubao streaming ASR → Optional LLM polishing → Write clipboard → Auto paste → Restore clipboard → Stats and logs
+Trigger recording → Capture microphone audio → Selected ASR service → Optional LLM polishing → Write clipboard → Auto paste → Restore clipboard → Stats and logs
 ```
 
 Main workflow guarantees:
@@ -54,7 +54,7 @@ Defaults. These are low-level parameters, so most users do not need to change th
 - Local low-volume auto-stop: off by default (`0s`), threshold `0.03`
 - Microphone input gain: `0 dB`
 
-VoxType normalizes the actual microphone input to Doubao big-model streaming ASR's supported `16000Hz`, mono, 16-bit PCM before sending it. `sample_rate` and `channels` are capture preferences, not the final wire format.
+VoxType normalizes the actual microphone input to `16000Hz`, mono, 16-bit PCM before sending it to the selected ASR service. `sample_rate` and `channels` are capture preferences, not the final wire format.
 
 Tips:
 
@@ -65,11 +65,11 @@ Tips:
 - Local silence auto-stop is off by default; set `silence_auto_stop_seconds` to a positive value only when unattended long recording matters.
 - System-volume mute while recording is off by default; enable it only if echo affects recognition.
 
-## 5. Doubao Streaming ASR
+## 5. ASR Service
 
-VoxType uses Doubao `bigmodel_async` WebSocket by default.
+VoxType uses Doubao `bigmodel_async` WebSocket by default, and Alibaba Cloud FunASR can be selected from API Config. Both providers share the same recording, caption, final text, LLM, clipboard, and stats workflow.
 
-It keeps Doubao two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. The main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is disabled by default to prioritize beginning-word accuracy, while DDC semantic smoothing is enabled by default for light ASR-side smoothing on short and medium text.
+Doubao mode keeps two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. Alibaba Cloud FunASR mode waits for `task-finished` and only uses final sentence text as output. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. In Doubao mode, the main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is disabled by default to prioritize beginning-word accuracy, while DDC semantic smoothing is enabled by default for light ASR-side smoothing on short and medium text.
 
 Quality and latency factors:
 
@@ -84,7 +84,7 @@ Quality and latency factors:
 | Local silence fallback | Off by default; set a positive value only for unattended long recording |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
 | Hotwords | Important for proper nouns and product names |
-| Recent context | Useful for continuous writing, but disabled by default for privacy |
+| Recent context | Useful for continuous writing, but disabled by default for privacy; when enabled, it is sent to the selected ASR service |
 | Screen OCR context | On by default, current display by default, useful for UI terms, filenames, and code identifiers |
 
 ## 6. Auto Paste and Clipboard Restore
@@ -143,7 +143,7 @@ Project code names
 Product names
 ```
 
-Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests. Keep frequent proper nouns and remove stale or rarely used terms.
+Terms or context sent to the selected ASR service are capped according to provider capability. Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests. Keep frequent proper nouns and remove stale or rarely used terms.
 
 Use scene notes for long-term style and context:
 
@@ -202,7 +202,7 @@ Privacy & local data answers four questions in one place: what VoxType stores, w
 The page separates data into three groups:
 
 - Base local files: the config file and local logs. The config file can contain API keys and basic settings, but recent context text is kept out of `config.toml`. Logs and diagnostic reports are redacted by default and should not contain transcripts, hotwords, prompts, or raw keys.
-- Local clearable data: recent context, automatic hotword history, and usage stats. Recent context and automatic hotword history contain voice-input text history and are off by default. Usage stats contain non-content metrics such as character count, duration, and speed. Recent context is sent to Doubao ASR by default after local recent context is enabled; it reaches the AI service only after a separate AI opt-in.
+- Local clearable data: recent context, automatic hotword history, and usage stats. Recent context and automatic hotword history contain voice-input text history and are off by default. Usage stats contain non-content metrics such as character count, duration, and speed. Recent context is sent to the selected ASR service after local recent context is enabled; it reaches the AI service only after a separate AI opt-in.
 - Runtime and third-party service data: ASR audio, screen OCR, LLM polishing text, and temporary clipboard snapshots. These are normally not written to disk, but ASR audio, OCR context, optional recent context, and LLM polishing text can be sent with the current request depending on enabled features.
 
 Clear actions remove VoxType local files only. They do not mean third-party ASR/LLM providers have deleted data they already received; retention depends on the provider configured by the user.

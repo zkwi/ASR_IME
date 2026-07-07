@@ -260,7 +260,7 @@ fn start_capture_in_thread(
         || stream_config.channels != ASR_OUTPUT_CHANNELS
     {
         app_log::info(format!(
-            "麦克风输入将转换为豆包 ASR 支持格式: input={}Hz/{}ch, output={}Hz/{}ch",
+            "麦克风输入将转换为 ASR 发送格式: input={}Hz/{}ch, output={}Hz/{}ch",
             stream_config.sample_rate,
             stream_config.channels,
             ASR_OUTPUT_SAMPLE_RATE,

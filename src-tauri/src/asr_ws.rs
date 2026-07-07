@@ -1,7 +1,7 @@
 use crate::session::{SessionController, SessionPhase};
 use crate::{
-    app_log, asr, audio, config, config::AppConfig, hotword_history, llm_post_edit, overlay,
-    protocol, screen_context, stats, text_output,
+    app_log, asr, asr_provider, audio, config, config::AppConfig, hotword_history, llm_post_edit,
+    overlay, protocol, screen_context, stats, text_output,
 };
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
@@ -53,15 +53,15 @@ pub fn spawn_asr_worker(
 ) {
     thread::spawn(move || {
         app_log::info(format!("ASR worker 已启动: generation={}", generation));
-        if config.auth.app_key.trim().is_empty() || config.auth.access_key.trim().is_empty() {
-            let error = "ASR skipped: app_key/access_key is not configured.".to_string();
+        if let Some(config_error) = asr_provider::worker_configuration_error(&config) {
+            let error = config_error.message;
             if session.abort_generation_from_worker_with_code(
                 &app,
                 generation,
                 &error,
-                "ASR_AUTH_MISSING",
+                config_error.code,
             ) {
-                emit_error(&app, &session, generation, "ASR_AUTH_MISSING", error);
+                emit_error(&app, &session, generation, config_error.code, error);
             }
             return;
         }
@@ -91,14 +91,14 @@ pub fn spawn_asr_worker(
             screen_context::wait_for_context(screen_context_rx, config.screen_context.timeout_ms);
         let screen_context_text = screen_context.as_ref().map(|item| item.text.clone());
         let runtime_result = runtime.block_on(async {
-            let text = run_websocket_session(
-                config.clone(),
+            let text = asr_provider::recognize_stream(asr_provider::RecognitionInput {
+                config: config.clone(),
                 audio_rx,
-                app.clone(),
-                session.clone(),
+                app: app.clone(),
+                session: session.clone(),
                 generation,
-                screen_context_text.as_deref(),
-            )
+                screen_context: screen_context_text.clone(),
+            })
             .await?;
             if text.trim().is_empty() {
                 return Ok::<llm_post_edit::PolishOutcome, String>(llm_post_edit::PolishOutcome {
@@ -259,7 +259,7 @@ pub fn spawn_asr_worker(
     });
 }
 
-pub async fn test_connection(config: &AppConfig) -> Result<(), String> {
+pub(crate) async fn test_doubao_connection(config: &AppConfig) -> Result<(), String> {
     if config.auth.app_key.trim().is_empty() || config.auth.access_key.trim().is_empty() {
         return Err("请先填写豆包 App Key 和 Access Key。".to_string());
     }
@@ -393,7 +393,7 @@ fn silent_test_audio(config: &AppConfig) -> Vec<u8> {
     vec![0; byte_len]
 }
 
-async fn run_websocket_session(
+pub(crate) async fn run_doubao_websocket_session(
     config: AppConfig,
     audio_rx: Receiver<Vec<u8>>,
     app: AppHandle,
@@ -932,7 +932,7 @@ fn is_cjk_punctuation(ch: char) -> bool {
     )
 }
 
-fn emit_partial_text(app: &AppHandle, text: &str) {
+pub(crate) fn emit_partial_text(app: &AppHandle, text: &str) {
     if text.trim().is_empty() {
         return;
     }
@@ -1122,6 +1122,10 @@ fn classify_asr_error(error: &str) -> &'static str {
         || error.contains("App Key")
         || error.contains("Access Key")
         || error.contains("Resource ID")
+        || error.contains("API Key")
+        || error.contains("Workspace")
+        || error.contains("Bearer")
+        || error.contains("阿里云 ASR 认证")
     {
         "ASR_AUTH_MISSING"
     } else if error == ASR_CONNECT_TIMEOUT_MESSAGE {
@@ -1143,6 +1147,8 @@ fn classify_asr_error(error: &str) -> &'static str {
         "ASR_CONNECTION_CLOSED"
     } else if error.contains("无法连接豆包 ASR")
         || error.contains("连接豆包 ASR 失败")
+        || error.contains("无法连接阿里云 ASR")
+        || error.contains("连接阿里云 ASR 失败")
         || lower.contains("dns")
         || lower.contains("resolve")
         || lower.contains("connect")

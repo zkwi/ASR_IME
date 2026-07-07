@@ -1,5 +1,8 @@
 export function settingsPanelForField(field: string) {
+  if (field.startsWith("asr.")) return "settings-auth";
   if (field.startsWith("auth.")) return "settings-auth";
+  if (field === "aliyun_asr.language_hint") return "settings-asr-language";
+  if (field.startsWith("aliyun_asr.")) return "settings-auth";
   if (field === "request.language") return "settings-asr-language";
   if (field.startsWith("request.")) return "settings-asr-language";
   if (field === "llm_post_edit.use_recent_context") return "settings-prompt-context";

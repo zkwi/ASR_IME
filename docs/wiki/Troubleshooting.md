@@ -9,7 +9,7 @@ English version: [Troubleshooting](Troubleshooting-English)
 遇到问题时，先按顺序检查：
 
 1. API配置页顶部健康检查是否有红色阻断项。
-2. 豆包 ASR App Key 和 Access Key 是否填写。
+2. 当前 ASR 服务的必填认证是否填写。
 3. Windows 是否允许桌面应用访问麦克风。
 4. 首页是否显示至少一种触发方式。
 5. 光标是否在可输入文本框中。
@@ -80,7 +80,7 @@ Start-Process -Wait -Verb RunAs "C:\Temp\MicrosoftEdgeWebView2RuntimeInstallerX6
 1. 在 Windows 设置中允许桌面应用访问麦克风。
 2. 在选项页选择正确输入设备。
 3. 如果麦克风声音偏小但清晰，先确认 Windows 麦克风音量和说话距离；录音质量卡片仍反复提示音量偏小时，再在选项页的录音排障中把输入增益小幅调到 `+3 dB` 或 `+6 dB`。
-4. 在 API配置页点击豆包 ASR 测试。
+4. 在 API配置页点击当前 ASR 服务测试。
 5. 在安静环境下重新录音。
 6. 如果提示麦克风采集异常，重新插拔或切换输入设备，关闭可能独占麦克风的软件后再试。
 
@@ -88,20 +88,21 @@ Start-Process -Wait -Verb RunAs "C:\Temp\MicrosoftEdgeWebView2RuntimeInstallerX6
 
 - 空识别会进入失败态，不会触发润色、粘贴或成功统计。
 - 麦克风输入流运行中异常也会进入失败态，避免缺帧音频产生低质量识别结果。
-- 输入增益默认 `0 dB`，只在本地放大发送给豆包的 PCM，不会保存音频；过高会削波或放大环境噪声。
+- 输入增益默认 `0 dB`，只在本地放大发送给当前 ASR 服务的 PCM，不会保存音频；过高会削波或放大环境噪声。
 - 本地静音自动停止默认关闭，避免低音量麦克风被本地阈值误判后提前截断。
 - 如果确实需要无人值守长录音，可在 `config.toml` 中把 `silence_auto_stop_seconds` 设置为正数。
 
-## 豆包 ASR 测试失败
+## ASR 测试失败
 
-先确认 API配置页里的 App Key、Access Key 和 Resource ID 都属于同一个豆包语音识别服务。VoxType 当前发送的是 `X-Api-App-Key`、`X-Api-Access-Key` 和 `X-Api-Resource-Id`；不要把大模型 API Key、GitHub Token 或火山引擎 IAM Secret 填到 ASR 认证里。
+先确认 API配置页选择的 ASR 服务与认证字段匹配。豆包模式需要 App Key、Access Key 和 Resource ID 属于同一个豆包语音识别服务；阿里云 FunASR 模式需要 API Key、Workspace ID、地域和模型权限属于同一个百炼工作空间。不要把大模型 API Key、GitHub Token、火山引擎 IAM Secret 或其他平台密钥填到错误的 ASR 服务里。
 
 常见处理：
 
-1. 认证或权限失败：重新复制 App Key、Access Key，确认账号已开通豆包流式语音识别，Resource ID 和计费资源匹配。
-2. 连接失败或超时：检查代理、防火墙和网络是否能访问 `openspeech.bytedance.com`。
-3. 修改识别语言后失败：先改回“自动 / 服务默认”再测试。
-4. 测试通过但录音没字：检查 Windows 麦克风权限、输入设备和音量。
+1. 豆包认证或权限失败：重新复制 App Key、Access Key，确认账号已开通豆包流式语音识别，Resource ID 和计费资源匹配。
+2. 阿里云认证或权限失败：重新复制 API Key，确认 Workspace ID、地域和 `fun-asr-realtime` 模型权限匹配。
+3. 连接失败或超时：检查代理、防火墙和网络是否能访问当前 ASR 服务域名。
+4. 修改识别语言后失败：先改回“自动 / 服务默认”再测试。
+5. 测试通过但录音没字：检查 Windows 麦克风权限、输入设备和音量。
 
 公开提问时只贴脱敏诊断报告中的错误码和状态，不要贴真实密钥、完整日志或识别正文。
 
@@ -208,7 +209,7 @@ VoxType 会尽量恢复常见剪贴板格式，但图片、位图句柄、文件
 
 ## 屏幕 OCR 结果有很多空格
 
-从 0.1.62 起，VoxType 会在发送给豆包 ASR 和可选大模型前，合并中文字符之间的多余空格。例如 `屏 幕 OCR 上 下 文` 会整理为 `屏幕 OCR 上下文`。英文缩写、快捷键、路径和数字间距会尽量保留。
+从 0.1.62 起，VoxType 会在发送给当前 ASR 服务和可选大模型前，合并中文字符之间的多余空格。例如 `屏 幕 OCR 上 下 文` 会整理为 `屏幕 OCR 上下文`。英文缩写、快捷键、路径和数字间距会尽量保留。
 
 如果测试预览仍然明显异常，先确认 Windows 已安装中文 OCR 语言能力，并尽量让参考文字清晰、不要被遮挡。屏幕包含敏感内容时，可在选项页切换为仅当前窗口或关闭屏幕 OCR 上下文；关闭后不影响录音、ASR 或粘贴主链路。
 

@@ -6,6 +6,7 @@
   } from "$lib/components/overview/SetupStatusCard.svelte";
   import type { CopyKey } from "$lib/i18n";
   import type { AppConfig } from "$lib/types/app";
+  import { ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO } from "$lib/utils/asrProvider";
   import { ExternalLink, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
@@ -47,6 +48,20 @@
     { value: "omit", labelKey: "llmThinkingStrategyOmit" },
   ];
 
+  const aliyunLanguageOptions: Array<{ value: string; labelKey: CopyKey }> = [
+    { value: "", labelKey: "aliyunLanguageAuto" },
+    { value: "zh", labelKey: "aliyunLanguageZh" },
+    { value: "en", labelKey: "aliyunLanguageEn" },
+    { value: "ja", labelKey: "aliyunLanguageJa" },
+    { value: "ko", labelKey: "aliyunLanguageKo" },
+    { value: "yue", labelKey: "aliyunLanguageYue" },
+  ];
+
+  const aliyunRegionOptions: Array<{ value: string; labelKey: CopyKey }> = [
+    { value: "cn-beijing", labelKey: "aliyunRegionCnBeijing" },
+    { value: "ap-southeast-1", labelKey: "aliyunRegionSingapore" },
+  ];
+
   type Props = {
     config: AppConfig;
     t: Translate;
@@ -69,6 +84,7 @@
     onScrollToSettingsPanel: (id: string) => void;
     onOpenSetupGuide: () => void;
     onOpenDoubaoAsrDocs: () => void;
+    onOpenAliyunAsrDocs: () => void;
     onRefreshSetupStatus: () => void;
     onSetupAction: (action: string) => void;
     onTestAsrConfig: () => void;
@@ -97,6 +113,7 @@
     onScrollToSettingsPanel,
     onOpenSetupGuide,
     onOpenDoubaoAsrDocs,
+    onOpenAliyunAsrDocs,
     onRefreshSetupStatus,
     onSetupAction,
     onTestAsrConfig,
@@ -172,8 +189,8 @@
     <div id="settings-auth" class="form-panel">
       <div class="section-heading with-actions">
         <div class="section-heading-copy">
-          <h3>{t("doubaoAuth")}</h3>
-          <p>{t("doubaoAuthRequiredHint")}</p>
+          <h3>{t("asrProviderAuthTitle")}</h3>
+          <p>{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunAuthRequiredHint") : t("doubaoAuthRequiredHint")}</p>
           <SettingTags tags={[{ label: t("tagRequired"), tone: "required" }, t("tagSentToService")]} />
           {#if requiresAsrAuth}
             <p class="setup-note">{setupRequiredMessage()}</p>
@@ -181,8 +198,12 @@
           {/if}
         </div>
         <div class="settings-inline-actions">
-          <button class="link-button" type="button" onclick={onOpenDoubaoAsrDocs}>
-            <ExternalLink size={16} />{t("doubaoDocsCta")}
+          <button
+            class="link-button"
+            type="button"
+            onclick={config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? onOpenAliyunAsrDocs : onOpenDoubaoAsrDocs}
+          >
+            <ExternalLink size={16} />{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunDocsCta") : t("doubaoDocsCta")}
           </button>
           <button class="test-button" type="button" onclick={onTestAsrConfig} disabled={testingAsr}>
             <ShieldCheck size={16} />{testingAsr ? t("testingConnection") : t("testConnection")}
@@ -190,37 +211,95 @@
         </div>
       </div>
       <div class="form-grid">
-        <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
-          <span>{t("appKey")}</span>
-          <input autocomplete="off" bind:value={config.auth.app_key} />
-          {#if fieldError("auth.app_key")}<small class="field-error">{fieldError("auth.app_key")}</small>{/if}
+        <label class:field-invalid={Boolean(fieldError("asr.provider"))}>
+          <span>{t("asrProviderSelect")}</span>
+          <select bind:value={config.asr.provider}>
+            <option value={ASR_PROVIDER_DOUBAO}>{t("asrProviderDoubao")}</option>
+            <option value={ASR_PROVIDER_ALIYUN_FUN}>{t("asrProviderAliyun")}</option>
+          </select>
+          {#if fieldError("asr.provider")}<small class="field-error">{fieldError("asr.provider")}</small>{/if}
+          <small class="field-hint">{t("asrProviderHint")}</small>
         </label>
-        <label class:field-invalid={Boolean(fieldError("auth.access_key"))}>
-          <span>{t("accessKey")}</span>
-          <input type="password" autocomplete="off" bind:value={config.auth.access_key} />
-          {#if fieldError("auth.access_key")}<small class="field-error">{fieldError("auth.access_key")}</small>{/if}
-        </label>
+        {#if config.asr.provider === ASR_PROVIDER_ALIYUN_FUN}
+          <label class:field-invalid={Boolean(fieldError("aliyun_asr.api_key"))}>
+            <span>API Key</span>
+            <input type="password" autocomplete="off" bind:value={config.aliyun_asr.api_key} />
+            {#if fieldError("aliyun_asr.api_key")}<small class="field-error">{fieldError("aliyun_asr.api_key")}</small>{/if}
+            <small class="field-hint">{t("aliyunApiKeyHint")}</small>
+          </label>
+          <label class:field-invalid={Boolean(fieldError("aliyun_asr.workspace_id"))}>
+            <span>Workspace ID</span>
+            <input autocomplete="off" bind:value={config.aliyun_asr.workspace_id} />
+            {#if fieldError("aliyun_asr.workspace_id")}<small class="field-error">{fieldError("aliyun_asr.workspace_id")}</small>{/if}
+            <small class="field-hint">{t("aliyunWorkspaceHint")}</small>
+          </label>
+          <label class:field-invalid={Boolean(fieldError("aliyun_asr.region"))}>
+            <span>{t("aliyunRegion")}</span>
+            <select bind:value={config.aliyun_asr.region}>
+              {#each aliyunRegionOptions as option}
+                <option value={option.value}>{t(option.labelKey)}</option>
+              {/each}
+            </select>
+            {#if fieldError("aliyun_asr.region")}<small class="field-error">{fieldError("aliyun_asr.region")}</small>{/if}
+          </label>
+          <label class:field-invalid={Boolean(fieldError("aliyun_asr.model"))}>
+            <span>{t("model")}</span>
+            <input autocomplete="off" bind:value={config.aliyun_asr.model} />
+            {#if fieldError("aliyun_asr.model")}<small class="field-error">{fieldError("aliyun_asr.model")}</small>{/if}
+            <small class="field-hint">{t("aliyunModelHint")}</small>
+          </label>
+          <label class:field-invalid={Boolean(fieldError("aliyun_asr.websocket_url"))}>
+            <span>{t("aliyunWebsocketUrl")}</span>
+            <input autocomplete="off" bind:value={config.aliyun_asr.websocket_url} />
+            {#if fieldError("aliyun_asr.websocket_url")}<small class="field-error">{fieldError("aliyun_asr.websocket_url")}</small>{/if}
+            <small class="field-hint">{t("aliyunWebsocketUrlHint")}</small>
+          </label>
+        {:else}
+          <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
+            <span>{t("appKey")}</span>
+            <input autocomplete="off" bind:value={config.auth.app_key} />
+            {#if fieldError("auth.app_key")}<small class="field-error">{fieldError("auth.app_key")}</small>{/if}
+          </label>
+          <label class:field-invalid={Boolean(fieldError("auth.access_key"))}>
+            <span>{t("accessKey")}</span>
+            <input type="password" autocomplete="off" bind:value={config.auth.access_key} />
+            {#if fieldError("auth.access_key")}<small class="field-error">{fieldError("auth.access_key")}</small>{/if}
+          </label>
+        {/if}
       </div>
     </div>
     <div id="settings-asr-language" class="form-panel">
       <div class="section-heading">
         <div class="section-heading-copy">
-          <h3>{t("asrLanguageTitle")}</h3>
-          <p>{t("asrLanguageDescription")}</p>
+          <h3>{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunLanguageTitle") : t("asrLanguageTitle")}</h3>
+          <p>{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunLanguageDescription") : t("asrLanguageDescription")}</p>
           <SettingTags tags={[t("tagOptional")]} />
         </div>
       </div>
       <div class="form-grid">
-        <label class:field-invalid={Boolean(fieldError("request.language"))}>
-          <span>{t("asrInputLanguage")}</span>
-          <select bind:value={config.request.language}>
-            {#each asrLanguageOptions as option}
-              <option value={option.value}>{t(option.labelKey)}</option>
-            {/each}
-          </select>
-          {#if fieldError("request.language")}<small class="field-error">{fieldError("request.language")}</small>{/if}
-          <small class="field-hint">{t("asrInputLanguageHint")}</small>
-        </label>
+        {#if config.asr.provider === ASR_PROVIDER_ALIYUN_FUN}
+          <label class:field-invalid={Boolean(fieldError("aliyun_asr.language_hint"))}>
+            <span>{t("aliyunInputLanguage")}</span>
+            <select bind:value={config.aliyun_asr.language_hint}>
+              {#each aliyunLanguageOptions as option}
+                <option value={option.value}>{t(option.labelKey)}</option>
+              {/each}
+            </select>
+            {#if fieldError("aliyun_asr.language_hint")}<small class="field-error">{fieldError("aliyun_asr.language_hint")}</small>{/if}
+            <small class="field-hint">{t("aliyunInputLanguageHint")}</small>
+          </label>
+        {:else}
+          <label class:field-invalid={Boolean(fieldError("request.language"))}>
+            <span>{t("asrInputLanguage")}</span>
+            <select bind:value={config.request.language}>
+              {#each asrLanguageOptions as option}
+                <option value={option.value}>{t(option.labelKey)}</option>
+              {/each}
+            </select>
+            {#if fieldError("request.language")}<small class="field-error">{fieldError("request.language")}</small>{/if}
+            <small class="field-hint">{t("asrInputLanguageHint")}</small>
+          </label>
+        {/if}
       </div>
     </div>
   </section>

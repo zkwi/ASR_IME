@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 use crate::app_log;
+use crate::asr_provider;
 use crate::asr_ws;
 use crate::audio::{self, AudioCapture, AudioQualityAccumulator};
 use crate::config;
@@ -86,19 +87,11 @@ impl SessionController {
         }
         let loaded = config::load_config()?;
         let max_seconds = loaded.data.audio.max_record_seconds;
-        if loaded.data.auth.app_key.trim().is_empty()
-            || loaded.data.auth.access_key.trim().is_empty()
+        if let Some(config_error) =
+            asr_provider::start_configuration_error(&loaded.data, loaded.exists)
         {
-            let message = if loaded.exists {
-                "ASR 未配置 app_key/access_key，请先在配置页填写豆包认证信息并保存。"
-            } else {
-                "未找到 config.toml。请先在配置页填写豆包认证信息并保存，或复制 config.example.toml 为 config.toml 后手动编辑。"
-            };
-            let error_code = if loaded.exists {
-                "ASR_AUTH_MISSING"
-            } else {
-                "CONFIG_MISSING"
-            };
+            let message = config_error.message;
+            let error_code = config_error.code;
             app_log::warn(format!(
                 "录音启动被拦截: config_exists={}, auth_ready=false",
                 loaded.exists
@@ -106,14 +99,14 @@ impl SessionController {
             let state = SessionState {
                 recording: false,
                 phase: SessionPhase::Failed,
-                message: message.to_string(),
+                message: message.clone(),
                 error_code: Some(error_code.to_string()),
             };
-            self.set_state_values(false, SessionPhase::Failed, message, Some(error_code));
+            self.set_state_values(false, SessionPhase::Failed, &message, Some(error_code));
             if let Some(app) = app.as_ref() {
                 emit_state(Some(app), &state);
             }
-            return Err(message.to_string());
+            return Err(message);
         }
         let generation = {
             let mut inner = self

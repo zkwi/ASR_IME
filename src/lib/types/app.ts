@@ -198,7 +198,19 @@ export type TextContext = { text: string };
 
 export type AppConfig = {
   hotkey: string;
+  asr: { provider: string };
   auth: { app_key: string; access_key: string; resource_id: string };
+  aliyun_asr: {
+    api_key: string;
+    workspace_id: string;
+    websocket_url: string;
+    region: string;
+    model: string;
+    language_hint: string;
+    semantic_punctuation_enabled: boolean;
+    max_sentence_silence: number;
+    vocabulary_id: string;
+  };
   audio: {
     sample_rate: number;
     channels: number;

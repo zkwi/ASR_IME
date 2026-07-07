@@ -2,15 +2,15 @@
 
 本页面是 GitHub Wiki `Home` 的仓库内草稿镜像，用于避免线上 Wiki 与仓库文档长期漂移。
 
-VoxType is a lightweight Rust/Tauri Windows desktop AI voice typing, dictation, and speech-to-text app. Put the cursor in any input box, press the global shortcut, speak, and VoxType will transcribe your voice with Doubao streaming ASR, optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active field, and restore the previous clipboard when possible.
+VoxType is a lightweight Rust/Tauri Windows desktop AI voice typing, dictation, and speech-to-text app. Put the cursor in any input box, press the global shortcut, speak, and VoxType will transcribe your voice with the selected ASR provider, optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active field, and restore the previous clipboard when possible.
 
-声写 VoxType 是一个基于 Rust/Tauri 的 Windows 桌面 AI 语音输入、语音转文字和听写工具。把光标放到任意输入框后，按全局快捷键开始说话，VoxType 会完成录音、豆包流式 ASR、可选大模型润色、写入剪贴板、自动粘贴和剪贴板恢复。
+声写 VoxType 是一个基于 Rust/Tauri 的 Windows 桌面 AI 语音输入、语音转文字和听写工具。把光标放到任意输入框后，按全局快捷键开始说话，VoxType 会完成录音、当前 ASR 服务识别、可选大模型润色、写入剪贴板、自动粘贴和剪贴板恢复。
 
 ## Use Cases / 适合场景
 
 - Windows voice typing and speech-to-text in chat apps, browsers, editors, forms, and office tools.
 - 中文语音输入、英文听写、多语言语音转文字，以及需要实时字幕的桌面输入场景。
-- Doubao ASR transcription with optional LLM polishing for cleaner long-form dictation.
+- Doubao ASR by default, optional Alibaba Cloud FunASR, and optional LLM polishing for cleaner long-form dictation.
 - A local-first open-source workflow with conservative privacy defaults.
 
 ## Interface Preview / 界面预览
@@ -19,7 +19,7 @@ Home keeps the current input state, shortcut triggers, latest result notice, and
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130744_793.png" alt="VoxType 中文首页：语音输入状态、启动方式和输入表现" width="820">
 
-API Config shows setup health before the credential forms. API 配置页先展示 ASR 密钥、麦克风、粘贴方式、触发方式和隐私设置状态，再提供豆包 ASR 与可选大模型测试入口。截图中的密钥已脱敏。
+API Config shows setup health before the credential forms. API 配置页先展示 ASR 密钥、麦克风、粘贴方式、触发方式和隐私设置状态，再提供当前 ASR 服务与可选大模型测试入口。截图中的密钥已脱敏。
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130827_317.png" alt="VoxType English API Config and setup health check" width="820">
 
@@ -37,7 +37,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 
 ## Recommended Reading Order
 
-1. Configure Doubao ASR first.
+1. Configure the ASR provider first. Doubao ASR is the default; Alibaba Cloud FunASR is optional.
 2. Add hotwords and optional prompt preferences.
 3. Adjust daily preferences such as shortcut, paste mode, microphone, captions, startup, and tray behavior.
 4. Open `config.toml` only when troubleshooting low-level ASR, LLM timeout, caption geometry, or clipboard timing parameters.
@@ -50,7 +50,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 - Screen OCR context: on by default, current display by default, no persisted OCR text.
 - Optional LLM polishing: off by default; when enabled, thinking/reasoning is disabled with provider-specific adapters where supported.
 - Local silence fallback: low-volume auto-stop is off by default, with a `0.03` threshold used only when you set a positive auto-stop duration.
-- Doubao server endpointing example value: `end_window_size = 800`.
+- Doubao server endpointing example value: `end_window_size = 800`; Alibaba Cloud FunASR uses provider-specific sentence silence settings.
 - Update prompts provide an "Update now" action when a new installer is available.
 
 ## Privacy Basics
@@ -70,7 +70,7 @@ Yes. VoxType is a Windows desktop dictation app that turns microphone speech int
 
 ### Does VoxType require Doubao ASR?
 
-Yes for the main speech-to-text workflow. Doubao ASR App Key and Access Key are required before recording, recognition, and paste actions are unlocked.
+No. VoxType uses Doubao ASR by default, but you can switch to Alibaba Cloud FunASR in API Config. The selected ASR provider's required credentials must be filled before recording, recognition, and paste actions are unlocked.
 
 ### Is LLM polishing required?
 

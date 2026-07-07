@@ -1,4 +1,6 @@
-use crate::config::{AppConfig, ConfigValidationError};
+use crate::config::{
+    AppConfig, ConfigValidationError, ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO,
+};
 use crate::llm_request_adapter::is_valid_thinking_strategy;
 
 /// 校验用户配置文件中会影响主链路的字段。
@@ -9,6 +11,13 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
     let mut errors = Vec::new();
 
     validate_hotkey(&mut errors, &config.hotkey);
+    validate_allowed_value(
+        &mut errors,
+        "asr.provider",
+        &config.asr.provider,
+        &[ASR_PROVIDER_DOUBAO, ASR_PROVIDER_ALIYUN_FUN],
+        "语音识别服务只能是 doubao 或 aliyun_fun。",
+    );
     validate_u32_range(
         &mut errors,
         "audio.sample_rate",
@@ -117,6 +126,30 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         &config.request.ws_url,
         &["ws://", "wss://"],
         "ASR WebSocket 地址必须以 ws:// 或 wss:// 开头。",
+    );
+    if !config.aliyun_asr.websocket_url.trim().is_empty() {
+        validate_url_scheme(
+            &mut errors,
+            "aliyun_asr.websocket_url",
+            &config.aliyun_asr.websocket_url,
+            &["wss://"],
+            "阿里云 ASR WebSocket 地址必须以 wss:// 开头。",
+        );
+    }
+    validate_allowed_value(
+        &mut errors,
+        "aliyun_asr.region",
+        &config.aliyun_asr.region,
+        &["cn-beijing", "ap-southeast-1"],
+        "阿里云 ASR 地域只能是 cn-beijing 或 ap-southeast-1。",
+    );
+    validate_u64_range(
+        &mut errors,
+        "aliyun_asr.max_sentence_silence",
+        config.aliyun_asr.max_sentence_silence,
+        200,
+        6_000,
+        "阿里云 ASR 断句静音需在 200 到 6000 毫秒之间。",
     );
     validate_allowed_value(
         &mut errors,

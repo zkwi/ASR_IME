@@ -9,7 +9,7 @@ This page is the repository draft mirror for the GitHub Wiki `Troubleshooting-En
 When something fails, check in this order:
 
 1. API Config setup health has no red blocking item.
-2. Doubao ASR App Key and Access Key are filled in.
+2. Required credentials for the selected ASR provider are filled in.
 3. Windows allows desktop apps to access the microphone.
 4. Home shows at least one enabled trigger.
 5. The cursor is in an editable text field.
@@ -80,7 +80,7 @@ Fix:
 1. Allow desktop microphone access in Windows Settings.
 2. Select the correct input device in Options.
 3. If the microphone is quiet but clear, check the Windows microphone level and speaking distance first; if the recording quality card still repeatedly reports low volume, raise input gain slightly in Options recording troubleshooting to `+3 dB` or `+6 dB`.
-4. Test Doubao ASR from API Config.
+4. Test the selected ASR provider from API Config.
 5. Try again in a quieter environment.
 6. If VoxType reports a microphone capture error, reconnect or switch the input device and close apps that may exclusively use the microphone.
 
@@ -88,20 +88,21 @@ Notes:
 
 - Empty recognition becomes a failure. It does not run polishing, paste, or successful statistics.
 - A microphone input-stream error also becomes a failure, so missing-frame audio does not produce low-quality recognized text.
-- Input gain defaults to `0 dB`; it only boosts the PCM sent to Doubao locally and does not save audio. Too much gain clips speech or amplifies room noise.
+- Input gain defaults to `0 dB`; it only boosts the PCM sent to the selected ASR provider locally and does not save audio. Too much gain clips speech or amplifies room noise.
 - Local silence auto-stop is off by default to avoid cutting off quiet microphones because of local threshold misclassification.
 - If you need unattended long recording, set `silence_auto_stop_seconds` to a positive value in `config.toml`.
 
-## Doubao ASR Test Fails
+## ASR Test Fails
 
-First confirm that App Key, Access Key, and Resource ID all belong to the same Doubao speech recognition service. VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`; do not paste an LLM API key, GitHub token, or unrelated cloud secret into ASR credentials.
+First confirm that API Config's selected ASR provider matches the credential fields. Doubao mode requires App Key, Access Key, and Resource ID from the same Doubao speech recognition service. Alibaba Cloud FunASR mode requires API Key, Workspace ID, region, and model permission from the same Bailian workspace. Do not paste an LLM API key, GitHub token, Volcano Engine IAM secret, or another platform's key into the wrong ASR provider.
 
 Common fixes:
 
-1. Authentication or permission failure: copy App Key and Access Key again, confirm Doubao streaming ASR is enabled, and confirm Resource ID matches the billing resource.
-2. Connection failure or timeout: check proxy, firewall, and network access to `openspeech.bytedance.com`.
-3. Failure after changing recognition language: switch back to Auto/service default and test again.
-4. Test passes but recording returns no text: check Windows microphone permission, input device, and mic volume.
+1. Doubao authentication or permission failure: copy App Key and Access Key again, confirm Doubao streaming ASR is enabled, and confirm Resource ID matches the billing resource.
+2. Alibaba Cloud authentication or permission failure: copy API Key again, confirm Workspace ID, region, and `fun-asr-realtime` model permission match.
+3. Connection failure or timeout: check proxy, firewall, and network access to the selected ASR service domain.
+4. Failure after changing recognition language: switch back to Auto/service default and test again.
+5. Test passes but recording returns no text: check Windows microphone permission, input device, and mic volume.
 
 When asking publicly, include only redacted diagnostic error codes and statuses. Do not paste real keys, full logs, or transcript text.
 
@@ -208,7 +209,7 @@ Fix:
 
 ## Screen OCR Text Has Extra Spaces
 
-Since 0.1.62, VoxType merges extra spaces between adjacent CJK characters before sending screen OCR context to Doubao ASR and the optional LLM. For example, `屏 幕 OCR 上 下 文` is normalized to `屏幕 OCR 上下文`. English acronyms, shortcuts, paths, and number spacing are kept as much as possible.
+Since 0.1.62, VoxType merges extra spaces between adjacent CJK characters before sending screen OCR context to the selected ASR service and the optional LLM. For example, `屏 幕 OCR 上 下 文` is normalized to `屏幕 OCR 上下文`. English acronyms, shortcuts, paths, and number spacing are kept as much as possible.
 
 If the test preview is still obviously poor, confirm that the Windows Chinese OCR language capability is available, and keep the reference text clear and unobstructed. If the screen contains sensitive information, switch to current-window-only or disable Screen OCR context in Options; recording, ASR, and paste still work without it.
 

@@ -2,11 +2,12 @@ import type { CopyKey, Language, UserErrorDetail } from "$lib/i18n";
 import { userErrorDetails } from "$lib/i18n";
 import type { AppConfig, LoadedConfig, Section } from "$lib/types/app";
 import type { SetupStatus } from "$lib/utils/setupStatus";
+import { hasAsrProviderConfig } from "$lib/utils/asrProvider";
 
 type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
 export function hasAuth(config: AppConfig) {
-  return Boolean(config.auth.app_key.trim() && config.auth.access_key.trim());
+  return hasAsrProviderConfig(config);
 }
 
 export function hasLlmApiConfig(config: AppConfig) {
@@ -58,6 +59,8 @@ export function isConfigError(message: string) {
     message.includes("access_key") ||
     message.includes("豆包 ASR 认证") ||
     message.includes("豆包 ASR Key") ||
+    message.includes("阿里云 ASR") ||
+    message.includes("Workspace ID") ||
     message.includes("Doubao ASR") ||
     message.includes("App Key") ||
     message.includes("Access Key") ||
@@ -107,6 +110,12 @@ export function isErrorStatus(message: string) {
     message.includes("豆包 ASR 连接已结束") ||
     message.includes("豆包 ASR 连接已中断") ||
     message.includes("豆包 ASR 服务返回错误码") ||
+    message.includes("连接阿里云 ASR 超时") ||
+    message.includes("无法连接阿里云 ASR") ||
+    message.includes("连接阿里云 ASR 失败") ||
+    message.includes("阿里云 ASR 连接已结束") ||
+    message.includes("阿里云 ASR 连接已中断") ||
+    message.includes("阿里云 ASR 服务返回错误") ||
     message.includes("开机自启动设置失败") ||
     message.includes("启动录音失败") ||
     message.includes("麦克风采集异常")

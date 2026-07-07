@@ -1,8 +1,8 @@
-# VoxType User Configuration Guide: Windows Voice Typing, Doubao ASR, and Optional LLM Polishing
+# VoxType User Configuration Guide: Windows Voice Typing, Selectable ASR, and Optional LLM Polishing
 
 This page is the repository draft mirror for the GitHub Wiki `Setup-Guide-English` page, so the Wiki and repository docs do not drift apart. When updating the live Wiki, check this file as well.
 
-This guide is for first-time setup and daily VoxType use. It covers Windows voice typing, speech-to-text with Doubao streaming ASR, optional OpenAI-compatible LLM polishing, automatic paste, clipboard restore, hotwords, and troubleshooting. Start with the minimum setup that makes the main workflow usable, then enable quality, trigger, caption, update, and privacy-related options as needed.
+This guide is for first-time setup and daily VoxType use. It covers Windows voice typing, speech-to-text with Doubao streaming ASR or Alibaba Cloud FunASR, optional OpenAI-compatible LLM polishing, automatic paste, clipboard restore, hotwords, and troubleshooting. Start with the minimum setup that makes the main workflow usable, then enable quality, trigger, caption, update, and privacy-related options as needed.
 
 Chinese version: [声写 VoxType 用户配置指南](Setup-Guide)
 
@@ -30,7 +30,7 @@ VoxType has six main pages:
 | --- | --- |
 | Home | Check current state, start/stop voice input, and see trigger methods |
 | Hotwords & prompts | Manage hotwords, scene notes, AI prompts, and automatic hotword candidates |
-| API Config | Configure required Doubao ASR credentials and optional LLM API |
+| API Config | Select and configure ASR credentials and optional LLM API |
 | Options | Configure shortcuts, paste method, microphone, floating captions, startup, and close behavior |
 | Privacy & local data | Review storage/upload boundaries and clear local context, hotword history, and stats |
 | Analytics | View recent 24-hour, recent 7-day, and daily usage stats |
@@ -43,19 +43,21 @@ After a successful input, Home shows "Input completed". This means VoxType copie
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType Home page with voice input state and input performance" width="820">
 
-When ASR keys are missing, API Config first shows a three-step first-use guide: fill keys, test the connection, then return Home to start dictating. Setup health follows below: ASR keys, microphone, paste method, trigger method, and privacy status are shown separately. Only issues that block recording, recognition, or paste should be prominent warnings. Optional settings such as right Alt, middle mouse, recent context, and automatic hotwords should remain softer reminders. Public screenshots should blur real App Keys, Access Keys, and other secrets.
+When the selected ASR credentials are missing, API Config first shows a three-step first-use guide: choose the provider and fill keys, test the connection, then return Home to start dictating. Setup health follows below: ASR keys, microphone, paste method, trigger method, and privacy status are shown separately. Only issues that block recording, recognition, or paste should be prominent warnings. Optional settings such as right Alt, middle mouse, recent context, and automatic hotwords should remain softer reminders. Public screenshots should blur real App Keys, Access Keys, Alibaba Cloud API Keys, and other secrets.
 
 <img src="https://raw.githubusercontent.com/zkwi/VoxType/main/screenshots/ScreenShot_2026-05-09_130827_317.png" alt="VoxType API Config and setup health check" width="820">
 
 Privacy & local data centralizes the storage/upload boundaries for recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots. It also clears local context, hotword history, and usage stats.
 
-## 3. Required: Configure Doubao ASR
+## 3. Required: Configure ASR
 
-The core workflow depends on Doubao streaming ASR. Without ASR credentials, recording, recognition, and paste stay locked.
+The core workflow depends on one working streaming ASR service. Doubao ASR remains the default; Alibaba Cloud FunASR can be selected from API Config. Without credentials for the selected ASR provider, recording, recognition, and paste stay locked.
 
-Minimum setup rule: once the Doubao ASR test passes, you can return Home and start dictating. LLM polishing, hotwords, and screen OCR are optional quality improvements.
+Minimum setup rule: once the selected ASR test passes, you can return Home and start dictating. LLM polishing, hotwords, and screen OCR are optional quality improvements.
 
-Open **API Config -> Doubao credentials** and fill in:
+### Doubao ASR Default Setup
+
+Open **API Config -> Speech recognition provider**, choose "Doubao ASR", and fill in:
 
 | Field | Required | Notes |
 | --- | --- | --- |
@@ -68,14 +70,31 @@ VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource
 
 Click **Test** after filling credentials. When the test passes, return to Home and start voice input.
 
-API Config also includes **Recognition language**. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
+In Doubao mode, API Config also includes **Recognition language**. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
 
-### If Doubao ASR Test Fails
+### Alibaba Cloud FunASR Setup
+
+Open **API Config -> Speech recognition provider**, choose "Alibaba Cloud FunASR", and fill in:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| API Key | Yes | Alibaba Cloud Bailian / DashScope API Key, used as WebSocket `Bearer` auth |
+| Workspace ID | Yes, unless custom WebSocket URL is filled | Bailian workspace ID used to build the realtime ASR WebSocket endpoint |
+| Region | Yes | Beijing `cn-beijing` by default; Singapore `ap-southeast-1` is also supported |
+| Model | Yes | Default `fun-asr-realtime` |
+| Custom WebSocket URL | No | Use only when you need to override the official domain or gateway |
+
+In Alibaba Cloud mode, VoxType connects, sends `run-task`, waits for `task-started`, uploads 16kHz mono PCM, sends `finish-task` after recording stops, and only accepts final sentence text confirmed before `task-finished`. Interim `result-generated` text is display feedback only and does not enter polishing, paste, recent context, automatic hotword history, or success stats.
+
+Alibaba Cloud mode uses FunASR `language_hints` for **Recognition language**. Leave it empty for auto detection; select Chinese, English, Japanese, Korean, or Cantonese only when troubleshooting a non-default language.
+
+### If ASR Test Fails
 
 | Symptom | Check first |
 | --- | --- |
-| Authentication or permission failure | App Key, Access Key, and Resource ID belong to the same Doubao speech service and account |
-| Connection failure or timeout | Network, proxy, or firewall access to `openspeech.bytedance.com` |
+| Doubao authentication or permission failure | App Key, Access Key, and Resource ID belong to the same Doubao speech service and account |
+| Alibaba Cloud authentication or permission failure | API Key, Workspace ID, region, and model permission belong to the same Bailian workspace |
+| Connection failure or timeout | Network, proxy, or firewall access to the selected ASR service domain |
 | Failure after changing language | Switch Recognition language back to Auto/service default and test again |
 | Test passes but recording returns no text | Windows microphone permission, selected input device, mic volume, and actual speech |
 
@@ -86,6 +105,10 @@ If it still fails, open **Options -> Updates and diagnostics -> Copy diagnostic 
 Doubao official docs:
 
 <https://www.volcengine.com/docs/6561/1354869?lang=en>
+
+Alibaba Cloud FunASR official docs:
+
+<https://help.aliyun.com/zh/model-studio/fun-asr-realtime-websocket-api>
 
 Do not commit real keys, and do not share your local `config.toml`.
 
@@ -155,7 +178,7 @@ Use one item per line. Good hotwords include:
 - Project names, abbreviations, code names.
 - Technical terms that ASR often misrecognizes.
 
-Do not add passwords, ID numbers, phone numbers, customer data, or other sensitive information. Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests.
+Do not add passwords, ID numbers, phone numbers, customer data, or other sensitive information. Terms or context sent to the selected ASR service are capped according to provider capability. Doubao ASR direct hotwords are capped at the first 100 effective entries, with manual hotwords taking priority over confirmed automatic hotwords, to avoid oversized real-time ASR requests.
 
 ### Writing Context
 
@@ -163,7 +186,7 @@ Use writing context for the current writing scenario, product names, project bac
 
 ### Recent Context
 
-Recent context is off by default. When enabled, VoxType saves recent recognized snippets to local `context/recent_context.jsonl` to improve continuity.
+Recent context is off by default. When enabled, VoxType saves recent recognized snippets to local `context/recent_context.jsonl` to improve continuity with the selected ASR service.
 
 Notes:
 
@@ -228,13 +251,30 @@ Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, mode
 
 Settings edited in the UI auto-save. The title bar briefly shows pending, saving, and saved states. For manual edits, use `config.example.toml` as the reference.
 
-Minimum ASR config:
+Minimum Doubao ASR config:
 
 ```toml
+[asr]
+provider = "doubao"
+
 [auth]
 app_key = ""
 access_key = ""
 resource_id = "volc.seedasr.sauc.duration"
+```
+
+Minimum Alibaba Cloud FunASR config:
+
+```toml
+[asr]
+provider = "aliyun_fun"
+
+[aliyun_asr]
+api_key = ""
+workspace_id = ""
+region = "cn-beijing"
+model = "fun-asr-realtime"
+language_hint = ""
 ```
 
 Optional LLM config:
@@ -272,13 +312,13 @@ mute_system_volume_while_recording = false
 
 When you choose a microphone in Options, VoxType saves both the device name and the legacy numeric index. Recording startup prefers the saved name, so Bluetooth reconnects or device-order changes are less likely to pick the wrong microphone. If the saved microphone is unavailable, VoxType falls back to the system default input device and shows a non-blocking notice.
 
-VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet.
+In Doubao mode, VoxType keeps actual ASR packets within Doubao's recommended `100-200ms` range, defaulting to `200ms`. About `50ms` of leading silence is merged into the first real-audio packet while keeping the first packet at the configured segment size, defaulting to about `200ms`; this helps Doubao stabilize initial speech recognition without sending a standalone 50ms packet. If no real microphone audio is captured, VoxType does not send an extra silence packet. Alibaba Cloud FunASR mode also sends `16000Hz` mono PCM and gates final output on the service's `task-finished` event.
 
 VoxType keeps `input_gain_db = 0.0` by default and does not boost microphone audio. Only raise input gain slightly in recording troubleshooting when the recording quality card repeatedly reports low volume and the system microphone level and distance already look correct; try `+3 dB` or `+6 dB` first to avoid clipping speech or amplifying room noise. After recording, Home shows a lightweight recording quality card when it is useful, with the latest RMS, peak, active speech ratio, and a suggestion. If the session already recognized and output text successfully, low-active-speech warnings are hidden to avoid flagging a usable result as a problem. These metrics contain no recognized text and are not written to the main stats table.
 
-Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. `stop_grace_ms` is the fixed real-audio tail wait after stopping, defaulting to about `250ms`; it no longer depends on local volume detection to decide whether to extend, so quiet microphones are less likely to lose tail words because of threshold misclassification. Any partial final audio chunk is flushed before the microphone is closed, no extra trailing silence is appended, and the last audio packet is sent as the negative final packet to help Doubao trigger the final two-pass endpoint. Local silence auto-stop is disabled by default with `silence_auto_stop_seconds = 0`; keep it disabled for quiet microphones.
+Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. Alibaba Cloud interim text is also caption feedback only; final paste waits for `task-finished`. `stop_grace_ms` is the fixed real-audio tail wait after stopping, defaulting to about `250ms`; it no longer depends on local volume detection to decide whether to extend, so quiet microphones are less likely to lose tail words because of threshold misclassification. Any partial final audio chunk is flushed before the microphone is closed. Local silence auto-stop is disabled by default with `silence_auto_stop_seconds = 0`; keep it disabled for quiet microphones.
 
-The recently verified stable combination is to keep the default `200ms` ASR packet size and put perceived-speed work into `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. First-word acceleration is off by default to prioritize beginning-word accuracy. Final output still accepts only Doubao's final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording.
+For Doubao mode, the recently verified stable combination is to keep the default `200ms` ASR packet size and put perceived-speed work into `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. First-word acceleration is off by default to prioritize beginning-word accuracy. Doubao final output still accepts only the final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording.
 
 First-word acceleration is disabled by default with `enable_accelerate_text = false` and `accelerate_score = 0`; saved explicit values are preserved. If faster live-caption startup matters more, you can manually enable it in `config.toml`, but beginning-word accuracy may drop.
 
@@ -325,8 +365,8 @@ github_repo = "zkwi/VoxType"
 
 1. Install and start VoxType.
 2. Open API Config.
-3. Fill in Doubao ASR App Key and Access Key; keep the default Resource ID unless you have a special reason.
-4. Click **Test** for Doubao ASR.
+3. Choose Doubao ASR or Alibaba Cloud FunASR and fill in the selected provider's credentials.
+4. Click **Test** for the selected ASR provider.
 5. Return to Home and put the cursor in a target input field.
 6. Press `Ctrl + Q` to start recording; press it again to stop. Local silence auto-stop is off by default and should be enabled only for unattended long recording.
 7. Wait for final recognition and optional polishing.
@@ -341,7 +381,7 @@ github_repo = "zkwi/VoxType"
 
 ### Is LLM API required?
 
-No. VoxType's core workflow is Windows voice typing with Doubao ASR speech-to-text. LLM polishing is optional.
+No. VoxType's core workflow is Windows voice typing with the selected ASR speech-to-text provider. LLM polishing is optional.
 
 ### Can I use clipboard-only output?
 
@@ -355,6 +395,6 @@ Names, product names, project names, abbreviations, and technical terms. Do not 
 
 They save voice-input text history locally. VoxType keeps them off by default to reduce privacy risk.
 
-Recent context contains real dictated text, so VoxType does not save it or send it to an AI service by default. When local recent context is enabled, it helps Doubao ASR with continuous dictation; it reaches the AI service only when "use recent context for polishing" is also enabled and polishing actually runs.
+Recent context contains real dictated text, so VoxType does not save it or send it to an AI service by default. When local recent context is enabled, it helps the selected ASR provider with continuous dictation; it reaches the AI service only when "use recent context for polishing" is also enabled and polishing actually runs.
 
 Screen OCR context is on by default, but it does not save transcript history. It reads the current display at recording start by default, lightly normalizes OCR text, and attaches it temporarily to the current ASR/LLM request. It does not cache recent OCR screenshots or text, and OCR sent to the LLM is compacted by budget. Use current-window-only or turn it off when the screen contains sensitive content.

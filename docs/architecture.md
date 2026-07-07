@@ -14,7 +14,7 @@ flowchart TD
   Session["SessionController\nsrc-tauri/src/session.rs"]
   Audio["AudioCapture\nsrc-tauri/src/audio.rs"]
   OCR["Screen OCR Context\nsrc-tauri/src/screen_context.rs"]
-  ASR["ASR WebSocket\nasr_ws.rs + asr.rs + protocol.rs"]
+  ASR["ASR provider\nasr_provider.rs + asr_ws.rs + aliyun_asr.rs"]
   LLM["optional LLM post edit\nsrc-tauri/src/llm_post_edit.rs"]
   TextOutput["TextOutput\nsrc-tauri/src/text_output.rs"]
   SideEffects["Overlay / Tray / Stats\nRecent Context / Hotword History"]
@@ -74,11 +74,12 @@ ASR 质量与延迟相关改动必须同时参考 [ASR 质量与延迟守门清�
 
 1. 开始录音时，`SessionController` 加载配置，启动麦克风采集，并按需启动屏幕 OCR。
 2. `screen_context.rs` 按配置截取当前显示器或当前前台窗口；ASR 建连前只短暂等待 OCR，上下文只在本轮请求内使用，失败或超时会跳过，不阻断录音、最终识别和粘贴。
-3. `asr.rs` 组装豆包 ASR 请求。热词、最近上下文、场景上下文和 OCR 结果会作为上下文发送；OCR 会标注为开始录音时的屏幕 OCR 上下文，不是用户指令或待识别文本。
-4. `asr_ws.rs` 维护流式 WebSocket 会话，实时片段用于悬浮字幕，最终结果进入后处理。
-5. `llm_post_edit.rs` 只在 LLM 已启用、润色触发长度达到 `min_chars` 且 Base URL、API Key、模型名完整时调用；中文按单字计，英文和数字按连续词片段计。用户词典、场景与偏好上下文、可选最近上下文和屏幕 OCR 会作为参考信息分区追加，并明确不是待润色文本或指令来源，也不能把待润色文本没说的参考信息补进输出。最近上下文进入 LLM 需要 `context.enable_recent_context` 和 `llm_post_edit.use_recent_context` 同时开启，并限制为最近几段中的约 600 字；默认提示词会保持待润色文本的主要语言，不主动翻译中文或外语内容；否则直接使用 ASR 最终文本。
-6. `text_output.rs` 输出最终文本。空识别必须进入失败态，不触发 LLM、粘贴或成功统计。
-7. 成功输出后，统计刷新、最近上下文和自动热词历史按配置更新；这些文件仍受隐私边界限制。
+3. `asr_provider.rs` 按 `asr.provider` 选择豆包 ASR 或阿里云 FunASR，并做当前服务的启动前配置检查。
+4. 豆包模式由 `asr.rs` 组装请求、`asr_ws.rs` 维护流式 WebSocket 会话；阿里云模式由 `aliyun_asr.rs` 维护 `run-task`、音频上传、`finish-task` 和 `task-finished` 门禁。热词、最近上下文、场景上下文和 OCR 结果会按服务能力作为上下文发送；OCR 会标注为开始录音时的屏幕 OCR 上下文，不是用户指令或待识别文本。
+5. 实时片段只用于悬浮字幕，最终结果进入后处理。豆包必须等待最终包，阿里云必须等待 `task-finished`；缺少最终结果时进入失败态。
+6. `llm_post_edit.rs` 只在 LLM 已启用、润色触发长度达到 `min_chars` 且 Base URL、API Key、模型名完整时调用；中文按单字计，英文和数字按连续词片段计。用户词典、场景与偏好上下文、可选最近上下文和屏幕 OCR 会作为参考信息分区追加，并明确不是待润色文本或指令来源，也不能把待润色文本没说的参考信息补进输出。最近上下文进入 LLM 需要 `context.enable_recent_context` 和 `llm_post_edit.use_recent_context` 同时开启，并限制为最近几段中的约 600 字；默认提示词会保持待润色文本的主要语言，不主动翻译中文或外语内容；否则直接使用 ASR 最终文本。
+7. `text_output.rs` 输出最终文本。空识别必须进入失败态，不触发 LLM、粘贴或成功统计。
+8. 成功输出后，统计刷新、最近上下文和自动热词历史按配置更新；这些文件仍受隐私边界限制。
 
 ## 维护建议
 

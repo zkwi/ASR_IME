@@ -1,7 +1,7 @@
 use super::{AppSnapshot, ConfigSaveError, ConnectionTestResult, SetupStatus, SetupWarning};
 use crate::{
-    app_log, asr_ws, audio, autostart, config, hotkey, llm_post_edit, overlay, screen_context,
-    setup_guide, tray,
+    app_log, asr_provider, audio, autostart, config, hotkey, llm_post_edit, overlay,
+    screen_context, setup_guide, tray,
 };
 use config::{AppConfig, LoadedConfig};
 use tauri::AppHandle;
@@ -27,8 +27,8 @@ pub(crate) fn get_setup_status() -> Result<SetupStatus, String> {
 }
 
 fn build_setup_status(data: AppConfig, has_audio_device: bool) -> SetupStatus {
-    let missing_auth =
-        data.auth.app_key.trim().is_empty() || data.auth.access_key.trim().is_empty();
+    let asr_configuration_error = asr_provider::configuration_error(&data);
+    let missing_auth = asr_configuration_error.is_some();
     let mut warnings = Vec::new();
 
     if missing_auth {
@@ -36,7 +36,9 @@ fn build_setup_status(data: AppConfig, has_audio_device: bool) -> SetupStatus {
             code: "ASR_AUTH_MISSING".to_string(),
             level: "blocking".to_string(),
             title: "ASR 密钥未填写".to_string(),
-            message: "填写 App Key 和 Access Key 后才能开始语音识别。".to_string(),
+            message: asr_configuration_error
+                .map(|error| error.message)
+                .unwrap_or_else(|| "填写当前语音识别服务认证信息后才能开始语音识别。".to_string()),
             action: "asr_auth".to_string(),
         });
     }
@@ -294,16 +296,18 @@ fn unchanged_hidden_config_field(
 
 #[tauri::command]
 pub(crate) async fn test_asr_config(config: AppConfig) -> Result<ConnectionTestResult, String> {
-    app_log::info("用户开始测试豆包 ASR 配置。");
-    match asr_ws::test_connection(&config).await {
+    let provider_label = asr_provider::active_provider_label(&config);
+    app_log::info(format!("用户开始测试{}配置。", provider_label));
+    match asr_provider::test_connection(&config).await {
         Ok(()) => {
-            app_log::info("豆包 ASR 配置测试成功。");
-            Ok(ConnectionTestResult::message(
-                "豆包 ASR 测试成功，当前 Key 可用。",
-            ))
+            app_log::info(format!("{}配置测试成功。", provider_label));
+            Ok(ConnectionTestResult::message(format!(
+                "{}测试成功，当前 Key 可用。",
+                provider_label
+            )))
         }
         Err(err) => {
-            app_log::warn(format!("豆包 ASR 配置测试失败: {}", err));
+            app_log::warn(format!("{}配置测试失败: {}", provider_label, err));
             Err(err)
         }
     }
@@ -369,6 +373,15 @@ pub(crate) fn open_doubao_asr_docs(app: AppHandle) -> Result<(), String> {
     app_log::info("用户打开豆包 ASR 帮助文档。");
     setup_guide::open_doubao_asr_docs(&app).map_err(|err| {
         app_log::warn(format!("打开豆包 ASR 帮助文档失败: {}", err));
+        err
+    })
+}
+
+#[tauri::command]
+pub(crate) fn open_aliyun_asr_docs(app: AppHandle) -> Result<(), String> {
+    app_log::info("用户打开阿里云 ASR 帮助文档。");
+    setup_guide::open_aliyun_asr_docs(&app).map_err(|err| {
+        app_log::warn(format!("打开阿里云 ASR 帮助文档失败: {}", err));
         err
     })
 }

@@ -43,6 +43,7 @@ import {
   userErrorMessage as getUserErrorMessage,
 } from "$lib/utils/appRouting";
 import { actionsForUserError } from "$lib/utils/errorActions";
+import { isAliyunAsrProvider } from "$lib/utils/asrProvider";
 import { clonePlain, configFingerprint } from "$lib/utils/config";
 import {
   clampAudioLevel,
@@ -710,14 +711,31 @@ export function createVoxTypeController() {
   }
   function authFieldErrors() {
     const errors: Record<string, string> = {};
-    if (!config.auth.app_key.trim()) errors["auth.app_key"] = t("requiredField");
-    if (!config.auth.access_key.trim()) errors["auth.access_key"] = t("requiredField");
+    if (isAliyunAsrProvider(config)) {
+      if (!config.aliyun_asr.api_key.trim()) errors["aliyun_asr.api_key"] = t("requiredField");
+      if (!config.aliyun_asr.model.trim()) errors["aliyun_asr.model"] = t("requiredField");
+      if (!config.aliyun_asr.workspace_id.trim() && !config.aliyun_asr.websocket_url.trim()) {
+        errors["aliyun_asr.workspace_id"] = t("aliyunWorkspaceOrUrlRequired");
+      }
+    } else {
+      if (!config.auth.app_key.trim()) errors["auth.app_key"] = t("requiredField");
+      if (!config.auth.access_key.trim()) errors["auth.access_key"] = t("requiredField");
+    }
     return errors;
   }
   function clearAuthFieldErrors() {
     const next = { ...validationErrors };
     delete next["auth.app_key"];
     delete next["auth.access_key"];
+    delete next["auth.resource_id"];
+    delete next["asr.provider"];
+    delete next["aliyun_asr.api_key"];
+    delete next["aliyun_asr.workspace_id"];
+    delete next["aliyun_asr.websocket_url"];
+    delete next["aliyun_asr.region"];
+    delete next["aliyun_asr.model"];
+    delete next["aliyun_asr.language_hint"];
+    delete next["aliyun_asr.max_sentence_silence"];
     validationErrors = next;
   }
   function requireAuthFields(showNotice = true, focusTarget = true) {
@@ -1191,6 +1209,7 @@ export function createVoxTypeController() {
       onRefreshSetupStatus: refreshSetupStatus,
       onSetupAction: handleSetupAction,
       onOpenDoubaoAsrDocs: openDoubaoAsrDocs,
+      onOpenAliyunAsrDocs: openAliyunAsrDocs,
       onTestAsrConfig: testAsrConfig,
       onTestLlmConfig: testLlmConfig,
       onTestScreenContext: testScreenContext,
@@ -1217,6 +1236,9 @@ export function createVoxTypeController() {
   }
   async function openDoubaoAsrDocs() {
     await safeInvoke<void>("open_doubao_asr_docs");
+  }
+  async function openAliyunAsrDocs() {
+    await safeInvoke<void>("open_aliyun_asr_docs");
   }
 
   return {

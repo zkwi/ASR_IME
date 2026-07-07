@@ -1,5 +1,7 @@
+mod aliyun_asr;
 mod app_log;
 mod asr;
+mod asr_provider;
 mod asr_ws;
 mod audio;
 mod autostart;
@@ -76,6 +78,7 @@ pub fn run() {
             commands::config_commands::test_screen_context,
             commands::config_commands::open_setup_guide,
             commands::config_commands::open_doubao_asr_docs,
+            commands::config_commands::open_aliyun_asr_docs,
             commands::diagnostic_commands::open_log_file,
             commands::diagnostic_commands::get_diagnostic_report,
             commands::diagnostic_commands::copy_diagnostic_report_to_clipboard,

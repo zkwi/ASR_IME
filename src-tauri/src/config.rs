@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
+pub(crate) const ASR_PROVIDER_DOUBAO: &str = "doubao";
+pub(crate) const ASR_PROVIDER_ALIYUN_FUN: &str = "aliyun_fun";
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 const APP_DATA_DIR_NAME: &str = "VoxType";
@@ -17,6 +19,8 @@ use crate::llm_request_adapter::STRATEGY_AUTO;
 pub struct AppConfig {
     #[serde(default = "default_hotkey")]
     pub hotkey: String,
+    #[serde(default)]
+    pub asr: AsrConfig,
     #[serde(default)]
     pub auth: AuthConfig,
     #[serde(default)]
@@ -38,6 +42,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub auto_hotwords: AutoHotwordConfig,
     #[serde(default)]
+    pub aliyun_asr: AliyunAsrConfig,
+    #[serde(default)]
     pub llm_post_edit: LlmPostEditConfig,
     #[serde(default)]
     pub ui: UiConfig,
@@ -48,6 +54,12 @@ pub struct AppConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AsrConfig {
+    #[serde(default = "default_asr_provider")]
+    pub provider: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthConfig {
     #[serde(default)]
     pub app_key: String,
@@ -55,6 +67,28 @@ pub struct AuthConfig {
     pub access_key: String,
     #[serde(default = "default_resource_id")]
     pub resource_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AliyunAsrConfig {
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default)]
+    pub workspace_id: String,
+    #[serde(default)]
+    pub websocket_url: String,
+    #[serde(default = "default_aliyun_region")]
+    pub region: String,
+    #[serde(default = "default_aliyun_asr_model")]
+    pub model: String,
+    #[serde(default)]
+    pub language_hint: String,
+    #[serde(default)]
+    pub semantic_punctuation_enabled: bool,
+    #[serde(default = "default_aliyun_max_sentence_silence")]
+    pub max_sentence_silence: u64,
+    #[serde(default)]
+    pub vocabulary_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -298,6 +332,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             hotkey: default_hotkey(),
+            asr: AsrConfig::default(),
             auth: AuthConfig::default(),
             audio: AudioConfig::default(),
             request: RequestConfig::default(),
@@ -308,10 +343,19 @@ impl Default for AppConfig {
             startup: StartupConfig::default(),
             update: UpdateConfig::default(),
             auto_hotwords: AutoHotwordConfig::default(),
+            aliyun_asr: AliyunAsrConfig::default(),
             llm_post_edit: LlmPostEditConfig::default(),
             ui: UiConfig::default(),
             tray: TrayConfig::default(),
             debug: DebugConfig::default(),
+        }
+    }
+}
+
+impl Default for AsrConfig {
+    fn default() -> Self {
+        Self {
+            provider: default_asr_provider(),
         }
     }
 }
@@ -322,6 +366,22 @@ impl Default for AuthConfig {
             app_key: String::new(),
             access_key: String::new(),
             resource_id: default_resource_id(),
+        }
+    }
+}
+
+impl Default for AliyunAsrConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            workspace_id: String::new(),
+            websocket_url: String::new(),
+            region: default_aliyun_region(),
+            model: default_aliyun_asr_model(),
+            language_hint: String::new(),
+            semantic_punctuation_enabled: false,
+            max_sentence_silence: default_aliyun_max_sentence_silence(),
+            vocabulary_id: String::new(),
         }
     }
 }
@@ -634,9 +694,14 @@ fn file_looks_like_voxtype_config(path: &Path) -> bool {
 
 fn text_looks_like_voxtype_config(text: &str) -> bool {
     text.contains("[auth]")
+        || text.contains("[asr]")
+        || text.contains("[aliyun_asr]")
         || text.contains("[request]")
         || text.contains("[audio]")
+        || text.contains("provider")
+        || text.contains("aliyun_asr")
         || text.contains("app_key")
+        || text.contains("workspace_id")
         || text.contains("access_key")
         || text.contains("ws_url")
 }
@@ -883,8 +948,20 @@ pub fn effective_hotwords(config: &AppConfig) -> Vec<String> {
 fn default_hotkey() -> String {
     "ctrl+q".to_string()
 }
+fn default_asr_provider() -> String {
+    ASR_PROVIDER_DOUBAO.to_string()
+}
 fn default_resource_id() -> String {
     "volc.seedasr.sauc.duration".to_string()
+}
+fn default_aliyun_region() -> String {
+    "cn-beijing".to_string()
+}
+fn default_aliyun_asr_model() -> String {
+    "fun-asr-realtime".to_string()
+}
+fn default_aliyun_max_sentence_silence() -> u64 {
+    1300
 }
 fn default_sample_rate() -> u32 {
     16000
@@ -1084,7 +1161,7 @@ mod tests {
         installed_config_path_from_appdata, load_config_from_path,
         migrate_legacy_asr_language_default, migrate_result_type_default,
         text_looks_like_voxtype_config, validate_config, write_config_file, AppConfig, TextContext,
-        DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+        ASR_PROVIDER_DOUBAO, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
     };
     use std::path::{Path, PathBuf};
 
@@ -1106,6 +1183,16 @@ mod tests {
     #[test]
     fn defaults_are_conservative_for_consumer_use() {
         let config = AppConfig::default();
+        assert_eq!(config.asr.provider, ASR_PROVIDER_DOUBAO);
+        assert!(config.aliyun_asr.api_key.is_empty());
+        assert!(config.aliyun_asr.workspace_id.is_empty());
+        assert!(config.aliyun_asr.websocket_url.is_empty());
+        assert_eq!(config.aliyun_asr.region, "cn-beijing");
+        assert_eq!(config.aliyun_asr.model, "fun-asr-realtime");
+        assert!(config.aliyun_asr.language_hint.is_empty());
+        assert!(!config.aliyun_asr.semantic_punctuation_enabled);
+        assert_eq!(config.aliyun_asr.max_sentence_silence, 1300);
+        assert!(config.aliyun_asr.vocabulary_id.is_empty());
         assert!(config.triggers.hotkey_enabled);
         assert!(!config.triggers.middle_mouse_enabled);
         assert!(!config.triggers.right_alt_enabled);
@@ -1214,6 +1301,12 @@ mod tests {
     fn voxtype_config_detection_requires_known_fields() {
         assert!(text_looks_like_voxtype_config(
             "[request]\nws_url = \"wss://example\"\n"
+        ));
+        assert!(text_looks_like_voxtype_config(
+            "[asr]\nprovider = \"aliyun_fun\"\n"
+        ));
+        assert!(text_looks_like_voxtype_config(
+            "[aliyun_asr]\nworkspace_id = \"demo\"\n"
         ));
         assert!(text_looks_like_voxtype_config("app_key = \"demo\"\n"));
         assert!(!text_looks_like_voxtype_config("theme = \"dark\"\n"));
@@ -1366,8 +1459,12 @@ mod tests {
         config.llm_post_edit.timeout_seconds = f64::NAN;
         config.typing.paste_method = "unknown".to_string();
         config.tray.close_behavior = "minimize".to_string();
+        config.asr.provider = "unknown".to_string();
         config.request.ws_url = "http://example.com/asr".to_string();
         config.request.language = "auto".to_string();
+        config.aliyun_asr.websocket_url = "http://example.com/asr".to_string();
+        config.aliyun_asr.region = "us-west-1".to_string();
+        config.aliyun_asr.max_sentence_silence = 100;
         config.update.github_repo = "broken".to_string();
         config.auto_hotwords.max_history_chars = 999;
         config.auto_hotwords.max_candidates = 101;
@@ -1398,8 +1495,12 @@ mod tests {
         assert!(fields.contains(&"llm_post_edit.timeout_seconds"));
         assert!(fields.contains(&"typing.paste_method"));
         assert!(fields.contains(&"tray.close_behavior"));
+        assert!(fields.contains(&"asr.provider"));
         assert!(fields.contains(&"request.ws_url"));
         assert!(fields.contains(&"request.language"));
+        assert!(fields.contains(&"aliyun_asr.websocket_url"));
+        assert!(fields.contains(&"aliyun_asr.region"));
+        assert!(fields.contains(&"aliyun_asr.max_sentence_silence"));
         assert!(fields.contains(&"update.github_repo"));
         assert!(fields.contains(&"auto_hotwords.max_history_chars"));
         assert!(fields.contains(&"auto_hotwords.max_candidates"));

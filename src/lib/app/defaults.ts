@@ -58,7 +58,19 @@ export function emptyUsage(): UsageStats {
 
 export const fallbackConfig: AppConfig = {
   hotkey: "ctrl+q",
+  asr: { provider: "doubao" },
   auth: { app_key: "", access_key: "", resource_id: "volc.seedasr.sauc.duration" },
+  aliyun_asr: {
+    api_key: "",
+    workspace_id: "",
+    websocket_url: "",
+    region: "cn-beijing",
+    model: "fun-asr-realtime",
+    language_hint: "",
+    semantic_punctuation_enabled: false,
+    max_sentence_silence: 1300,
+    vocabulary_id: "",
+  },
   audio: {
     sample_rate: 16000,
     channels: 1,
@@ -181,5 +193,5 @@ export const overlayColorPresets: { label: CopyKey; background: string; text: st
   { label: "overlayPresetAmber", background: "#92400e", text: "#fff7ed" },
 ];
 export const overlayOpacityPresets = [0.6, 0.75, 0.9, 1] as const;
-export const setupStatusCacheKey = "voxtype-setup-status-v1";
+export const setupStatusCacheKey = "voxtype-setup-status-v2";
 export const autoSaveDelayMs = 700;

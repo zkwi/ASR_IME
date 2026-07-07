@@ -2,6 +2,7 @@ import { fallbackConfig, fallbackSnapshot, setupStatusCacheKey } from "$lib/app/
 import type { SetupStatusItem, SetupStatusWarning } from "$lib/components/overview/SetupStatusCard.svelte";
 import type { AppConfig, AsrConnectionStatus, AudioDeviceInfo } from "$lib/types/app";
 import type { CopyKey } from "$lib/i18n";
+import { activeAsrConfigFingerprint, hasAsrProviderConfig } from "$lib/utils/asrProvider";
 
 export type SetupStatus = {
   ready: boolean;
@@ -46,7 +47,7 @@ export function readCachedSetupStatus(isBrowser: boolean): SetupStatus | null {
 }
 
 export function buildLocalSetupStatus(config: AppConfig, devices: AudioDeviceInfo[] = [], warnings: SetupStatusWarning[] = []): SetupStatus {
-  const missingAuth = !config.auth.app_key.trim() || !config.auth.access_key.trim();
+  const missingAuth = !hasAsrProviderConfig(config);
   const anyTriggerEnabled =
     config.triggers.hotkey_enabled ||
     config.triggers.middle_mouse_enabled ||
@@ -63,7 +64,7 @@ export function buildLocalSetupStatus(config: AppConfig, devices: AudioDeviceInf
 }
 
 export function mergeSetupStatusFromConfig(config: AppConfig, currentStatus: SetupStatus): SetupStatus {
-  const missingAuth = !config.auth.app_key.trim() || !config.auth.access_key.trim();
+  const missingAuth = !hasAsrProviderConfig(config);
   const anyTriggerEnabled =
     config.triggers.hotkey_enabled ||
     config.triggers.middle_mouse_enabled ||
@@ -85,13 +86,7 @@ export function pasteMethodLabel(value: string, t: Translate) {
 }
 
 export function asrConfigFingerprint(config: AppConfig) {
-  return JSON.stringify({
-    app_key: config.auth.app_key,
-    access_key: config.auth.access_key,
-    resource_id: config.auth.resource_id,
-    ws_url: config.request.ws_url,
-    model_name: config.request.model_name,
-  });
+  return activeAsrConfigFingerprint(config);
 }
 
 export function currentAsrConnectionStatus(params: {
