@@ -34,6 +34,7 @@ type ConfigControllerOptions = {
   hasTauriApi: () => boolean;
   canAutoSave: () => boolean;
   logFrontendError: (message: string) => void;
+  onConfigSaved?: (loaded: LoadedConfig) => void;
 };
 
 export function createConfigController(options: ConfigControllerOptions) {
@@ -117,6 +118,7 @@ export function createConfigController(options: ConfigControllerOptions) {
         options.setConfigLoaded(true);
         options.setStatusMessage(options.t("configSaved"));
         markConfigSavedRecently();
+        options.onConfigSaved?.(result);
       }
       return result;
     } catch (error) {

@@ -275,6 +275,9 @@ export function createVoxTypeController() {
       !isToast &&
       hasTauriApi(),
     logFrontendError,
+    onConfigSaved: (loaded) => {
+      queueLlmAutoAdaptAfterSave(loaded.data);
+    },
   });
   const setup = createSetupController({
     t,
@@ -710,9 +713,7 @@ export function createVoxTypeController() {
   }
 
   async function persistConfig(options: PersistConfigOptions = {}) {
-    const result = await configController.persistConfig(options);
-    if (result) queueLlmAutoAdaptAfterSave(result.data);
-    return result;
+    return configController.persistConfig(options);
   }
   function queueLlmAutoAdaptAfterSave(savedConfig: AppConfig) {
     const fingerprint = llmAdapterConfigFingerprint(savedConfig);
