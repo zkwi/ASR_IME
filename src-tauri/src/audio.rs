@@ -63,11 +63,8 @@ struct CaptureOutputs {
     chunk_tx: Option<mpsc::Sender<Vec<u8>>>,
     pcm_sink: Option<Arc<Mutex<PcmSink>>>,
     level_tx: Option<mpsc::Sender<f32>>,
-    silence_tx: Option<mpsc::Sender<()>>,
     error_reporter: CaptureErrorReporter,
     input_gain_factor: f32,
-    silence_auto_stop_seconds: u64,
-    silence_level_threshold: f32,
 }
 
 type CaptureStartResult = (
@@ -107,7 +104,6 @@ pub fn start_capture(
     audio: &AudioConfig,
     chunk_tx: Option<mpsc::Sender<Vec<u8>>>,
     level_tx: Option<mpsc::Sender<f32>>,
-    silence_tx: Option<mpsc::Sender<()>>,
     error_tx: Option<mpsc::Sender<String>>,
 ) -> Result<AudioCapture, String> {
     let audio = audio.clone();
@@ -123,11 +119,8 @@ pub fn start_capture(
             chunk_tx,
             pcm_sink: None,
             level_tx,
-            silence_tx,
             error_reporter: CaptureErrorReporter::new(error_tx),
             input_gain_factor: input_gain_factor(audio.input_gain_db),
-            silence_auto_stop_seconds: audio.silence_auto_stop_seconds,
-            silence_level_threshold: audio.silence_level_threshold,
         };
         let (stream, device_name, sample_rate, channels, pcm_sink, device_fallback) =
             match start_capture_in_thread(&audio, worker_counters, outputs) {
@@ -737,19 +730,6 @@ impl AudioQualityAccumulator {
     }
 }
 
-fn send_silence_auto_stop(
-    tx: &Option<mpsc::Sender<()>>,
-    silence: &mut SilenceAutoStopper,
-    level: f32,
-    frame_count: usize,
-) {
-    if let Some(tx) = tx {
-        if silence.observe(level, frame_count) {
-            let _ = tx.send(());
-        }
-    }
-}
-
 fn push_pcm_sink(
     pcm_sink: &Option<Arc<Mutex<PcmSink>>>,
     error_reporter: &CaptureErrorReporter,
@@ -766,56 +746,6 @@ fn push_pcm_sink(
         }
         Err(_) => {
             error_reporter.report("麦克风音频缓冲异常，音频可能不完整。".to_string());
-        }
-    }
-}
-
-// 短促杂音不应打断静音计时，否则键盘声或碰麦会让空录音持续过久。
-const SILENCE_RESET_CONFIRM_MS: u64 = 200;
-
-struct SilenceAutoStopper {
-    silence_frames: u64,
-    limit_frames: u64,
-    consecutive_active_frames: u64,
-    active_reset_confirm_frames: u64,
-    level_threshold: f32,
-    triggered: bool,
-}
-
-impl SilenceAutoStopper {
-    fn new(sample_rate: u32, seconds: u64, level_threshold: f32) -> Self {
-        Self {
-            silence_frames: 0,
-            limit_frames: sample_rate as u64 * seconds,
-            consecutive_active_frames: 0,
-            active_reset_confirm_frames: (sample_rate as u64 * SILENCE_RESET_CONFIRM_MS / 1000)
-                .max(1),
-            level_threshold: level_threshold.clamp(0.001, 0.5),
-            triggered: seconds == 0,
-        }
-    }
-
-    fn observe(&mut self, level: f32, frame_count: usize) -> bool {
-        if self.triggered || self.limit_frames == 0 || frame_count == 0 {
-            return false;
-        }
-        if level <= self.level_threshold {
-            self.silence_frames = self.silence_frames.saturating_add(frame_count as u64);
-            self.consecutive_active_frames = 0;
-        } else {
-            self.consecutive_active_frames = self
-                .consecutive_active_frames
-                .saturating_add(frame_count as u64);
-            if self.consecutive_active_frames >= self.active_reset_confirm_frames {
-                self.silence_frames = 0;
-                self.consecutive_active_frames = self.active_reset_confirm_frames;
-            }
-        }
-        if self.silence_frames >= self.limit_frames {
-            self.triggered = true;
-            true
-        } else {
-            false
         }
     }
 }
@@ -1053,16 +983,9 @@ fn build_i16_stream(
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
-    let channels = config.channels.max(1) as usize;
-    let mut silence = SilenceAutoStopper::new(
-        config.sample_rate,
-        outputs.silence_auto_stop_seconds,
-        outputs.silence_level_threshold,
-    );
     let CaptureOutputs {
         pcm_sink,
         level_tx,
-        silence_tx,
         error_reporter,
         input_gain_factor,
         ..
@@ -1071,11 +994,9 @@ fn build_i16_stream(
         .build_input_stream(
             config,
             move |data: &[i16], _| {
-                let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_i16(data), input_gain_factor);
                 send_level(&level_tx, level);
-                send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_i16(data)
                 });
@@ -1093,16 +1014,9 @@ fn build_u16_stream(
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
-    let channels = config.channels.max(1) as usize;
-    let mut silence = SilenceAutoStopper::new(
-        config.sample_rate,
-        outputs.silence_auto_stop_seconds,
-        outputs.silence_level_threshold,
-    );
     let CaptureOutputs {
         pcm_sink,
         level_tx,
-        silence_tx,
         error_reporter,
         input_gain_factor,
         ..
@@ -1111,11 +1025,9 @@ fn build_u16_stream(
         .build_input_stream(
             config,
             move |data: &[u16], _| {
-                let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_u16(data), input_gain_factor);
                 send_level(&level_tx, level);
-                send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_u16(data)
                 });
@@ -1133,16 +1045,9 @@ fn build_u8_stream(
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
-    let channels = config.channels.max(1) as usize;
-    let mut silence = SilenceAutoStopper::new(
-        config.sample_rate,
-        outputs.silence_auto_stop_seconds,
-        outputs.silence_level_threshold,
-    );
     let CaptureOutputs {
         pcm_sink,
         level_tx,
-        silence_tx,
         error_reporter,
         input_gain_factor,
         ..
@@ -1151,11 +1056,9 @@ fn build_u8_stream(
         .build_input_stream(
             config,
             move |data: &[u8], _| {
-                let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_u8(data), input_gain_factor);
                 send_level(&level_tx, level);
-                send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_u8(data)
                 });
@@ -1173,16 +1076,9 @@ fn build_f32_stream(
     outputs: CaptureOutputs,
     err_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<Stream, String> {
-    let channels = config.channels.max(1) as usize;
-    let mut silence = SilenceAutoStopper::new(
-        config.sample_rate,
-        outputs.silence_auto_stop_seconds,
-        outputs.silence_level_threshold,
-    );
     let CaptureOutputs {
         pcm_sink,
         level_tx,
-        silence_tx,
         error_reporter,
         input_gain_factor,
         ..
@@ -1191,11 +1087,9 @@ fn build_f32_stream(
         .build_input_stream(
             config,
             move |data: &[f32], _| {
-                let frame_count = data.len() / channels;
                 counters.chunks.fetch_add(1, Ordering::Relaxed);
                 let level = apply_level_gain(rms_f32(data), input_gain_factor);
                 send_level(&level_tx, level);
-                send_silence_auto_stop(&silence_tx, &mut silence, level, frame_count);
                 push_pcm_sink(&pcm_sink, &error_reporter, &counters, |sink| {
                     sink.push_f32(data)
                 });
@@ -1211,8 +1105,8 @@ mod tests {
     use super::{
         apply_input_gain_to_pcm, apply_level_gain, effective_asr_segment_ms, input_gain_factor,
         resolve_input_device, target_chunk_bytes, AudioQualityAccumulator, CaptureErrorReporter,
-        InputDeviceCandidate, PcmNormalizer, PcmSink, SegmentedAudioBuffer, SilenceAutoStopper,
-        ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE,
+        InputDeviceCandidate, PcmNormalizer, PcmSink, SegmentedAudioBuffer, ASR_OUTPUT_CHANNELS,
+        ASR_OUTPUT_SAMPLE_RATE,
     };
     use std::sync::mpsc;
 
@@ -1221,60 +1115,6 @@ mod tests {
             .chunks_exact(2)
             .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
             .collect()
-    }
-
-    #[test]
-    fn silence_auto_stop_fires_after_configured_silent_audio_duration() {
-        let mut stopper = SilenceAutoStopper::new(16_000, 10, 0.04);
-
-        assert!(!stopper.observe(0.0, 16_000 * 9));
-        assert!(stopper.observe(0.0, 16_000));
-        assert!(!stopper.observe(0.0, 16_000));
-    }
-
-    #[test]
-    fn silence_auto_stop_counts_low_background_noise_as_silence() {
-        let mut stopper = SilenceAutoStopper::new(16_000, 10, 0.04);
-
-        assert!(!stopper.observe(0.03, 16_000 * 9));
-        assert!(stopper.observe(0.03, 16_000));
-    }
-
-    #[test]
-    fn silence_auto_stop_resets_when_level_exceeds_threshold() {
-        let mut stopper = SilenceAutoStopper::new(16_000, 10, 0.04);
-
-        assert!(!stopper.observe(0.0, 16_000 * 8));
-        assert!(!stopper.observe(0.05, 16_000));
-        assert!(!stopper.observe(0.0, 16_000 * 9));
-        assert!(stopper.observe(0.0, 16_000));
-    }
-
-    #[test]
-    fn silence_auto_stop_resets_after_sustained_active_chunks() {
-        let mut stopper = SilenceAutoStopper::new(16_000, 10, 0.04);
-
-        assert!(!stopper.observe(0.0, 16_000 * 9));
-        assert!(!stopper.observe(0.08, 1_600));
-        assert!(!stopper.observe(0.08, 1_600));
-        assert!(!stopper.observe(0.0, 16_000 * 9));
-        assert!(stopper.observe(0.0, 16_000));
-    }
-
-    #[test]
-    fn silence_auto_stop_ignores_brief_loud_spikes() {
-        let mut stopper = SilenceAutoStopper::new(16_000, 10, 0.04);
-
-        assert!(!stopper.observe(0.0, 16_000 * 9));
-        assert!(!stopper.observe(0.08, 1_600));
-        assert!(stopper.observe(0.0, 16_000));
-    }
-
-    #[test]
-    fn silence_auto_stop_can_be_disabled() {
-        let mut stopper = SilenceAutoStopper::new(16_000, 0, 0.04);
-
-        assert!(!stopper.observe(0.0, 16_000 * 600));
     }
 
     #[test]

@@ -128,9 +128,9 @@
       config.triggers.right_alt_enabled,
   ));
   let recordingTroubleshootingActive = $derived(Boolean(
-    config.audio.silence_auto_stop_seconds > 0 ||
+    config.asr.no_feedback_auto_stop_seconds !== 30 ||
       config.audio.input_gain_db !== 0 ||
-      fieldError("audio.silence_auto_stop_seconds") ||
+      fieldError("asr.no_feedback_auto_stop_seconds") ||
       fieldError("audio.input_gain_db"),
   ));
   let backupTriggersExpanded = $derived(showBackupTriggers || backupTriggersActive);
@@ -207,10 +207,10 @@
         onToggle={() => (showRecordingTroubleshooting = !showRecordingTroubleshooting)}
       >
         <div class="form-grid">
-          <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
-            <span>{t("silenceAutoStopSeconds")}</span>
-            <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
-            {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
+          <label class:field-invalid={Boolean(fieldError("asr.no_feedback_auto_stop_seconds"))}>
+            <span>{t("asrNoFeedbackAutoStopSeconds")}</span>
+            <input type="number" min="0" max="300" step="1" bind:value={config.asr.no_feedback_auto_stop_seconds} />
+            {#if fieldError("asr.no_feedback_auto_stop_seconds")}<small class="field-error">{fieldError("asr.no_feedback_auto_stop_seconds")}</small>{/if}
           </label>
           <label class:field-invalid={Boolean(fieldError("audio.input_gain_db"))}>
             <span>{t("inputGainDb")}</span>
@@ -218,7 +218,7 @@
             {#if fieldError("audio.input_gain_db")}<small class="field-error">{fieldError("audio.input_gain_db")}</small>{/if}
           </label>
         </div>
-        <p class="field-hint">{t("silenceAutoStopHint")}</p>
+        <p class="field-hint">{t("asrNoFeedbackAutoStopHint")}</p>
         <p class="field-hint">{t("inputGainHint")}</p>
       </AdvancedSettings>
     </div>

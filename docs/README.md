@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 自动适配与 ASR 无反馈停录发布审计：[2026-07-07 VoxType 0.7.0 自动适配与 ASR 无反馈停录发布审计](audits/2026-07-07-release-0.7.0-llm-asr-auto-stop-audit.md)
 - 豆包 ASR 模块拆分发布审计：[2026-07-07 VoxType 0.6.4 豆包 ASR 模块拆分发布审计](audits/2026-07-07-release-0.6.4-asr-ws-split-audit.md)
 - 操作面板优化发布审计：[2026-07-07 VoxType 0.6.3 操作面板优化发布审计](audits/2026-07-07-release-0.6.3-action-panel-audit.md)
 - CI 检查修复发布审计：[2026-07-07 VoxType 0.6.2 CI 检查修复发布审计](audits/2026-07-07-release-0.6.2-ci-checks-audit.md)

@@ -198,7 +198,7 @@ export type TextContext = { text: string };
 
 export type AppConfig = {
   hotkey: string;
-  asr: { provider: string };
+  asr: { provider: string; no_feedback_auto_stop_seconds: number };
   auth: { app_key: string; access_key: string; resource_id: string };
   aliyun_asr: {
     api_key: string;
@@ -217,8 +217,6 @@ export type AppConfig = {
     segment_ms: number;
     max_record_seconds: number;
     stop_grace_ms: number;
-    silence_auto_stop_seconds: number;
-    silence_level_threshold: number;
     input_gain_db: number;
     mute_system_volume_while_recording: boolean;
     input_device_name: string | null;

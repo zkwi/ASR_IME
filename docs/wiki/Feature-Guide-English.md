@@ -51,7 +51,7 @@ Defaults. These are low-level parameters, so most users do not need to change th
 - Channels: `1`
 - Segment size: `200ms`
 - Max recording duration: `300s`
-- Local low-volume auto-stop: off by default (`0s`), threshold `0.03`
+- ASR no-feedback auto-stop: `30s` by default, `0` disables it
 - Microphone input gain: `0 dB`
 
 VoxType normalizes the actual microphone input to `16000Hz`, mono, 16-bit PCM before sending it to the selected ASR service. `sample_rate` and `channels` are capture preferences, not the final wire format.
@@ -62,7 +62,7 @@ Tips:
 - Low volume, long distance, noisy rooms, and disabled Windows microphone permission can cause empty recognition.
 - If the microphone is quiet but clear, check the system microphone level and distance first; if the recording quality card still repeatedly reports low volume, raise input gain slightly in recording troubleshooting to `+3 dB` or `+6 dB`.
 - A microphone input-stream error fails the current session immediately, so incomplete audio is not polished, pasted, or counted as success.
-- Local silence auto-stop is off by default; set `silence_auto_stop_seconds` to a positive value only when unattended long recording matters.
+- ASR no-feedback auto-stop defaults to 30 seconds. If the provider returns no effective text feedback for that window, VoxType stops through the normal grace flow and does not depend on local volume thresholds.
 - System-volume mute while recording is off by default; enable it only if echo affects recognition.
 
 ## 5. ASR Service
@@ -81,7 +81,7 @@ Quality and latency factors:
 | First-word return | `enable_accelerate_text` defaults to off with `accelerate_score = 0`; enable it manually only when faster live-caption startup matters more |
 | Semantic smoothing | `enable_ddc` is on by default; disable it manually when exact proper nouns, short commands, paths, or punctuation-sensitive dictation matter more |
 | Result type | The main workflow forces `full` so the final package contains the complete cumulative text; interim captions are feedback only |
-| Local silence fallback | Off by default; set a positive value only for unattended long recording |
+| ASR no-feedback fallback | Defaults to 30 seconds; set `no_feedback_auto_stop_seconds = 0` to disable |
 | Final result timeout | Default 15s; adjust in `config.toml` only for network/service issues |
 | Hotwords | Important for proper nouns and product names |
 | Recent context | Useful for continuous writing, but disabled by default for privacy; when enabled, it is sent to the selected ASR service |
@@ -128,7 +128,7 @@ Tips:
 
 - Short messages often do not need polishing.
 - Documentation, meeting notes, and requirement drafts benefit more from polishing.
-- If polishing is slow, rerun the thinking adapter test, disable thinking, raise `min_chars`, or choose a faster model. Raising timeout can reduce failures, but it does not make the model faster.
+- If polishing is slow, first confirm the automatic adapter test after auto-save has finished, then rerun the thinking adapter test manually if needed, disable thinking, raise `min_chars`, or choose a faster model. Raising timeout can reduce failures, but it does not make the model faster.
 - If the text contains code paths, filenames, log fields, or English identifiers, let screen OCR and hotwords provide the exact spelling, and still check the final text manually.
 
 ## 8. Hotwords, Scene Notes, and Prompts

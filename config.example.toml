@@ -7,6 +7,8 @@ hotkey = "ctrl+q"
 [asr]
 # 语音识别服务商：doubao / aliyun_fun。默认 doubao，旧配置缺少本段时也会按豆包处理
 provider = "doubao"
+# ASR 连续没有返回有效文本反馈时，按正常停录收尾流程自动停止；0 表示关闭
+no_feedback_auto_stop_seconds = 30
 
 [auth]
 # 豆包 ASR 的认证信息，仅在 [asr].provider = "doubao" 时必填；Resource ID 默认适配豆包语音识别大模型 2.0 小时版
@@ -16,7 +18,7 @@ access_key = ""
 resource_id = "volc.seedasr.sauc.duration"
 
 [audio]
-# 以下采样、声道、分片、尾音和静音阈值参数属于高级/内部参数；应用设置页不再展示，普通用户不需要修改
+# 以下采样、声道、分片和尾音参数属于高级/内部参数；应用设置页不再展示，普通用户不需要修改
 # 录音采样率偏好；发送语音识别服务前会统一转换为 16000Hz 单声道 PCM
 sample_rate = 16000
 # 录音声道偏好；发送语音识别服务前会统一转换为单声道
@@ -27,10 +29,6 @@ segment_ms = 200
 max_record_seconds = 300
 # 停录后固定保留的真实尾音；默认约 250ms，不依赖本地音量检测
 stop_grace_ms = 250
-# 连续静音达到该秒数后，本地自动结束本次录音；默认关闭，低音量麦克风建议保持 0
-silence_auto_stop_seconds = 0
-# 静音判定音量阈值；短促噪声不会立即重置计时，普通用户不需要修改
-silence_level_threshold = 0.03
 # 麦克风输入增益 dB；默认 0 不改变音频。声音持续偏小但清晰时再手动小幅尝试 +3 / +6，范围 -12 到 24
 input_gain_db = 0.0
 # 录音时是否自动静音系统音量；可减少回声，但可能影响会议、视频或系统提示音

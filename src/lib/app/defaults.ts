@@ -58,7 +58,7 @@ export function emptyUsage(): UsageStats {
 
 export const fallbackConfig: AppConfig = {
   hotkey: "ctrl+q",
-  asr: { provider: "doubao" },
+  asr: { provider: "doubao", no_feedback_auto_stop_seconds: 30 },
   auth: { app_key: "", access_key: "", resource_id: "volc.seedasr.sauc.duration" },
   aliyun_asr: {
     api_key: "",
@@ -77,8 +77,6 @@ export const fallbackConfig: AppConfig = {
     segment_ms: 200,
     max_record_seconds: 300,
     stop_grace_ms: 250,
-    silence_auto_stop_seconds: 0,
-    silence_level_threshold: 0.03,
     input_gain_db: 0,
     mute_system_volume_while_recording: false,
     input_device_name: null,

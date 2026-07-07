@@ -7,7 +7,7 @@ use super::final_text::{
 };
 use super::partial_text::{emit_partial_text, normalize_live_text, PartialTextLimiter};
 use crate::session::{SessionController, SessionPhase};
-use crate::{app_log, asr, config::AppConfig, protocol};
+use crate::{app_log, asr, asr_activity::AsrActivityReporter, config::AppConfig, protocol};
 use futures_util::{SinkExt, StreamExt};
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::time::{Duration, Instant};
@@ -27,6 +27,7 @@ pub(crate) async fn run_doubao_websocket_session(
     session: SessionController,
     generation: u64,
     screen_context: Option<&str>,
+    activity: AsrActivityReporter,
 ) -> Result<String, String> {
     let remove_trailing_period = config.typing.remove_trailing_period;
     let preview = asr::build_request_preview(&config, screen_context);
@@ -158,6 +159,7 @@ pub(crate) async fn run_doubao_websocket_session(
                     normalize_live_text(&asr::extract_final_text(parsed.payload_msg.as_ref()));
                 let settling_after_final = final_packet_settle_started.is_some();
                 let live_packet_text_seen = !packet_text.is_empty();
+                let mut definite_feedback_seen = false;
                 if live_packet_text_seen && packet_text != display_text {
                     display_text = packet_text.clone();
                     if let Some(text) = partial_limiter.emit_or_defer(&display_text) {
@@ -166,7 +168,11 @@ pub(crate) async fn run_doubao_websocket_session(
                 }
                 let mut final_update_seen = false;
                 for segment in asr::extract_definite_segments(parsed.payload_msg.as_ref()) {
+                    let segment_has_text = !segment.text.trim().is_empty();
                     if upsert_definite_segment(&mut definitive_segments, segment) {
+                        if segment_has_text {
+                            definite_feedback_seen = true;
+                        }
                         final_update_seen = true;
                         definitive_segments.sort_by_key(|item| (item.start_time, item.end_time));
                         let text = definitive_segments
@@ -192,9 +198,17 @@ pub(crate) async fn run_doubao_websocket_session(
                         final_packet_settle_started = Some(Instant::now());
                     }
                 }
+                let effective_feedback_seen = doubao_packet_has_effective_feedback(
+                    &packet_text,
+                    &final_packet_candidate,
+                    definite_feedback_seen,
+                );
                 if parsed.is_last_package {
                     final_packet_text = Some(final_packet_candidate);
                     final_packet_settle_started = Some(Instant::now());
+                }
+                if effective_feedback_seen {
+                    activity.mark_feedback();
                 }
             }
             Ok(Some(Ok(Message::Close(_)))) => {
@@ -236,4 +250,28 @@ pub(crate) async fn run_doubao_websocket_session(
         &display_text,
         remove_trailing_period,
     )
+}
+
+fn doubao_packet_has_effective_feedback(
+    packet_text: &str,
+    final_packet_candidate: &str,
+    definite_feedback_seen: bool,
+) -> bool {
+    !packet_text.trim().is_empty()
+        || !final_packet_candidate.trim().is_empty()
+        || definite_feedback_seen
+}
+
+#[cfg(test)]
+mod tests {
+    use super::doubao_packet_has_effective_feedback;
+
+    #[test]
+    fn effective_feedback_requires_text_or_definite_update() {
+        assert!(!doubao_packet_has_effective_feedback("", "", false));
+        assert!(!doubao_packet_has_effective_feedback("   ", " ", false));
+        assert!(doubao_packet_has_effective_feedback("实时字幕", "", false));
+        assert!(doubao_packet_has_effective_feedback("", "最终文本", false));
+        assert!(doubao_packet_has_effective_feedback("", "", true));
+    }
 }

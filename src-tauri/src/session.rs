@@ -1,10 +1,14 @@
 use serde::{Deserialize, Serialize};
-use std::sync::{mpsc::Receiver, Arc, Mutex};
+use std::sync::{
+    mpsc::{Receiver, RecvTimeoutError},
+    Arc, Mutex,
+};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 use crate::app_log;
+use crate::asr_activity::AsrActivityReporter;
 use crate::asr_provider;
 use crate::asr_ws;
 use crate::audio::{self, AudioCapture, AudioQualityAccumulator};
@@ -136,20 +140,19 @@ impl SessionController {
         } else {
             (None, None)
         };
-        let silence_auto_stop_enabled = loaded.data.audio.silence_auto_stop_seconds > 0;
-        let (silence_tx, silence_rx) = std::sync::mpsc::channel();
-        let silence_tx = if silence_auto_stop_enabled {
-            Some(silence_tx)
+        let no_feedback_auto_stop_seconds = loaded.data.asr.no_feedback_auto_stop_seconds;
+        let (asr_activity_reporter, asr_activity_rx) = if no_feedback_auto_stop_seconds > 0 {
+            let (tx, rx) = std::sync::mpsc::channel();
+            (AsrActivityReporter::new(tx), Some(rx))
         } else {
-            None
+            (AsrActivityReporter::disabled(), None)
         };
         let (audio_error_tx, audio_error_rx) = std::sync::mpsc::channel();
         app_log::info(format!(
-            "录音启动请求: max_seconds={}, stop_grace_ms={}, silence_auto_stop_seconds={}, silence_level_threshold={}, mute_system_volume={}",
+            "录音启动请求: max_seconds={}, stop_grace_ms={}, asr_no_feedback_auto_stop_seconds={}, mute_system_volume={}",
             max_seconds,
             loaded.data.audio.stop_grace_ms,
-            loaded.data.audio.silence_auto_stop_seconds,
-            loaded.data.audio.silence_level_threshold,
+            no_feedback_auto_stop_seconds,
             loaded.data.audio.mute_system_volume_while_recording
         ));
         if let Some(app) = app.as_ref() {
@@ -166,7 +169,6 @@ impl SessionController {
             &loaded.data.audio,
             Some(audio_tx),
             level_tx,
-            silence_tx,
             Some(audio_error_tx),
         ) {
             Ok(capture) => capture,
@@ -219,12 +221,13 @@ impl SessionController {
         if let (Some(app_for_level), Some(level_rx)) = (app.clone(), level_rx) {
             spawn_audio_level_emitter(app_for_level, level_rx);
         }
-        if silence_auto_stop_enabled {
-            spawn_silence_auto_stop_listener(
+        if let Some(asr_activity_rx) = asr_activity_rx {
+            spawn_asr_no_feedback_auto_stop_listener(
                 self.clone(),
                 app.clone(),
                 generation,
-                silence_rx,
+                asr_activity_rx,
+                no_feedback_auto_stop_seconds,
                 loaded.data.audio.stop_grace_ms,
             );
         }
@@ -275,15 +278,16 @@ impl SessionController {
         }
         emit_state(app.as_ref(), &state);
         if let Some(app) = app.clone() {
-            asr_ws::spawn_asr_worker(
-                runtime_config,
+            asr_ws::spawn_asr_worker(asr_ws::AsrWorkerInput {
+                config: runtime_config,
                 audio_rx,
                 started_at,
                 app,
-                self.clone(),
+                session: self.clone(),
                 generation,
                 screen_context_rx,
-            );
+                activity: asr_activity_reporter,
+            });
         }
 
         let controller = self.clone();
@@ -701,29 +705,57 @@ fn spawn_audio_level_emitter(app: AppHandle, level_rx: std::sync::mpsc::Receiver
     });
 }
 
-fn spawn_silence_auto_stop_listener(
+fn spawn_asr_no_feedback_auto_stop_listener(
     controller: SessionController,
     app: Option<AppHandle>,
     generation: u64,
-    silence_rx: Receiver<()>,
+    activity_rx: Receiver<()>,
+    seconds: u64,
     stop_grace_ms: u64,
 ) {
+    if seconds == 0 {
+        return;
+    }
     thread::spawn(move || {
-        if silence_rx.recv().is_err() {
-            return;
+        let timeout = Duration::from_secs(seconds);
+        loop {
+            match activity_rx.recv_timeout(timeout) {
+                Ok(()) => continue,
+                Err(RecvTimeoutError::Disconnected) => return,
+                Err(RecvTimeoutError::Timeout) => break,
+            }
         }
-        let stopped = controller.stop_generation_with_grace(
+        if stop_generation_after_asr_no_feedback_timeout(
+            &controller,
             app,
             generation,
             stop_grace_ms,
-            "Recording stopped after local silence timeout.",
-            "Recording stopped after local silence timeout.",
-            "本地静音超时触发停止录音",
-        );
-        if stopped.is_some() {
-            app_log::info("本地静音超时已按手动停止流程结束录音。");
+        )
+        .is_some()
+        {
+            app_log::info(format!(
+                "ASR {} 秒无有效反馈，已按手动停止流程结束录音。",
+                seconds
+            ));
         }
     });
+}
+
+fn stop_generation_after_asr_no_feedback_timeout(
+    controller: &SessionController,
+    app: Option<AppHandle>,
+    generation: u64,
+    stop_grace_ms: u64,
+) -> Option<SessionState> {
+    // Treat no ASR feedback like a user stop: keep tail capture and final-result gates intact.
+    controller.stop_generation_with_grace(
+        app,
+        generation,
+        stop_grace_ms,
+        "Recording stopped after ASR no-feedback timeout.",
+        "Recording stopped after ASR no-feedback timeout.",
+        "ASR 无有效反馈超时触发停止录音",
+    )
 }
 
 fn spawn_audio_error_listener(
@@ -1076,6 +1108,75 @@ mod tests {
         let state = controller.current_state();
         assert!(!state.recording);
         assert_eq!(state.phase, SessionPhase::WaitingFinalResult);
+    }
+
+    #[test]
+    fn asr_no_feedback_timeout_uses_grace_stop_flow() {
+        let controller = SessionController::default();
+        {
+            let mut inner = controller.inner.lock().unwrap();
+            inner.recording = true;
+            inner.phase = SessionPhase::Recording;
+            inner.message = "Recording started.".to_string();
+            inner.generation = 14;
+        }
+
+        let state =
+            super::stop_generation_after_asr_no_feedback_timeout(&controller, None, 14, 1).unwrap();
+
+        assert!(state.recording);
+        assert_eq!(state.phase, SessionPhase::Stopping);
+
+        std::thread::sleep(std::time::Duration::from_millis(280));
+        let state = controller.current_state();
+        assert!(!state.recording);
+        assert_eq!(state.phase, SessionPhase::WaitingFinalResult);
+    }
+
+    #[test]
+    fn asr_no_feedback_timeout_ignores_stale_or_already_stopped_generation() {
+        let controller = SessionController::default();
+        {
+            let mut inner = controller.inner.lock().unwrap();
+            inner.recording = true;
+            inner.phase = SessionPhase::Recording;
+            inner.message = "Recording started.".to_string();
+            inner.generation = 21;
+        }
+
+        assert!(
+            super::stop_generation_after_asr_no_feedback_timeout(&controller, None, 20, 0)
+                .is_none()
+        );
+        assert_eq!(controller.current_state().phase, SessionPhase::Recording);
+
+        controller
+            .force_stop_generation(21, SessionPhase::WaitingFinalResult, "Stopped.", None)
+            .unwrap();
+        assert!(
+            super::stop_generation_after_asr_no_feedback_timeout(&controller, None, 21, 0)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn zero_asr_no_feedback_seconds_disables_watchdog() {
+        let controller = SessionController::default();
+        {
+            let mut inner = controller.inner.lock().unwrap();
+            inner.recording = true;
+            inner.phase = SessionPhase::Recording;
+            inner.message = "Recording started.".to_string();
+            inner.generation = 30;
+        }
+        let (_tx, rx) = std::sync::mpsc::channel();
+
+        super::spawn_asr_no_feedback_auto_stop_listener(controller.clone(), None, 30, rx, 0, 0);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        let state = controller.current_state();
+        assert!(state.recording);
+        assert_eq!(state.phase, SessionPhase::Recording);
     }
 
     #[test]

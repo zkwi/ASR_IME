@@ -49,7 +49,7 @@ API Config shows setup health before the credential forms. API 配置页先展�
 - Recent context and automatic hotword candidates: off by default.
 - Screen OCR context: on by default, current display by default, no persisted OCR text.
 - Optional LLM polishing: off by default; when enabled, thinking/reasoning is disabled with provider-specific adapters where supported.
-- Local silence fallback: low-volume auto-stop is off by default, with a `0.03` threshold used only when you set a positive auto-stop duration.
+- ASR no-feedback fallback: defaults to 30 seconds and stops through the normal grace flow only when the provider returns no effective text feedback.
 - Doubao server endpointing example value: `end_window_size = 800`; Alibaba Cloud FunASR uses provider-specific sentence silence settings.
 - Update prompts provide an "Update now" action when a new installer is available.
 
@@ -78,4 +78,4 @@ No. LLM polishing is optional. VoxType can run as a pure ASR voice input tool, a
 
 ### Which LLM model should I use?
 
-Start with `qwen3.7-max` on DashScope/Bailian for daily polishing, or `qwen3.6-flash-2026-04-16` when latency matters more than edge-case accuracy. Rerun the LLM test after changing Base URL or model so VoxType can save the fastest thinking adapter. For code paths, filenames, and identifiers, prefer screen OCR, hotwords, or a manual check instead of relying on a model switch alone.
+Start with `qwen3.7-max` on DashScope/Bailian for daily polishing, or `qwen3.6-flash-2026-04-16` when latency matters more than edge-case accuracy. After changing Base URL, API Key, model, or the thinking toggle, VoxType automatically reruns the LLM adapter test after auto-save and saves the fastest strategy; you can still rerun it manually when troubleshooting. For code paths, filenames, and identifiers, prefer screen OCR, hotwords, or a manual check instead of relying on a model switch alone.

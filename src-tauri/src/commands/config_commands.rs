@@ -216,6 +216,10 @@ fn unchanged_hidden_config_field(
         return false;
     };
     match field {
+        "asr.no_feedback_auto_stop_seconds" => {
+            previous_config.asr.no_feedback_auto_stop_seconds
+                == next_config.asr.no_feedback_auto_stop_seconds
+        }
         "audio.sample_rate" => previous_config.audio.sample_rate == next_config.audio.sample_rate,
         "audio.channels" => previous_config.audio.channels == next_config.audio.channels,
         "audio.segment_ms" => previous_config.audio.segment_ms == next_config.audio.segment_ms,
@@ -224,14 +228,6 @@ fn unchanged_hidden_config_field(
         }
         "audio.stop_grace_ms" => {
             previous_config.audio.stop_grace_ms == next_config.audio.stop_grace_ms
-        }
-        "audio.silence_auto_stop_seconds" => {
-            previous_config.audio.silence_auto_stop_seconds
-                == next_config.audio.silence_auto_stop_seconds
-        }
-        "audio.silence_level_threshold" => {
-            previous_config.audio.silence_level_threshold
-                == next_config.audio.silence_level_threshold
         }
         "request.final_result_timeout_seconds" => {
             previous_config.request.final_result_timeout_seconds

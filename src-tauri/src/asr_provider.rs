@@ -6,7 +6,7 @@
 
 use crate::config::{AppConfig, ASR_PROVIDER_ALIYUN_FUN};
 use crate::session::SessionController;
-use crate::{aliyun_asr, asr_ws};
+use crate::{aliyun_asr, asr_activity::AsrActivityReporter, asr_ws};
 use std::sync::mpsc::Receiver;
 use tauri::AppHandle;
 
@@ -24,6 +24,7 @@ pub(crate) struct RecognitionInput {
     pub(crate) session: SessionController,
     pub(crate) generation: u64,
     pub(crate) screen_context: Option<String>,
+    pub(crate) activity: AsrActivityReporter,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,6 +115,7 @@ pub(crate) async fn recognize_stream(input: RecognitionInput) -> Result<String, 
                 input.session,
                 input.generation,
                 screen_context.as_deref(),
+                input.activity,
             )
             .await
         }
@@ -126,6 +128,7 @@ pub(crate) async fn recognize_stream(input: RecognitionInput) -> Result<String, 
                 input.session,
                 input.generation,
                 screen_context.as_deref(),
+                input.activity,
             )
             .await
         }

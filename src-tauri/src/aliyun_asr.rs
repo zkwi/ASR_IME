@@ -7,7 +7,7 @@
 
 use crate::config::effective_hotwords;
 use crate::session::{SessionController, SessionPhase};
-use crate::{app_log, asr, asr_ws, audio, config::AppConfig};
+use crate::{app_log, asr, asr_activity::AsrActivityReporter, asr_ws, audio, config::AppConfig};
 use futures_util::{Sink, SinkExt, Stream, StreamExt};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
@@ -116,6 +116,12 @@ impl AliyunFinalGate {
                 .to_string(),
         ))
     }
+
+    fn has_final_text(&self) -> bool {
+        self.final_sentences
+            .iter()
+            .any(|text| !text.trim().is_empty())
+    }
 }
 
 pub(crate) async fn test_connection(config: &AppConfig) -> Result<(), String> {
@@ -153,6 +159,7 @@ pub(crate) async fn recognize_stream(
     session: SessionController,
     generation: u64,
     screen_context: Option<&str>,
+    activity: AsrActivityReporter,
 ) -> Result<String, String> {
     validate_configured(&config)?;
 
@@ -235,6 +242,9 @@ pub(crate) async fn recognize_stream(
         };
         if let Some(event) = poll_server_event(&mut websocket, poll_timeout).await? {
             if let Some(surface_event) = gate.apply(event) {
+                if provider_surface_event_has_activity(&surface_event, &gate) {
+                    activity.mark_feedback();
+                }
                 match surface_event {
                     ProviderSurfaceEvent::PartialText(text)
                     | ProviderSurfaceEvent::StableText(text) => {
@@ -488,6 +498,19 @@ where
                 _ => {}
             }
         }
+    }
+}
+
+fn provider_surface_event_has_activity(
+    event: &ProviderSurfaceEvent,
+    gate: &AliyunFinalGate,
+) -> bool {
+    match event {
+        ProviderSurfaceEvent::PartialText(text) | ProviderSurfaceEvent::StableText(text) => {
+            !text.trim().is_empty()
+        }
+        ProviderSurfaceEvent::Finished => gate.has_final_text(),
+        ProviderSurfaceEvent::Started => false,
     }
 }
 
@@ -853,6 +876,46 @@ mod tests {
             Some(ProviderSurfaceEvent::Finished)
         );
         assert_eq!(gate.final_text().unwrap(), Some("最终文本".to_string()));
+    }
+
+    #[test]
+    fn activity_detection_only_counts_effective_text_events() {
+        let mut gate = AliyunFinalGate::default();
+        let started = gate
+            .apply(parse_server_event(r#"{"header":{"event":"task-started"}}"#).unwrap())
+            .unwrap();
+        assert!(!provider_surface_event_has_activity(&started, &gate));
+
+        let empty = r#"{
+            "header": {"event": "result-generated"},
+            "payload": {"output": {"sentence": {"text": "   ", "sentence_end": false}}}
+        }"#;
+        assert_eq!(gate.apply(parse_server_event(empty).unwrap()), None);
+
+        let partial = r#"{
+            "header": {"event": "result-generated"},
+            "payload": {"output": {"sentence": {"text": "中间字幕", "sentence_end": false}}}
+        }"#;
+        let partial_event = gate.apply(parse_server_event(partial).unwrap()).unwrap();
+        assert!(provider_surface_event_has_activity(&partial_event, &gate));
+
+        let finished_without_final = ProviderSurfaceEvent::Finished;
+        let empty_gate = AliyunFinalGate::default();
+        assert!(!provider_surface_event_has_activity(
+            &finished_without_final,
+            &empty_gate
+        ));
+
+        let stable = r#"{
+            "header": {"event": "result-generated"},
+            "payload": {"output": {"sentence": {"text": "最终文本", "sentence_end": true}}}
+        }"#;
+        let stable_event = gate.apply(parse_server_event(stable).unwrap()).unwrap();
+        assert!(provider_surface_event_has_activity(&stable_event, &gate));
+        let finished = gate
+            .apply(parse_server_event(r#"{"header":{"event":"task-finished"}}"#).unwrap())
+            .unwrap();
+        assert!(provider_surface_event_has_activity(&finished, &gate));
     }
 
     #[test]

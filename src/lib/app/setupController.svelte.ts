@@ -10,6 +10,7 @@ import type {
 } from "$lib/types/app";
 import { clonePlain } from "$lib/utils/config";
 import type { SetupStatus } from "$lib/utils/setupStatus";
+import { llmAdapterConfigFingerprint } from "$lib/utils/llmConfig";
 
 type NoticeKind = "success" | "info" | "warning" | "error";
 
@@ -45,6 +46,12 @@ type SetupControllerOptions = {
   getTestingScreenContext: () => boolean;
   setTestingScreenContext: (testing: boolean) => void;
   setScreenContextTestResult: (result: ScreenContextTestResult | null) => void;
+};
+
+type LlmConfigTestOptions = {
+  automatic?: boolean;
+  expectedFingerprint?: string;
+  forceThinkingStrategy?: string;
 };
 
 export function createSetupController(options: SetupControllerOptions) {
@@ -89,22 +96,34 @@ export function createSetupController(options: SetupControllerOptions) {
     }
   }
 
-  async function testLlmConfig() {
+  async function testLlmConfig(testOptions: LlmConfigTestOptions = {}) {
     if (options.getTestingLlm()) return;
     options.setTestingLlm(true);
     try {
-      const config = options.getConfig();
+      const config = clonePlain(options.getConfig());
+      const testedFingerprint = testOptions.expectedFingerprint ?? llmAdapterConfigFingerprint(config);
+      if (testOptions.forceThinkingStrategy) {
+        config.llm_post_edit.thinking_strategy = testOptions.forceThinkingStrategy;
+      }
+      if (testOptions.automatic) {
+        options.setStatusMessage(options.t("llmAutoTestStarted"));
+      }
       const result = await options.safeInvoke<ConnectionTestResult>("test_llm_config", {
-        config: clonePlain(config),
+        config,
       });
       if (result) {
+        const currentConfig = options.getConfig();
+        const currentMatchesTestedConfig =
+          llmAdapterConfigFingerprint(currentConfig) === testedFingerprint;
+        if (testOptions.automatic && !currentMatchesTestedConfig) return;
         let savedStrategy = false;
         if (
+          currentMatchesTestedConfig &&
           typeof result.thinking_strategy === "string" &&
           result.thinking_strategy &&
-          config.llm_post_edit.thinking_strategy !== result.thinking_strategy
+          currentConfig.llm_post_edit.thinking_strategy !== result.thinking_strategy
         ) {
-          config.llm_post_edit.thinking_strategy = result.thinking_strategy;
+          currentConfig.llm_post_edit.thinking_strategy = result.thinking_strategy;
           savedStrategy = Boolean(await options.persistConfig({ enforceAuth: false, focusErrors: false }));
         }
         const message =

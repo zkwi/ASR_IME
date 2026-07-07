@@ -49,7 +49,7 @@ API配置页顶部提供配置健康检查，只把真正阻断主流程的问�
 - 全局触发：默认只启用 `Ctrl + Q`；右 Alt 和鼠标中键可在选项页手动开启，避免误触或与其他软件冲突。
 - 麦克风采集：使用 Rust `cpal` 采集 PCM 音频，可选择输入设备。
 - 实时语音识别：默认对接豆包 `bigmodel_async` WebSocket，也可在 API配置页切换到阿里云 FunASR Realtime；字幕只作反馈，最终粘贴必须等待所选 ASR 服务返回最终完成事件。豆包链路继续使用二遍识别和 `full` 全量结果，阿里云链路等待 `task-finished` 后再进入润色/粘贴。
-- 静音兜底：本地连续低音量自动停止默认关闭，避免低音量麦克风被本地阈值误判截断；需要无人值守长录音时可在选项页手动设置为正数。
+- 无反馈兜底：ASR 连续 30 秒没有返回有效文本反馈时，会按正常停录流程收尾；不再依赖本地音量阈值。
 - 悬浮字幕：录音时在屏幕居下显示实时识别文本，不抢焦点；选项页展示字幕预览、预设配色和透明度预设，自定义颜色、宽高和位置保留在 `config.toml`。
 - 自动输入：最终文本写入剪贴板，并用带扫描码和短间隔的 `Ctrl+V` 或 `Shift+Insert` 粘贴到当前焦点输入框；首页可临时展开查看并一键复制最近一次识别文本，关闭窗口或开始下一次录音后清除。选项页直接提供 `Ctrl+V`、`Shift+Insert` 和“仅复制到剪贴板”，剪贴板恢复延迟等底层参数保留在 `config.toml`。
 - 标点处理：默认会自动移除最终文本末尾的中文句号或英文句点；如需保留句末标点，可在选项页关闭该开关。
@@ -182,7 +182,7 @@ enable_thinking = false
 thinking_strategy = "auto"
 ```
 
-大模型配置走 OpenAI 兼容接口，API配置页日常只展示启用润色、Base URL、API Key、模型和测试按钮；`thinking_strategy` 收在高级兼容性设置里，通常保持自动即可。默认示例使用阿里云百炼/DashScope 的北京地域地址 `https://dashscope.aliyuncs.com/compatible-mode/v1`。Base URL 可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址；例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。`api_key` 必须来自同一个大模型服务商，`model` 必须是该账号和地域可用的模型名。只需要语音识别时可以完全不配置大模型；开启润色后，短文本默认低于 `min_chars` 不会调用大模型，以减少延迟；已保存的 `min_chars` 会按用户配置原样保留，不再按旧默认值猜测迁移。`min_chars` 使用润色触发长度：中文等 CJK 字符按单字计，英文和数字按连续词片段计，空格和标点不计；因此默认 `40` 约等于 40 个汉字或 40 个英文/数字片段。达到最小触发长度的最终识别文本会发送到你配置的大模型服务；用户词典、场景与产品偏好、按预算压缩后的屏幕 OCR 和可选最近上下文会作为参考信息追加。最近上下文进入大模型默认关闭，只有 `[context].enable_recent_context` 和 `[llm_post_edit].use_recent_context` 同时开启时才会发送，且默认限制为最近几段中的约 200 字。屏幕 OCR 发给大模型前会按行去空、去重，并默认限制为 12 行 / 400 字；热词参考默认最多 50 条，这些 LLM 参考预算保留在 `config.toml`，不作为普通用户日常设置。真实润色请求会按输入长度设置输出上限，减少模型生成过长导致的等待。`thinking_strategy = "auto"` 会按服务商选择关闭思考/推理的兼容写法，例如 DashScope 使用 `enable_thinking=false`，DeepSeek 和 MiMo 使用 `thinking.type=disabled`，OpenRouter 使用较低 reasoning effort；API配置页的大模型测试会使用较长的内置语音输入样例，尝试候选策略并保存最快的成功结果。测试不会读取本地最近上下文正文。
+大模型配置走 OpenAI 兼容接口，API配置页日常只展示启用润色、Base URL、API Key、模型和测试按钮；`thinking_strategy` 收在高级兼容性设置里，通常保持自动即可。默认示例使用阿里云百炼/DashScope 的北京地域地址 `https://dashscope.aliyuncs.com/compatible-mode/v1`。Base URL 可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址；例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。`api_key` 必须来自同一个大模型服务商，`model` 必须是该账号和地域可用的模型名。只需要语音识别时可以完全不配置大模型；开启润色后，短文本默认低于 `min_chars` 不会调用大模型，以减少延迟；已保存的 `min_chars` 会按用户配置原样保留，不再按旧默认值猜测迁移。`min_chars` 使用润色触发长度：中文等 CJK 字符按单字计，英文和数字按连续词片段计，空格和标点不计；因此默认 `40` 约等于 40 个汉字或 40 个英文/数字片段。达到最小触发长度的最终识别文本会发送到你配置的大模型服务；用户词典、场景与产品偏好、按预算压缩后的屏幕 OCR 和可选最近上下文会作为参考信息追加。最近上下文进入大模型默认关闭，只有 `[context].enable_recent_context` 和 `[llm_post_edit].use_recent_context` 同时开启时才会发送，且默认限制为最近几段中的约 200 字。屏幕 OCR 发给大模型前会按行去空、去重，并默认限制为 12 行 / 400 字；热词参考默认最多 50 条，这些 LLM 参考预算保留在 `config.toml`，不作为普通用户日常设置。真实润色请求会按输入长度设置输出上限，减少模型生成过长导致的等待。`thinking_strategy = "auto"` 会按服务商选择关闭思考/推理的兼容写法，例如 DashScope 使用 `enable_thinking=false`，DeepSeek 和 MiMo 使用 `thinking.type=disabled`，OpenRouter 使用较低 reasoning effort；API配置页的大模型测试会使用较长的内置语音输入样例，尝试候选策略并保存最快的成功结果。修改 Base URL、API Key、模型名或 thinking 开关并自动保存后，VoxType 会自动从 `auto` 候选重新测速并保存最快成功策略；测试不会读取本地最近上下文正文。
 
 DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](docs/audits/2026-05-28-llm-polishing-model-test.md)，其中 2026-05-30 复测修正了旧结论：日常仍优先考虑 `qwen3.7-max`；低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，但它对提示词样式文本和技术路径更容易改偏；不要仅因技术文本切换到 `deepseek-v4-pro`，当前简化 prompt 下它也会改写代码路径，路径、文件名和标识符应优先依赖屏幕 OCR、热词或人工确认。
 
@@ -224,11 +224,12 @@ ignored_hotwords = []
 录音相关配置：
 
 ```toml
+[asr]
+no_feedback_auto_stop_seconds = 30
+
 [audio]
 max_record_seconds = 300
 stop_grace_ms = 250
-silence_auto_stop_seconds = 0
-silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
 ```
@@ -253,7 +254,7 @@ VoxType 会把约 `50ms` 头部静音并入第一包真实音频，第一包总�
 
 停录时，`stop_grace_ms` 是固定保留的真实尾音等待时间，默认约 `250ms`，不再依赖本地音量检测判断是否延长。这样更换低音量麦克风后，也不会因为音量阈值误判而提前切断尾音。不足一片的尾部音频会在关闭麦克风前补发给 ASR，不再额外追加尾部静音，最后一个音频包会直接作为负包发送，帮助豆包触发二遍最终判停。
 
-本地静音自动停止默认关闭，`silence_auto_stop_seconds = 0`。低音量麦克风或输入电平不稳定时建议保持关闭；如需无人值守长录音，可以手动设为大于 0 的秒数。
+ASR 无反馈自动停止默认开启，`no_feedback_auto_stop_seconds = 30`。如果 ASR 服务在 30 秒内没有返回任何有效文本反馈，VoxType 会按手动停录同样的尾音收尾流程结束录音，然后继续等待服务端最终包；填 `0` 可关闭。它不再依赖本地音量阈值，因此低音量麦克风不会因为静音误判而被提前截断。
 
 文本后处理相关配置：
 
@@ -362,7 +363,7 @@ src-tauri\target\release\voxtype-desktop.exe
 - 自动热词候选默认关闭。开启后本地采集文本写入 `context/hotword_history.jsonl`，可在热词页或隐私与本地数据页清空；诊断报告和日志不会输出历史正文、候选词或 prompt。
 - 统计只保存字数、时长、速度等非正文数据，可在隐私与本地数据页清空。
 - 右 Alt 和鼠标中键默认关闭，确认不与其他软件冲突后再开启。
-- 连续低音量自动停止默认关闭，默认值为 `0`，静音阈值默认 `0.03`；已保存的秒数、阈值和尾音窗口会保留，不再按旧默认值自动改写；录音期间静音系统声音默认关闭。
+- ASR 无反馈自动停止默认 `30` 秒，填 `0` 可关闭；停录尾音窗口会保留用户设置，录音期间静音系统声音默认关闭。
 - 最终识别正文默认不打印到控制台。
 
 托盘行为：

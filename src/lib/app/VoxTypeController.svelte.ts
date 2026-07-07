@@ -46,6 +46,11 @@ import { actionsForUserError } from "$lib/utils/errorActions";
 import { isAliyunAsrProvider } from "$lib/utils/asrProvider";
 import { clonePlain, configFingerprint } from "$lib/utils/config";
 import {
+  hasLlmAdapterTestConfig,
+  llmAdapterConfigFingerprint,
+  LLM_THINKING_STRATEGY_AUTO,
+} from "$lib/utils/llmConfig";
+import {
   clampAudioLevel,
   micBarHeight as getMicBarHeight,
   micBarOpacity as getMicBarOpacity,
@@ -163,6 +168,9 @@ export function createVoxTypeController() {
   let asrConnectionStatus = $state<AsrConnectionStatus>("missing_auth");
   let asrTestedConfigFingerprint = $state("");
   let testingLlm = $state(false);
+  let llmAutoAdaptTestedFingerprint = "";
+  let pendingLlmAutoAdaptFingerprint: string | null = null;
+  let runningLlmAutoAdapt = false;
   let testingScreenContext = $state(false);
   let screenContextTestResult = $state<ScreenContextTestResult | null>(null);
   let validationErrors = $state<Record<string, string>>({});
@@ -618,6 +626,8 @@ export function createVoxTypeController() {
 
   function applyLoadedConfig(loaded: LoadedConfig) {
     configController.applyLoadedConfig(loaded);
+    llmAutoAdaptTestedFingerprint = llmAdapterConfigFingerprint(loaded.data);
+    pendingLlmAutoAdaptFingerprint = null;
   }
 
   async function loadAll() {
@@ -700,7 +710,46 @@ export function createVoxTypeController() {
   }
 
   async function persistConfig(options: PersistConfigOptions = {}) {
-    return configController.persistConfig(options);
+    const result = await configController.persistConfig(options);
+    if (result) queueLlmAutoAdaptAfterSave(result.data);
+    return result;
+  }
+  function queueLlmAutoAdaptAfterSave(savedConfig: AppConfig) {
+    const fingerprint = llmAdapterConfigFingerprint(savedConfig);
+    if (!hasLlmAdapterTestConfig(savedConfig)) {
+      llmAutoAdaptTestedFingerprint = fingerprint;
+      pendingLlmAutoAdaptFingerprint = null;
+      return;
+    }
+    if (fingerprint === llmAutoAdaptTestedFingerprint) return;
+    pendingLlmAutoAdaptFingerprint = fingerprint;
+    void runPendingLlmAutoAdaptTest();
+  }
+  async function runPendingLlmAutoAdaptTest() {
+    if (runningLlmAutoAdapt || testingLlm || !pendingLlmAutoAdaptFingerprint) return;
+    const fingerprint = pendingLlmAutoAdaptFingerprint;
+    if (!hasLlmAdapterTestConfig(config) || llmAdapterConfigFingerprint(config) !== fingerprint) {
+      pendingLlmAutoAdaptFingerprint = null;
+      return;
+    }
+    pendingLlmAutoAdaptFingerprint = null;
+    runningLlmAutoAdapt = true;
+    llmAutoAdaptTestedFingerprint = fingerprint;
+    try {
+      await setup.testLlmConfig({
+        automatic: true,
+        expectedFingerprint: fingerprint,
+        forceThinkingStrategy: LLM_THINKING_STRATEGY_AUTO,
+      });
+    } finally {
+      runningLlmAutoAdapt = false;
+      if (
+        pendingLlmAutoAdaptFingerprint &&
+        pendingLlmAutoAdaptFingerprint !== llmAutoAdaptTestedFingerprint
+      ) {
+        void runPendingLlmAutoAdaptTest();
+      }
+    }
   }
   function fieldError(field: string) {
     return configController.fieldError(field);
@@ -754,7 +803,13 @@ export function createVoxTypeController() {
     await setup.testAsrConfig();
   }
   async function testLlmConfig() {
+    const testedFingerprint = llmAdapterConfigFingerprint(config);
     await setup.testLlmConfig();
+    if (hasLlmAdapterTestConfig(config) && llmAdapterConfigFingerprint(config) === testedFingerprint) {
+      llmAutoAdaptTestedFingerprint = testedFingerprint;
+      if (pendingLlmAutoAdaptFingerprint === testedFingerprint) pendingLlmAutoAdaptFingerprint = null;
+    }
+    void runPendingLlmAutoAdaptTest();
   }
   async function testScreenContext() {
     await setup.testScreenContext();

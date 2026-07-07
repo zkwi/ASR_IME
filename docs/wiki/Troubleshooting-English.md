@@ -89,8 +89,8 @@ Notes:
 - Empty recognition becomes a failure. It does not run polishing, paste, or successful statistics.
 - A microphone input-stream error also becomes a failure, so missing-frame audio does not produce low-quality recognized text.
 - Input gain defaults to `0 dB`; it only boosts the PCM sent to the selected ASR provider locally and does not save audio. Too much gain clips speech or amplifies room noise.
-- Local silence auto-stop is off by default to avoid cutting off quiet microphones because of local threshold misclassification.
-- If you need unattended long recording, set `silence_auto_stop_seconds` to a positive value in `config.toml`.
+- ASR no-feedback auto-stop defaults to `30` seconds and only stops through the normal grace flow when the provider returns no effective text feedback.
+- If the network or provider responds slowly, increase this value in Options; set `0` to disable it.
 
 ## ASR Test Fails
 
@@ -159,7 +159,7 @@ Notes:
 
 Try:
 
-- Rerun the LLM test in API Config so VoxType saves the fastest thinking adapter, and keep thinking disabled.
+- After changing Base URL, API Key, model, or the thinking toggle, wait for the automatic adapter test after auto-save; if polishing is still slow, rerun the LLM test manually in API Config and keep thinking disabled.
 - Increase `min_chars` so short text skips polishing.
 - Lower the LLM reference budgets for terms, recent context, and screen OCR to send less context.
 - Use a faster model.

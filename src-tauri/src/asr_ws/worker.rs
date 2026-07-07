@@ -6,8 +6,8 @@ use super::output::{
 };
 use crate::session::{SessionController, SessionPhase};
 use crate::{
-    app_log, asr, asr_provider, config::AppConfig, llm_post_edit, overlay, screen_context,
-    text_output,
+    app_log, asr, asr_activity::AsrActivityReporter, asr_provider, config::AppConfig,
+    llm_post_edit, overlay, screen_context, text_output,
 };
 use std::sync::mpsc::Receiver;
 use std::thread;
@@ -16,16 +16,29 @@ use tauri::AppHandle;
 
 const POST_EDITING_OVERLAY_DELAY: Duration = Duration::from_millis(450);
 
-pub fn spawn_asr_worker(
-    config: AppConfig,
-    audio_rx: Receiver<Vec<u8>>,
-    started_at: Instant,
-    app: AppHandle,
-    session: SessionController,
-    generation: u64,
-    screen_context_rx: Option<screen_context::ScreenContextReceiver>,
-) {
+pub(crate) struct AsrWorkerInput {
+    pub(crate) config: AppConfig,
+    pub(crate) audio_rx: Receiver<Vec<u8>>,
+    pub(crate) started_at: Instant,
+    pub(crate) app: AppHandle,
+    pub(crate) session: SessionController,
+    pub(crate) generation: u64,
+    pub(crate) screen_context_rx: Option<screen_context::ScreenContextReceiver>,
+    pub(crate) activity: AsrActivityReporter,
+}
+
+pub fn spawn_asr_worker(input: AsrWorkerInput) {
     thread::spawn(move || {
+        let AsrWorkerInput {
+            config,
+            audio_rx,
+            started_at,
+            app,
+            session,
+            generation,
+            screen_context_rx,
+            activity,
+        } = input;
         app_log::info(format!("ASR worker 已启动: generation={}", generation));
         if let Some(config_error) = asr_provider::worker_configuration_error(&config) {
             let error = config_error.message;
@@ -72,6 +85,7 @@ pub fn spawn_asr_worker(
                 session: session.clone(),
                 generation,
                 screen_context: screen_context_text.clone(),
+                activity,
             })
             .await?;
             if text.trim().is_empty() {

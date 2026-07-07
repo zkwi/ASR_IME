@@ -18,6 +18,14 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         &[ASR_PROVIDER_DOUBAO, ASR_PROVIDER_ALIYUN_FUN],
         "语音识别服务只能是 doubao 或 aliyun_fun。",
     );
+    validate_u64_range(
+        &mut errors,
+        "asr.no_feedback_auto_stop_seconds",
+        config.asr.no_feedback_auto_stop_seconds,
+        0,
+        300,
+        "ASR 无反馈自动停止秒数需在 0 到 300 之间。",
+    );
     validate_u32_range(
         &mut errors,
         "audio.sample_rate",
@@ -57,22 +65,6 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         0,
         10_000,
         "停止收尾毫秒需在 0 到 10000 之间。",
-    );
-    validate_u64_range(
-        &mut errors,
-        "audio.silence_auto_stop_seconds",
-        config.audio.silence_auto_stop_seconds,
-        0,
-        300,
-        "静音自动停止秒数需在 0 到 300 之间。",
-    );
-    validate_f32_range(
-        &mut errors,
-        "audio.silence_level_threshold",
-        config.audio.silence_level_threshold,
-        0.001,
-        0.5,
-        "静音音量阈值需在 0.001 到 0.5 之间。",
     );
     validate_f32_range(
         &mut errors,

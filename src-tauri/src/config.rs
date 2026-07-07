@@ -57,6 +57,8 @@ pub struct AppConfig {
 pub struct AsrConfig {
     #[serde(default = "default_asr_provider")]
     pub provider: String,
+    #[serde(default = "default_asr_no_feedback_auto_stop_seconds")]
+    pub no_feedback_auto_stop_seconds: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,10 +105,6 @@ pub struct AudioConfig {
     pub max_record_seconds: u64,
     #[serde(default = "default_stop_grace_ms")]
     pub stop_grace_ms: u64,
-    #[serde(default = "default_silence_auto_stop_seconds")]
-    pub silence_auto_stop_seconds: u64,
-    #[serde(default = "default_silence_level_threshold")]
-    pub silence_level_threshold: f32,
     #[serde(default = "default_input_gain_db")]
     pub input_gain_db: f32,
     #[serde(default)]
@@ -356,6 +354,7 @@ impl Default for AsrConfig {
     fn default() -> Self {
         Self {
             provider: default_asr_provider(),
+            no_feedback_auto_stop_seconds: default_asr_no_feedback_auto_stop_seconds(),
         }
     }
 }
@@ -394,8 +393,6 @@ impl Default for AudioConfig {
             segment_ms: default_segment_ms(),
             max_record_seconds: default_max_record_seconds(),
             stop_grace_ms: default_stop_grace_ms(),
-            silence_auto_stop_seconds: default_silence_auto_stop_seconds(),
-            silence_level_threshold: default_silence_level_threshold(),
             input_gain_db: default_input_gain_db(),
             mute_system_volume_while_recording: false,
             input_device_name: None,
@@ -951,6 +948,9 @@ fn default_hotkey() -> String {
 fn default_asr_provider() -> String {
     ASR_PROVIDER_DOUBAO.to_string()
 }
+fn default_asr_no_feedback_auto_stop_seconds() -> u64 {
+    30
+}
 fn default_resource_id() -> String {
     "volc.seedasr.sauc.duration".to_string()
 }
@@ -977,12 +977,6 @@ fn default_max_record_seconds() -> u64 {
 }
 fn default_stop_grace_ms() -> u64 {
     250
-}
-fn default_silence_auto_stop_seconds() -> u64 {
-    0
-}
-fn default_silence_level_threshold() -> f32 {
-    0.03
 }
 fn default_input_gain_db() -> f32 {
     0.0
@@ -1184,6 +1178,7 @@ mod tests {
     fn defaults_are_conservative_for_consumer_use() {
         let config = AppConfig::default();
         assert_eq!(config.asr.provider, ASR_PROVIDER_DOUBAO);
+        assert_eq!(config.asr.no_feedback_auto_stop_seconds, 30);
         assert!(config.aliyun_asr.api_key.is_empty());
         assert!(config.aliyun_asr.workspace_id.is_empty());
         assert!(config.aliyun_asr.websocket_url.is_empty());
@@ -1198,8 +1193,6 @@ mod tests {
         assert!(!config.triggers.right_alt_enabled);
         assert!(!config.audio.mute_system_volume_while_recording);
         assert_eq!(config.audio.stop_grace_ms, 250);
-        assert_eq!(config.audio.silence_auto_stop_seconds, 0);
-        assert_eq!(config.audio.silence_level_threshold, 0.03);
         assert_eq!(config.audio.input_gain_db, 0.0);
         assert_eq!(config.request.end_window_size, Some(800));
         assert!(config.request.language.is_empty());
@@ -1445,10 +1438,9 @@ mod tests {
     #[test]
     fn validates_obviously_invalid_fields() {
         let mut config = AppConfig::default();
+        config.asr.no_feedback_auto_stop_seconds = 301;
         config.audio.sample_rate = 0;
         config.audio.channels = 0;
-        config.audio.silence_auto_stop_seconds = 301;
-        config.audio.silence_level_threshold = 2.0;
         config.audio.input_gain_db = 25.0;
         config.typing.paste_delay_ms = 9_999;
         config.request.final_result_timeout_seconds = 0.0;
@@ -1483,8 +1475,7 @@ mod tests {
 
         assert!(fields.contains(&"audio.sample_rate"));
         assert!(fields.contains(&"audio.channels"));
-        assert!(fields.contains(&"audio.silence_auto_stop_seconds"));
-        assert!(fields.contains(&"audio.silence_level_threshold"));
+        assert!(fields.contains(&"asr.no_feedback_auto_stop_seconds"));
         assert!(fields.contains(&"audio.input_gain_db"));
         assert!(fields.contains(&"typing.paste_delay_ms"));
         assert!(fields.contains(&"request.final_result_timeout_seconds"));
@@ -1560,6 +1551,47 @@ mod tests {
     #[test]
     fn accepts_default_config() {
         assert!(validate_config(&AppConfig::default()).is_ok());
+    }
+
+    #[test]
+    fn asr_no_feedback_auto_stop_accepts_documented_bounds() {
+        for seconds in [0, 30, 300] {
+            let mut config = AppConfig::default();
+            config.asr.no_feedback_auto_stop_seconds = seconds;
+            assert!(
+                validate_config(&config).is_ok(),
+                "{seconds} should be accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_audio_silence_fields_are_ignored_and_not_saved_back() {
+        let dir = temp_test_dir("legacy-silence-fields");
+        let path = dir.join("config.toml");
+        std::fs::write(
+            &path,
+            r#"
+[asr]
+provider = "doubao"
+
+[audio]
+silence_auto_stop_seconds = 10
+silence_level_threshold = 0.04
+stop_grace_ms = 800
+"#,
+        )
+        .unwrap();
+
+        let loaded = load_config_from_path(path.clone()).unwrap();
+        assert_eq!(loaded.data.asr.no_feedback_auto_stop_seconds, 30);
+        assert_eq!(loaded.data.audio.stop_grace_ms, 800);
+        write_config_file(&path, &loaded.data).unwrap();
+        let saved = std::fs::read_to_string(&path).unwrap();
+
+        assert!(!saved.contains("silence_auto_stop_seconds"));
+        assert!(!saved.contains("silence_level_threshold"));
+        remove_temp_dir(&dir);
     }
 
     #[test]
@@ -1654,26 +1686,24 @@ mod tests {
 
         let mut config = AppConfig::default();
         config.auto_hotwords.max_history_chars = 10_000;
-        config.audio.silence_auto_stop_seconds = 10;
-        config.audio.silence_level_threshold = 0.04;
+        config.asr.no_feedback_auto_stop_seconds = 10;
         config.audio.stop_grace_ms = 800;
         config.request.enable_accelerate_text = Some(true);
         config.request.accelerate_score = Some(8);
         write_config_file(&path, &config).unwrap();
         let loaded = load_config_from_path(path.clone()).unwrap();
         assert_eq!(loaded.data.auto_hotwords.max_history_chars, 10_000);
-        assert_eq!(loaded.data.audio.silence_auto_stop_seconds, 10);
-        assert_eq!(loaded.data.audio.silence_level_threshold, 0.04);
+        assert_eq!(loaded.data.asr.no_feedback_auto_stop_seconds, 10);
         assert_eq!(loaded.data.audio.stop_grace_ms, 800);
         assert_eq!(loaded.data.request.enable_accelerate_text, Some(true));
         assert_eq!(loaded.data.request.accelerate_score, Some(8));
 
         for stop_seconds in [10, 30] {
             let mut config = AppConfig::default();
-            config.audio.silence_auto_stop_seconds = stop_seconds;
+            config.asr.no_feedback_auto_stop_seconds = stop_seconds;
             write_config_file(&path, &config).unwrap();
             let loaded = load_config_from_path(path.clone()).unwrap();
-            assert_eq!(loaded.data.audio.silence_auto_stop_seconds, stop_seconds);
+            assert_eq!(loaded.data.asr.no_feedback_auto_stop_seconds, stop_seconds);
         }
 
         for stop_grace_ms in [100, 150, 200, 800] {

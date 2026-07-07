@@ -3,6 +3,7 @@ import { userErrorDetails } from "$lib/i18n";
 import type { AppConfig, LoadedConfig, Section } from "$lib/types/app";
 import type { SetupStatus } from "$lib/utils/setupStatus";
 import { hasAsrProviderConfig } from "$lib/utils/asrProvider";
+import { hasLlmAdapterTestConfig } from "$lib/utils/llmConfig";
 
 type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -11,11 +12,7 @@ export function hasAuth(config: AppConfig) {
 }
 
 export function hasLlmApiConfig(config: AppConfig) {
-  return Boolean(
-    config.llm_post_edit.base_url?.trim() &&
-      config.llm_post_edit.api_key?.trim() &&
-      config.llm_post_edit.model?.trim(),
-  );
+  return hasLlmAdapterTestConfig(config);
 }
 
 export function requiresAsrAuth(params: {

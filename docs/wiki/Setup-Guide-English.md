@@ -137,7 +137,7 @@ Open **API Config -> LLM API**:
 | Model | For example `qwen3.5-plus`; must be available to the current account |
 | Advanced compatibility settings | Thinking adapter is Auto by default; the test tries candidate strategies and saves the fastest successful one |
 
-Click **Test** after configuration. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default. Screen OCR is trimmed by line, deduplicated, and capped to 12 lines / 400 chars before AI polishing by default; term references are capped to 50 entries. LLM reference budgets are low-frequency settings and remain in `config.toml`, not in the normal UI.
+Click **Test** after configuration, or wait for the automatic test after auto-save. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. After Base URL, API Key, model, or the thinking toggle changes and auto-save succeeds, VoxType automatically reruns the adapter test from Auto candidates and saves the fastest successful strategy. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default. Screen OCR is trimmed by line, deduplicated, and capped to 12 lines / 400 chars before AI polishing by default; term references are capped to 50 entries. LLM reference budgets are low-frequency settings and remain in `config.toml`, not in the normal UI.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
@@ -145,7 +145,7 @@ For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](.
 
 Recommendations:
 
-- Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; retest after changing Base URL or model.
+- Thinking is disabled with provider-specific request fields where supported because voice polishing is latency-sensitive; changing Base URL, API Key, model, or the thinking toggle automatically retests after auto-save.
 - Text below `min_chars = 40` is not polished by default. CJK characters count individually; English and numbers count by contiguous word-like segments; spaces and punctuation do not count.
 - Similar or identical model names can behave very differently across providers, so prefer the latency measured by API Config over the model name alone.
 - Code paths, filenames, and English identifiers are easy for an LLM to "correct" into plausible but wrong forms. Use screen OCR, hotwords, or a manual check for those terms.
@@ -219,7 +219,7 @@ Options is grouped into Common settings, Enhancements, and Maintenance so daily 
 | Common settings | Primary shortcut, microphone, paste method, remove trailing period, restore clipboard after paste |
 | Enhancements | Screen OCR context, Windows OCR test, caption preview, color presets, opacity presets |
 | Maintenance | Startup, close-window behavior, check updates, update now, open logs, copy diagnostic report |
-| Recording troubleshooting | Collapsed by default; expands for non-default values or validation errors, with low-volume auto-stop and input gain |
+| Recording troubleshooting | Collapsed by default; expands for non-default values or validation errors, with ASR no-feedback auto-stop and input gain |
 | Extra start options | Collapsed by default; expands when enabled, with middle mouse and right Alt |
 
 To review or clear local data, open Privacy & local data from the sidebar.
@@ -237,7 +237,7 @@ Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, mode
 | Right Alt | Off | Can conflict with IMEs or shortcuts |
 | Paste method | Automatic paste | Works for most text fields |
 | Clipboard restore | On | Tries to restore previous clipboard after paste |
-| Low-volume auto-stop | Off by default (`0` seconds), threshold `0.03` | Avoids cutting off quiet microphones because of local threshold misclassification; set a positive value only for unattended long recording |
+| ASR no-feedback auto-stop | `30` seconds by default; set `0` to disable | Stops through the normal grace flow when the ASR provider returns no effective text feedback for too long |
 | Screen OCR context | On, current display | Improves names, UI terms, filenames, and code identifiers; switch to current-window-only or disable in sensitive scenarios |
 | Recent context | Off | Conservative by default; AI access to previous text also needs a separate opt-in |
 | Automatic hotword candidates | Off | Does not save transcript history by default |
@@ -295,11 +295,12 @@ thinking_strategy = "auto"
 Recording:
 
 ```toml
+[asr]
+no_feedback_auto_stop_seconds = 30
+
 [audio]
 max_record_seconds = 300
 stop_grace_ms = 250
-silence_auto_stop_seconds = 0
-silence_level_threshold = 0.03
 input_gain_db = 0.0
 mute_system_volume_while_recording = false
 # Optional: prefer matching by device name; legacy input_device index is kept only for old configs.
@@ -313,7 +314,7 @@ In Doubao mode, VoxType keeps actual ASR packets within Doubao's recommended `10
 
 VoxType keeps `input_gain_db = 0.0` by default and does not boost microphone audio. Only raise input gain slightly in recording troubleshooting when the recording quality card repeatedly reports low volume and the system microphone level and distance already look correct; try `+3 dB` or `+6 dB` first to avoid clipping speech or amplifying room noise. After recording, Home shows a lightweight recording quality card when it is useful, with the latest RMS, peak, active speech ratio, and a suggestion. If the session already recognized and output text successfully, low-active-speech warnings are hidden to avoid flagging a usable result as a problem. These metrics contain no recognized text and are not written to the main stats table.
 
-Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. Alibaba Cloud interim text is also caption feedback only; final paste waits for `task-finished`. `stop_grace_ms` is the fixed real-audio tail wait after stopping, defaulting to about `250ms`; it no longer depends on local volume detection to decide whether to extend, so quiet microphones are less likely to lose tail words because of threshold misclassification. Any partial final audio chunk is flushed before the microphone is closed. Local silence auto-stop is disabled by default with `silence_auto_stop_seconds = 0`; keep it disabled for quiet microphones.
+Interim Doubao text is shown in the floating caption with a shorter local throttle; fast interim updates are coalesced to the latest text and emitted on time. When utterance text is more complete than `result.text` in the same response, captions prefer the fuller cumulative utterance text, while final paste still waits for the final package. Alibaba Cloud interim text is also caption feedback only; final paste waits for `task-finished`. `stop_grace_ms` is the fixed real-audio tail wait after stopping, defaulting to about `250ms`; it no longer depends on local volume detection to decide whether to extend, so quiet microphones are less likely to lose tail words because of threshold misclassification. Any partial final audio chunk is flushed before the microphone is closed. ASR no-feedback auto-stop defaults to `30` seconds and only stops through the normal grace flow when the provider returns no effective text feedback; set `0` to disable it.
 
 For Doubao mode, the recently verified stable combination is to keep the default `200ms` ASR packet size and put perceived-speed work into `20ms` response polling, `50ms` caption throttling, and a `500ms` OCR-context wait. First-word acceleration is off by default to prioritize beginning-word accuracy. Doubao final output still accepts only the final package and prefers that package's full `result.text`. `definite=true` utterances stabilize the final result, but when the final package highly overlaps those utterances and recovers missing head or tail words, VoxType should keep the final full text even if the package slightly shortens earlier wording.
 
@@ -365,7 +366,7 @@ github_repo = "zkwi/VoxType"
 3. Choose Doubao ASR or Alibaba Cloud FunASR and fill in the selected provider's credentials.
 4. Click **Test** for the selected ASR provider.
 5. Return to Home and put the cursor in a target input field.
-6. Press `Ctrl + Q` to start recording; press it again to stop. Local silence auto-stop is off by default and should be enabled only for unattended long recording.
+6. Press `Ctrl + Q` to start recording; press it again to stop. ASR no-feedback auto-stop defaults to 30 seconds and can be increased or disabled from Options.
 7. Wait for final recognition and optional polishing.
 8. If text does not appear in the target field, press `Ctrl + V` manually.
 

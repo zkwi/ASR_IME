@@ -1,6 +1,7 @@
 mod aliyun_asr;
 mod app_log;
 mod asr;
+mod asr_activity;
 mod asr_provider;
 mod asr_ws;
 mod audio;
