@@ -222,7 +222,7 @@
             <ExternalLink size={16} />{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunDocsCta") : t("doubaoDocsCta")}
           </button>
           <button class="test-button" type="button" onclick={onTestAsrConfig} disabled={testingAsr}>
-            <ShieldCheck size={16} />{testingAsr ? t("testingConnection") : t("testConnection")}
+            <ShieldCheck size={16} />{testingAsr ? t("testingAsrConnection") : t("testAsrConnection")}
           </button>
         </div>
       </div>
@@ -355,6 +355,7 @@
         </span>
       </label>
       <p class="field-hint">{t("llmPolishingDataHint")}</p>
+      <p class="field-hint">{t("llmAutoTestDataHint")}</p>
       <div id="llm-api-config-fields" class="llm-api-config-fields">
         <div class="form-grid">
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.base_url"))}>
@@ -396,7 +397,7 @@
           </div>
         </AdvancedSettings>
         <button class="test-button" type="button" onclick={onTestLlmConfig} disabled={testingLlm}>
-          <ShieldCheck size={16} />{testingLlm ? t("testingConnection") : t("testConnection")}
+          <ShieldCheck size={16} />{testingLlm ? t("testingLlmConnection") : t("testLlmConnection")}
         </button>
       </div>
     </div>
