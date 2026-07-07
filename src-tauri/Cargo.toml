@@ -1,6 +1,6 @@
 [package]
 name = "voxtype-desktop"
-version = "0.7.1"
+version = "0.7.2"
 description = "Tauri prototype for VoxType"
 authors = ["VoxType contributors"]
 edition = "2021"
