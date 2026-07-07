@@ -80,6 +80,8 @@ npm run ai:release-check
 npx tauri build
 ```
 
+`ai:release-check` 会覆盖日常检查、npm audit、Rust audit、clippy 和 Tauri debug build。GitHub Actions CI 复用同一入口；如果本地发布检查没过，不要推送发布分支。
+
 发布版本号要反映影响范围：
 
 - patch：纯维护、文档、小修复、小范围文案。

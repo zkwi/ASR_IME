@@ -16,17 +16,19 @@ function Invoke-CheckedCommand {
   }
 }
 
-Invoke-CheckedCommand "[1/4] Local checks" { .\scripts\ai-check.ps1 }
+Invoke-CheckedCommand "[1/5] Local checks" { .\scripts\ai-check.ps1 }
 
-Invoke-CheckedCommand "[2/4] Rust dependency audit" { npm run audit:rust }
+Invoke-CheckedCommand "[2/5] NPM dependency audit" { npm run audit:npm }
+
+Invoke-CheckedCommand "[3/5] Rust dependency audit" { npm run audit:rust }
 
 Push-Location ".\src-tauri"
 try {
-  Invoke-CheckedCommand "[3/4] Rust clippy" { cargo clippy --all-targets -- -D warnings }
+  Invoke-CheckedCommand "[4/5] Rust clippy" { cargo clippy --all-targets -- -D warnings }
 } finally {
   Pop-Location
 }
 
-Invoke-CheckedCommand "[4/4] Tauri debug build" { npx tauri build --debug --no-bundle }
+Invoke-CheckedCommand "[5/5] Tauri debug build" { npx tauri build --debug --no-bundle }
 
 Write-Host "`nRelease checks passed."
