@@ -6,6 +6,7 @@
     title: string;
     description: string;
     expanded: boolean;
+    // rootId is for navigation targets; panelId is for aria-controls.
     rootId?: string;
     panelId?: string;
     onToggle: () => void;

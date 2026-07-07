@@ -1,3 +1,5 @@
+// Maps validation fields to stable settings panels. Keep ids aligned with
+// component root/panel ids so hidden advanced sections can open on errors.
 export function settingsPanelForField(field: string) {
   if (field.startsWith("asr.")) return "settings-auth";
   if (field.startsWith("auth.")) return "settings-auth";

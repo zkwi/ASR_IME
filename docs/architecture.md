@@ -86,3 +86,4 @@ ASR 质量与延迟相关改动必须同时参考 [ASR 质量与延迟守门清�
 - 新增 UI 状态优先放到 `src/lib/app/*Controller.svelte.ts`，让 `VoxTypeController.svelte.ts` 继续作为组合入口。
 - 改主链路时先判断是否影响 ASR、LLM、剪贴板、统计、日志脱敏、热键或托盘，并同步 README、Wiki 或本文件中对应说明。
 - 改配置字段时同步 Rust 默认值、配置模板、前端设置项、三语言文案和文档。
+- 日常小改和发布前检查可以参考 [维护指南](maintenance-guide.md)，避免把 provider、设置页、隐私和发布规则散落在审计记录里。

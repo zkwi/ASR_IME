@@ -3,6 +3,8 @@ import type { AppConfig } from "$lib/types/app";
 export const ASR_PROVIDER_DOUBAO = "doubao";
 export const ASR_PROVIDER_ALIYUN_FUN = "aliyun_fun";
 
+// Frontend mirror of the Rust provider facade. Keep this file focused on
+// provider selection and UI readiness checks; protocol validation stays in Rust.
 export function activeAsrProvider(config: AppConfig) {
   return config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? ASR_PROVIDER_ALIYUN_FUN : ASR_PROVIDER_DOUBAO;
 }
@@ -22,6 +24,8 @@ export function hasAsrProviderConfig(config: AppConfig) {
   return Boolean(config.auth.app_key.trim() && config.auth.access_key.trim());
 }
 
+// Used to refresh setup status when the active provider's effective inputs change.
+// Do not include recognition text, prompt bodies, recent context, or screen OCR here.
 export function activeAsrConfigFingerprint(config: AppConfig) {
   if (isAliyunAsrProvider(config)) {
     return JSON.stringify({

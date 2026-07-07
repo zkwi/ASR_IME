@@ -1,3 +1,10 @@
+//! Alibaba Cloud FunASR realtime WebSocket provider.
+//!
+//! Intermediate `result-generated` messages are only surfaced as captions.
+//! Final text is released to the main pipeline after `task-finished`, matching
+//! VoxType's rule that interim ASR text must never trigger LLM, paste, stats,
+//! recent context, or auto-hotword history.
+
 use crate::config::effective_hotwords;
 use crate::session::{SessionController, SessionPhase};
 use crate::{app_log, asr, asr_ws, audio, config::AppConfig};
@@ -58,6 +65,7 @@ struct AliyunFinalGate {
 }
 
 impl AliyunFinalGate {
+    /// Converts provider events into UI-safe updates while holding back final text.
     fn apply(&mut self, event: AliyunServerEvent) -> Option<ProviderSurfaceEvent> {
         match event {
             AliyunServerEvent::TaskStarted => {

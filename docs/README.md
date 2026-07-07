@@ -13,6 +13,7 @@
 ## 维护文档
 
 - AI 和维护规则：[AGENTS.md](../AGENTS.md)
+- 日常维护指南：[docs/maintenance-guide.md](maintenance-guide.md)
 - 架构概览：[docs/architecture.md](architecture.md)
 - ASR 质量与延迟守门清单：[docs/asr-quality-latency-guardrails.md](asr-quality-latency-guardrails.md)
 - 代码规范：[docs/code-style.md](code-style.md)
@@ -25,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 维护文档发布审计：[2026-07-07 VoxType 0.6.1 维护文档发布审计](audits/2026-07-07-release-0.6.1-maintenance-docs-audit.md)
 - 设置页简化发布审计：[2026-07-07 VoxType 0.6.0 设置页简化发布审计](audits/2026-07-07-release-0.6.0-settings-simplification-audit.md)
 - ASR 服务封装发布审计：[2026-07-07 VoxType 0.5.0 ASR 服务封装发布审计](audits/2026-07-07-release-0.5.0-asr-provider-audit.md)
 - LLM 润色模型测试：[2026-05-28 LLM 润色模型测试记录](audits/2026-05-28-llm-polishing-model-test.md)，含 2026-05-30 基于当前简化 prompt 和 `thinking_strategy` 的修正复测。
