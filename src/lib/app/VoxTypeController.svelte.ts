@@ -168,7 +168,8 @@ export function createVoxTypeController() {
   let asrConnectionStatus = $state<AsrConnectionStatus>("missing_auth");
   let asrTestedConfigFingerprint = $state("");
   let testingLlm = $state(false);
-  let llmAutoAdaptTestedFingerprint = "";
+  let llmTestStatusMessage = $state("");
+  let llmAutoAdaptTestedFingerprint = $state("");
   let pendingLlmAutoAdaptFingerprint: string | null = null;
   let runningLlmAutoAdapt = false;
   let testingScreenContext = $state(false);
@@ -315,6 +316,9 @@ export function createVoxTypeController() {
     getTestingLlm: () => testingLlm,
     setTestingLlm: (testing) => {
       testingLlm = testing;
+    },
+    setLlmTestStatusMessage: (message) => {
+      llmTestStatusMessage = message;
     },
     getTestingScreenContext: () => testingScreenContext,
     setTestingScreenContext: (testing) => {
@@ -720,6 +724,7 @@ export function createVoxTypeController() {
     if (!hasLlmAdapterTestConfig(savedConfig)) {
       llmAutoAdaptTestedFingerprint = fingerprint;
       pendingLlmAutoAdaptFingerprint = null;
+      llmTestStatusMessage = "";
       return;
     }
     if (fingerprint === llmAutoAdaptTestedFingerprint) return;
@@ -1072,6 +1077,14 @@ export function createVoxTypeController() {
   function llmApiStatusText() {
     return hasLlmApiConfig() ? t("llmApiConfigured") : t("llmApiMissing");
   }
+  function llmTestStatusText() {
+    if (!hasLlmApiConfig()) return "";
+    if (testingLlm) return llmTestStatusMessage || t("testingConnection");
+    if (llmAdapterConfigFingerprint(config) !== llmAutoAdaptTestedFingerprint) {
+      return t("llmAutoTestPending");
+    }
+    return llmTestStatusMessage;
+  }
   function requiresAsrAuth(configValue?: AppConfig, exists?: boolean) {
     return configRequiresAsrAuth({
       configLoaded,
@@ -1214,6 +1227,7 @@ export function createVoxTypeController() {
       selectedAutoHotwordCount: autoHotwords.selectedCount(),
       autoHotwordStatusText: autoHotwords.statusText(),
       llmApiStatusText: llmApiStatusText(),
+      llmTestStatusText: llmTestStatusText(),
       fieldError,
       candidateConfidenceLabel,
       formatHotkey,

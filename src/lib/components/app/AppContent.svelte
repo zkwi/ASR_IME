@@ -78,6 +78,7 @@
     selectedAutoHotwordCount: number;
     autoHotwordStatusText: string;
     llmApiStatusText: string;
+    llmTestStatusText: string;
     fieldError: (field: string) => string;
     candidateConfidenceLabel: (confidence: number) => string;
     formatHotkey: (value: string) => string;
@@ -203,6 +204,7 @@
     selectedAutoHotwordCount,
     autoHotwordStatusText,
     llmApiStatusText,
+    llmTestStatusText,
     fieldError,
     candidateConfidenceLabel,
     formatHotkey,
@@ -361,6 +363,7 @@
     {testingLlm}
     {hasLlmApiConfig}
     {llmApiStatusText}
+    {llmTestStatusText}
     {fieldError}
     {setupRequiredMessage}
     {setupActionText}

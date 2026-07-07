@@ -124,6 +124,8 @@ export const zhTW = {
   "llmTestSucceededWithLatency": "大模型測試成功，目前 API Key 可用；延遲 {ms} ms。",
   "llmTestSucceededWithLatencyAndStrategy": "大模型測試成功，目前 API Key 可用；延遲 {ms} ms，已儲存思考適配策略 {strategy}。",
   "llmAutoTestStarted": "大模型配置已儲存，正在自動測試思考適配。",
+  "llmManualTestStarted": "正在測試大模型連線和思考適配。",
+  "llmAutoTestPending": "大模型關鍵配置已修改，儲存後會自動測試思考適配。",
   "screenContextTestSucceeded": "螢幕文字識別測試完成，識別 {chars} 字，用時 {ms} ms。",
   "setupWarningAsrAuthTitle": "識別密鑰未填寫",
   "setupWarningAsrAuthMessage": "填寫目前語音識別服務需要的認證資訊後才能開始語音輸入。",

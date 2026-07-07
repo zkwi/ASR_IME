@@ -124,6 +124,8 @@ export const en = {
   "llmTestSucceededWithLatency": "AI polishing test passed. The current API key is usable; latency {ms} ms.",
   "llmTestSucceededWithLatencyAndStrategy": "AI polishing test passed. The current API key is usable; latency {ms} ms. Saved thinking adapter {strategy}.",
   "llmAutoTestStarted": "AI config saved. Testing the thinking adapter automatically.",
+  "llmManualTestStarted": "Testing the AI connection and thinking adapter.",
+  "llmAutoTestPending": "Key AI settings changed. The thinking adapter will be tested automatically after save.",
   "screenContextTestSucceeded": "Screen text test finished: {chars} chars in {ms} ms.",
   "setupWarningAsrAuthTitle": "Speech keys are missing",
   "setupWarningAsrAuthMessage": "Fill the credentials required by the selected speech recognition provider before starting voice input.",

@@ -78,6 +78,7 @@
     testingLlm: boolean;
     hasLlmApiConfig: boolean;
     llmApiStatusText: string;
+    llmTestStatusText: string;
     fieldError: (field: string) => string;
     setupRequiredMessage: () => string;
     setupActionText: (action: string) => string;
@@ -107,6 +108,7 @@
     testingLlm,
     hasLlmApiConfig,
     llmApiStatusText,
+    llmTestStatusText,
     fieldError,
     setupRequiredMessage,
     setupActionText,
@@ -333,6 +335,12 @@
         <span>{llmApiStatusText}</span>
         <small>{t("llmApiOptionalUses")}</small>
       </div>
+      {#if llmTestStatusText}
+        <div class:testing={testingLlm} class="llm-test-status" aria-live="polite">
+          <ShieldCheck size={16} />
+          <span>{llmTestStatusText}</span>
+        </div>
+      {/if}
       <label class="check">
         <input
           type="checkbox"
@@ -420,6 +428,32 @@
 
   .optional-config-summary small {
     color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  .llm-test-status {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    margin: 8px 0 0;
+    padding: 9px 11px;
+    color: var(--text-main);
+    background: #f8fbff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .llm-test-status.testing {
+    color: #174ea6;
+    background: #f1f6ff;
+    border-color: #bfd6ff;
+  }
+
+  .llm-test-status span {
+    min-width: 0;
     overflow-wrap: anywhere;
   }
 

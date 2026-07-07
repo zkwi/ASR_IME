@@ -43,6 +43,7 @@ type SetupControllerOptions = {
   setAsrTestedConfigFingerprint: (fingerprint: string) => void;
   getTestingLlm: () => boolean;
   setTestingLlm: (testing: boolean) => void;
+  setLlmTestStatusMessage: (message: string) => void;
   getTestingScreenContext: () => boolean;
   setTestingScreenContext: (testing: boolean) => void;
   setScreenContextTestResult: (result: ScreenContextTestResult | null) => void;
@@ -105,9 +106,9 @@ export function createSetupController(options: SetupControllerOptions) {
       if (testOptions.forceThinkingStrategy) {
         config.llm_post_edit.thinking_strategy = testOptions.forceThinkingStrategy;
       }
-      if (testOptions.automatic) {
-        options.setStatusMessage(options.t("llmAutoTestStarted"));
-      }
+      const startMessage = testOptions.automatic ? options.t("llmAutoTestStarted") : options.t("llmManualTestStarted");
+      options.setStatusMessage(startMessage);
+      options.setLlmTestStatusMessage(startMessage);
       const result = await options.safeInvoke<ConnectionTestResult>("test_llm_config", {
         config,
       });
@@ -136,9 +137,12 @@ export function createSetupController(options: SetupControllerOptions) {
               ? options.t("llmTestSucceededWithLatency", { ms: options.formatNumber(result.elapsed_ms) })
               : options.t("llmTestSucceeded");
         options.setStatusMessage(message);
+        options.setLlmTestStatusMessage(message);
         options.notify(message, "success");
       } else if (options.getStatusMessage()) {
-        options.notify(options.getStatusMessage(), "error");
+        const message = options.getStatusMessage();
+        options.setLlmTestStatusMessage(message);
+        options.notify(message, "error");
       }
     } finally {
       options.setTestingLlm(false);

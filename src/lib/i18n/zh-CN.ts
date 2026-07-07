@@ -123,6 +123,8 @@ export const zhCN = {
   "llmTestSucceededWithLatency": "大模型测试成功，当前 API Key 可用；延迟 {ms} ms。",
   "llmTestSucceededWithLatencyAndStrategy": "大模型测试成功，当前 API Key 可用；延迟 {ms} ms，已保存思考适配策略 {strategy}。",
   "llmAutoTestStarted": "大模型配置已保存，正在自动测试思考适配。",
+  "llmManualTestStarted": "正在测试大模型连接和思考适配。",
+  "llmAutoTestPending": "大模型关键配置已修改，保存后会自动测试思考适配。",
   "screenContextTestSucceeded": "屏幕文字识别测试完成，识别 {chars} 字，用时 {ms} ms。",
   "setupWarningAsrAuthTitle": "识别密钥未填写",
   "setupWarningAsrAuthMessage": "填写当前语音识别服务需要的认证信息后才能开始语音输入。",
