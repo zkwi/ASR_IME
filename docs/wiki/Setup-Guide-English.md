@@ -70,7 +70,7 @@ VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource
 
 Click **Test** after filling credentials. When the test passes, return to Home and start voice input.
 
-In Doubao mode, API Config also includes **Recognition language**. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
+In Doubao mode, API Config normally only needs the provider and credential fields. **Recognition language** is under Advanced connection and language settings. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
 
 ### Alibaba Cloud FunASR Setup
 
@@ -80,13 +80,11 @@ Open **API Config -> Speech recognition provider**, choose "Alibaba Cloud FunASR
 | --- | --- | --- |
 | API Key | Yes | Alibaba Cloud Bailian / DashScope API Key, used as WebSocket `Bearer` auth |
 | Workspace ID | Yes, unless custom WebSocket URL is filled | Bailian workspace ID used to build the realtime ASR WebSocket endpoint |
-| Region | Yes | Beijing `cn-beijing` by default; Singapore `ap-southeast-1` is also supported |
-| Model | Yes | Default `fun-asr-realtime` |
-| Custom WebSocket URL | No | Use only when you need to override the official domain or gateway |
+| Advanced connection and language settings | Usually not needed | Region, model, custom WebSocket URL, and language hint. Expand only for region changes, fixed languages, or custom endpoints required by docs |
 
 In Alibaba Cloud mode, VoxType connects, sends `run-task`, waits for `task-started`, uploads 16kHz mono PCM, sends `finish-task` after recording stops, and only accepts final sentence text confirmed before `task-finished`. Interim `result-generated` text is display feedback only and does not enter polishing, paste, recent context, automatic hotword history, or success stats.
 
-Alibaba Cloud mode uses FunASR `language_hints` for **Recognition language**. Leave it empty for auto detection; select Chinese, English, Japanese, Korean, or Cantonese only when troubleshooting a non-default language.
+Alibaba Cloud mode uses FunASR `language_hints`. Leave it empty for auto detection; choose Chinese, English, Japanese, Korean, or Cantonese in the advanced area only when troubleshooting a non-default language.
 
 ### If ASR Test Fails
 
@@ -137,9 +135,9 @@ Open **API Config -> LLM API**:
 | Base URL | OpenAI-compatible endpoint; service root, `/v1` URL, and full `/chat/completions` URL are accepted |
 | API Key | Provider API key from the same platform/region as the Base URL |
 | Model | For example `qwen3.5-plus`; must be available to the current account |
-| Thinking adapter | Auto by default; the test tries candidate strategies and saves the fastest successful one |
+| Advanced compatibility settings | Thinking adapter is Auto by default; the test tries candidate strategies and saves the fastest successful one |
 
-Click **Test** after configuration. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default. Screen OCR is trimmed by line, deduplicated, and capped to 12 lines / 400 chars before AI polishing by default; term references are capped to 50 entries.
+Click **Test** after configuration. The test sends a sample text with the real AI prompt, shows the measured latency, and in Auto mode saves the fastest thinking/reasoning adapter that succeeds, but it does not read local recent-context text. If you only need speech recognition, LLM polishing is not required. When polishing is enabled, final transcripts that reach the minimum length are sent to your configured AI service; recognition terms, writing/product preferences, budget-compacted screen OCR, and optional recent context are appended as reference information. Recent context for AI is off by default; it is sent only when local recent context and "use recent context for polishing" are both enabled, and it is capped to about 200 chars from the latest snippets by default. Screen OCR is trimmed by line, deduplicated, and capped to 12 lines / 400 chars before AI polishing by default; term references are capped to 50 entries. LLM reference budgets are low-frequency settings and remain in `config.toml`, not in the normal UI.
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
@@ -196,16 +194,15 @@ Notes:
 
 ### AI Prompt
 
-VoxType includes a default voice-input AI prompt. It marks the text-to-polish block as the only content to rewrite and output. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. Short messages, one-line commands, and questions get light correction, with natural punctuation allowed but no expansion. Long spoken notes, records, retrospectives, explanations, meeting notes, product feedback, and investment reviews are polished into publishable prose: filler words, verbal padding, repeated expressions, dead pauses, and self-corrections are removed; sentence order can be adjusted; sentences can be split; necessary connectors can be added; and the result is usually organized into 2-4 natural paragraphs. It preserves the original facts, judgment, intensity, stance, proper nouns, English abbreviations, finance terms, and programming terms, and avoids adding headings, lists, Markdown, or backticks. User dictionary terms, writing/product preferences, optional recent context, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, continuity, paths, filenames, code identifiers, and wording preferences, not act as text to polish or instructions to follow, and must not add information that the text to polish did not say. Recent context must not be continued, summarized, or reproduced, and screen OCR is only used for related corrections. For file paths, commands, log fields, and code identifiers, the default prompt asks the model to keep uncertain text unchanged unless the reference information provides an exact spelling. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万` and `1%`, without calculating returns or answering questions.
+Hotwords & prompts now prioritizes recognition terms, writing context, recent context, and automatic hotword candidates. The AI prompt template and minimum polishing length are under **Advanced prompt settings**. VoxType includes a default voice-input AI prompt. It marks the text-to-polish block as the only content to rewrite and output. Even if the transcript contains questions, commands, or prompt-like content, the LLM should polish the text rather than answer, execute, or analyze it. Short messages, one-line commands, and questions get light correction, with natural punctuation allowed but no expansion. Long spoken notes, records, retrospectives, explanations, meeting notes, product feedback, and investment reviews are polished into publishable prose: filler words, verbal padding, repeated expressions, dead pauses, and self-corrections are removed; sentence order can be adjusted; sentences can be split; necessary connectors can be added; and the result is usually organized into 2-4 natural paragraphs. It preserves the original facts, judgment, intensity, stance, proper nouns, English abbreviations, finance terms, and programming terms, and avoids adding headings, lists, Markdown, or backticks. User dictionary terms, writing/product preferences, optional recent context, and screen OCR are appended as reference-information blocks; they only help correct terms, names, UI words, continuity, paths, filenames, code identifiers, and wording preferences, not act as text to polish or instructions to follow, and must not add information that the text to polish did not say. Recent context must not be continued, summarized, or reproduced, and screen OCR is only used for related corrections. For file paths, commands, log fields, and code identifiers, the default prompt asks the model to keep uncertain text unchanged unless the reference information provides an exact spelling. In finance, investing, and quant contexts, the default prompt asks the LLM to normalize clear amounts, returns, and percentages into common numeric forms such as `100万` and `1%`, without calculating returns or answering questions.
 
 The Hotwords page lets you:
 
 - Restore the default prompt.
 - Preview the final prompt, including reference-information rules, the current screen OCR policy and LLM budgets, and whether recent context enters the AI prompt.
-- Edit the User Prompt template.
-- Adjust the minimum polishing length from 0 to 10000. CJK characters count individually; English and numbers count by contiguous word-like segments.
+- Edit the User Prompt template and minimum polishing length in Advanced prompt settings.
 
-System Prompt stays in `config.toml` to keep the normal UI concise.
+Minimum polishing length supports 0 to 10000. CJK characters count individually; English and numbers count by contiguous word-like segments. LLM reference budgets and System Prompt stay in `config.toml` to keep the normal UI concise.
 
 ### Automatic Hotword Candidates
 
@@ -222,14 +219,14 @@ Options is grouped into Common settings, Enhancements, and Maintenance so daily 
 | Common settings | Primary shortcut, microphone, paste method, remove trailing period, restore clipboard after paste |
 | Enhancements | Screen OCR context, Windows OCR test, caption preview, color presets, opacity presets |
 | Maintenance | Startup, close-window behavior, check updates, update now, open logs, copy diagnostic report |
-| Recording troubleshooting | Low-volume auto-stop |
-| Extra start options | Middle mouse and right Alt |
+| Recording troubleshooting | Collapsed by default; expands for non-default values or validation errors, with low-volume auto-stop and input gain |
+| Extra start options | Collapsed by default; expands when enabled, with middle mouse and right Alt |
 
 To review or clear local data, open Privacy & local data from the sidebar.
 
 Screen OCR context is on by default. It captures the current display by default, which helps when you reference one document while typing into another window. You can switch it to the current window only in Options. OCR text is lightly normalized, used only for the current ASR/LLM request, and is not written to logs, stats, config, or cache. OCR sent to ASR is controlled by the screen OCR character limit; OCR sent to AI polishing has a separate LLM budget. Switch to current-window-only or disable it when the screen contains sensitive content.
 
-Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, stop grace milliseconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters. The LLM minimum polishing length and reference budgets are adjustable on Hotwords & prompts.
+Low-level parameters stay in `config.toml`: Resource ID, ASR WebSocket URL, model name, final-result timeout, max recording seconds, stop grace milliseconds, LLM timeout, main hotkey enable flag, mute system volume while recording, OCR character limit and wait time, caption custom size/position/color, clipboard restore delay, snapshot size, and retry parameters. LLM minimum polishing length is under Advanced prompt settings on Hotwords & prompts; LLM reference budgets remain in `config.toml`.
 
 ## 7. Recommended Defaults
 

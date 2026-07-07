@@ -15,7 +15,10 @@
     hasLlmApiConfig: boolean;
     onRefreshStatus: () => void;
     onOpenLlmApiSettings: () => void;
-    onOptionEnabledNotice: (key: "enable_recent_context", enabled: boolean) => void;
+    onOpenRecentContextSettings: () => void;
+    onOpenAutoHotwordSettings: () => void;
+    onOpenScreenContextSettings: () => void;
+    onOpenOutputSettings: () => void;
     onClearRecentContext: () => void;
     onClearAutoHotwordHistory: () => void;
     onClearUsageStats: () => void;
@@ -31,7 +34,10 @@
     hasLlmApiConfig,
     onRefreshStatus,
     onOpenLlmApiSettings,
-    onOptionEnabledNotice,
+    onOpenRecentContextSettings,
+    onOpenAutoHotwordSettings,
+    onOpenScreenContextSettings,
+    onOpenOutputSettings,
     onClearRecentContext,
     onClearAutoHotwordHistory,
     onClearUsageStats,
@@ -58,6 +64,10 @@
 
   function clearDisabled(isClearing: boolean, count: number | undefined) {
     return isClearing || count === undefined || count === 0;
+  }
+
+  function statusText(enabled: boolean) {
+    return enabled ? t("privacyStatusEnabled") : t("privacyStatusDisabled");
   }
 </script>
 
@@ -149,18 +159,11 @@
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadRecentContext")}</td>
             <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
-                <label class="inline-check">
-                  <input
-                    type="checkbox"
-                    bind:checked={config.context.enable_recent_context}
-                    onchange={(event) => onOptionEnabledNotice("enable_recent_context", event.currentTarget.checked)}
-                  />
-                  <span>{t("useRecentContext")}</span>
-                </label>
-                <label class="inline-check">
-                  <input type="checkbox" bind:checked={config.llm_post_edit.use_recent_context} />
-                  <span>{t("privacyLlmRecentContextToggle")}</span>
-                </label>
+                <span class:enabled={config.context.enable_recent_context} class="status-pill">{statusText(config.context.enable_recent_context)}</span>
+                <small class="action-hint">
+                  {config.llm_post_edit.use_recent_context ? t("privacyLlmRecentContextEnabled") : t("privacyLlmRecentContextDisabled")}
+                </small>
+                <button type="button" class="secondary-action" onclick={onOpenRecentContextSettings}>{t("privacyManageSettings")}</button>
                 <button
                   type="button"
                   class="danger-action"
@@ -183,10 +186,8 @@
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadAutoHotwords")}</td>
             <td data-label={t("privacyActionColumn")}>
               <div class="action-cell">
-                <label class="inline-check">
-                  <input type="checkbox" bind:checked={config.auto_hotwords.enabled} />
-                  <span>{t("privacyAutoHotwordToggle")}</span>
-                </label>
+                <span class:enabled={config.auto_hotwords.enabled} class="status-pill">{statusText(config.auto_hotwords.enabled)}</span>
+                <button type="button" class="secondary-action" onclick={onOpenAutoHotwordSettings}>{t("privacyManageSettings")}</button>
                 <button
                   type="button"
                   class="danger-action"
@@ -236,10 +237,10 @@
             <td class="location-cell" data-label={t("privacyLocationColumn")}>{t("privacyLocationNotStored")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadScreenOcr")}</td>
             <td data-label={t("privacyActionColumn")}>
-              <label class="inline-check">
-                <input type="checkbox" bind:checked={config.screen_context.enabled} />
-                <span>{t("privacyScreenOcrToggle")}</span>
-              </label>
+              <div class="action-cell">
+                <span class:enabled={config.screen_context.enabled} class="status-pill">{statusText(config.screen_context.enabled)}</span>
+                <button type="button" class="secondary-action" onclick={onOpenScreenContextSettings}>{t("privacyManageSettings")}</button>
+              </div>
             </td>
           </tr>
 
@@ -255,10 +256,10 @@
                   <small class="action-hint">{t("llmApiRequiredForPolishing")}</small>
                 </div>
               {:else}
-                <label class="inline-check">
-                  <input type="checkbox" bind:checked={config.llm_post_edit.enabled} />
-                  <span>{t("privacyLlmPolishToggle")}</span>
-                </label>
+                <div class="action-cell">
+                  <span class:enabled={config.llm_post_edit.enabled} class="status-pill">{statusText(config.llm_post_edit.enabled)}</span>
+                  <button type="button" class="secondary-action" onclick={onOpenLlmApiSettings}>{t("privacyManageSettings")}</button>
+                </div>
               {/if}
             </td>
           </tr>
@@ -269,10 +270,10 @@
             <td class="location-cell" data-label={t("privacyLocationColumn")}>{t("privacyLocationMemory")}</td>
             <td data-label={t("privacyUploadColumn")}>{t("privacyUploadNever")}</td>
             <td data-label={t("privacyActionColumn")}>
-              <label class="inline-check">
-                <input type="checkbox" bind:checked={config.typing.restore_clipboard_after_paste} />
-                <span>{t("privacyClipboardRestoreToggle")}</span>
-              </label>
+              <div class="action-cell">
+                <span class:enabled={config.typing.restore_clipboard_after_paste} class="status-pill">{statusText(config.typing.restore_clipboard_after_paste)}</span>
+                <button type="button" class="secondary-action" onclick={onOpenOutputSettings}>{t("privacyManageSettings")}</button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -453,27 +454,26 @@
     line-height: 1.35;
   }
 
-  .inline-check {
+  .status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-width: 0;
-    color: var(--text-main);
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.35;
+    justify-content: center;
+    width: fit-content;
+    min-height: 26px;
+    padding: 0 9px;
+    color: var(--text-secondary);
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
   }
 
-  .inline-check input {
-    width: 17px;
-    min-height: 17px;
-    flex: 0 0 auto;
-    accent-color: var(--primary);
-  }
-
-  .inline-check span {
-    min-width: 0;
-    overflow-wrap: anywhere;
+  .status-pill.enabled {
+    color: #0f6b43;
+    background: #ecfdf3;
+    border-color: #bbf7d0;
   }
 
   .secondary-action,
@@ -613,7 +613,6 @@
       margin-top: 0;
     }
 
-    .inline-check,
     .danger-action {
       width: 100%;
     }

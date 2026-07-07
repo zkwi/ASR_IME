@@ -25,6 +25,8 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 设置页简化发布审计：[2026-07-07 VoxType 0.6.0 设置页简化发布审计](audits/2026-07-07-release-0.6.0-settings-simplification-audit.md)
+- ASR 服务封装发布审计：[2026-07-07 VoxType 0.5.0 ASR 服务封装发布审计](audits/2026-07-07-release-0.5.0-asr-provider-audit.md)
 - LLM 润色模型测试：[2026-05-28 LLM 润色模型测试记录](audits/2026-05-28-llm-polishing-model-test.md)，含 2026-05-30 基于当前简化 prompt 和 `thinking_strategy` 的修正复测。
 - LLM 文档同步审计：[2026-05-30 LLM 文档同步审计](audits/2026-05-30-llm-docs-sync-audit.md)
 - LLM Prompt 拼装优化审计：[2026-05-30 LLM Prompt 拼装优化审计](audits/2026-05-30-llm-prompt-assembly-audit.md)

@@ -143,6 +143,10 @@
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
     onRefreshPrivacyStatus: () => void;
+    onOpenRecentContextSettings: () => void;
+    onOpenAutoHotwordSettings: () => void;
+    onOpenScreenContextSettings: () => void;
+    onOpenOutputSettings: () => void;
     onClearPrivacyRecentContext: () => void;
     onClearPrivacyAutoHotwordHistory: () => void;
     onClearPrivacyUsageStats: () => void;
@@ -264,6 +268,10 @@
     onOpenLog,
     onCopyDiagnosticReport,
     onRefreshPrivacyStatus,
+    onOpenRecentContextSettings,
+    onOpenAutoHotwordSettings,
+    onOpenScreenContextSettings,
+    onOpenOutputSettings,
     onClearPrivacyRecentContext,
     onClearPrivacyAutoHotwordHistory,
     onClearPrivacyUsageStats,
@@ -417,7 +425,10 @@
     {hasLlmApiConfig}
     onRefreshStatus={onRefreshPrivacyStatus}
     onOpenLlmApiSettings={onOpenLlmApiSettings}
-    onOptionEnabledNotice={onOptionEnabledNotice}
+    onOpenRecentContextSettings={onOpenRecentContextSettings}
+    onOpenAutoHotwordSettings={onOpenAutoHotwordSettings}
+    onOpenScreenContextSettings={onOpenScreenContextSettings}
+    onOpenOutputSettings={onOpenOutputSettings}
     onClearRecentContext={onClearPrivacyRecentContext}
     onClearAutoHotwordHistory={onClearPrivacyAutoHotwordHistory}
     onClearUsageStats={onClearPrivacyUsageStats}

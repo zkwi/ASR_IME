@@ -2,7 +2,7 @@
   import SettingTags from "$lib/components/common/SettingTags.svelte";
   import type { AppConfig, SelectableHotwordCandidate } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
-  import { AlertCircle, Check, FileText, Info, Sparkles, Trash2 } from "lucide-svelte";
+  import { AlertCircle, Check, ChevronDown, FileText, Info, Sparkles, Trash2 } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -69,6 +69,19 @@
     onClearAcceptedAutoHotwords,
     onApplySelectedAutoHotwords,
   }: Props = $props();
+
+  let showPromptAdvanced = $state(false);
+  let promptAdvancedHasError = $derived(Boolean(
+    fieldError("llm_post_edit.user_prompt_template") ||
+      fieldError("llm_post_edit.min_chars"),
+  ));
+  let promptBudgetHasError = $derived(Boolean(
+    fieldError("llm_post_edit.screen_context_max_chars") ||
+      fieldError("llm_post_edit.screen_context_max_lines") ||
+      fieldError("llm_post_edit.recent_context_max_chars") ||
+      fieldError("llm_post_edit.reference_hotwords_limit"),
+  ));
+  let promptAdvancedExpanded = $derived(showPromptAdvanced || promptAdvancedHasError || promptBudgetHasError);
 </script>
 
 <section class="settings-stack">
@@ -130,42 +143,64 @@
           <button class="test-button" type="button" onclick={onPreviewFinalPrompt}><FileText size={16} />{t("previewFinalPrompt")}</button>
         </div>
       </div>
-      <label class:field-invalid={Boolean(fieldError("llm_post_edit.user_prompt_template"))}>
-        <span>{t("userPromptTemplate")}</span>
-        <textarea bind:value={config.llm_post_edit.user_prompt_template}></textarea>
-        {#if fieldError("llm_post_edit.user_prompt_template")}<small class="field-error">{fieldError("llm_post_edit.user_prompt_template")}</small>{/if}
-      </label>
-      <div class="form-grid">
-        <label class:field-invalid={Boolean(fieldError("llm_post_edit.min_chars"))}>
-          <span>{t("minChars")}</span>
-          <input type="number" min="0" max="10000" step="1" bind:value={config.llm_post_edit.min_chars} />
-          {#if fieldError("llm_post_edit.min_chars")}<small class="field-error">{fieldError("llm_post_edit.min_chars")}</small>{/if}
-          <small class="field-hint">{t("minCharsHint")}</small>
-        </label>
-        <label class:field-invalid={Boolean(fieldError("llm_post_edit.screen_context_max_chars"))}>
-          <span>{t("llmScreenContextMaxChars")}</span>
-          <input type="number" min="0" max="2000" step="1" bind:value={config.llm_post_edit.screen_context_max_chars} />
-          {#if fieldError("llm_post_edit.screen_context_max_chars")}<small class="field-error">{fieldError("llm_post_edit.screen_context_max_chars")}</small>{/if}
-          <small class="field-hint">{t("llmScreenContextMaxCharsHint")}</small>
-        </label>
-        <label class:field-invalid={Boolean(fieldError("llm_post_edit.screen_context_max_lines"))}>
-          <span>{t("llmScreenContextMaxLines")}</span>
-          <input type="number" min="0" max="100" step="1" bind:value={config.llm_post_edit.screen_context_max_lines} />
-          {#if fieldError("llm_post_edit.screen_context_max_lines")}<small class="field-error">{fieldError("llm_post_edit.screen_context_max_lines")}</small>{/if}
-          <small class="field-hint">{t("llmScreenContextMaxLinesHint")}</small>
-        </label>
-        <label class:field-invalid={Boolean(fieldError("llm_post_edit.recent_context_max_chars"))}>
-          <span>{t("llmRecentContextMaxChars")}</span>
-          <input type="number" min="0" max="2000" step="1" bind:value={config.llm_post_edit.recent_context_max_chars} />
-          {#if fieldError("llm_post_edit.recent_context_max_chars")}<small class="field-error">{fieldError("llm_post_edit.recent_context_max_chars")}</small>{/if}
-          <small class="field-hint">{t("llmRecentContextMaxCharsHint")}</small>
-        </label>
-        <label class:field-invalid={Boolean(fieldError("llm_post_edit.reference_hotwords_limit"))}>
-          <span>{t("llmReferenceHotwordsLimit")}</span>
-          <input type="number" min="0" max="500" step="1" bind:value={config.llm_post_edit.reference_hotwords_limit} />
-          {#if fieldError("llm_post_edit.reference_hotwords_limit")}<small class="field-error">{fieldError("llm_post_edit.reference_hotwords_limit")}</small>{/if}
-          <small class="field-hint">{t("llmReferenceHotwordsLimitHint")}</small>
-        </label>
+      <div class="advanced-settings">
+        <button
+          type="button"
+          class="advanced-toggle"
+          aria-expanded={promptAdvancedExpanded}
+          onclick={() => (showPromptAdvanced = !showPromptAdvanced)}
+        >
+          <span>
+            <strong>{t("promptAdvancedSettings")}</strong>
+            <small>{t("promptAdvancedSettingsHint")}</small>
+          </span>
+          <ChevronDown size={16} class={promptAdvancedExpanded ? "expanded" : ""} />
+        </button>
+        {#if promptAdvancedExpanded}
+          <div class="advanced-panel">
+            <label class:field-invalid={Boolean(fieldError("llm_post_edit.user_prompt_template"))}>
+              <span>{t("userPromptTemplate")}</span>
+              <textarea bind:value={config.llm_post_edit.user_prompt_template}></textarea>
+              {#if fieldError("llm_post_edit.user_prompt_template")}<small class="field-error">{fieldError("llm_post_edit.user_prompt_template")}</small>{/if}
+            </label>
+            <div class="form-grid">
+              <label class:field-invalid={Boolean(fieldError("llm_post_edit.min_chars"))}>
+                <span>{t("minChars")}</span>
+                <input type="number" min="0" max="10000" step="1" bind:value={config.llm_post_edit.min_chars} />
+                {#if fieldError("llm_post_edit.min_chars")}<small class="field-error">{fieldError("llm_post_edit.min_chars")}</small>{/if}
+                <small class="field-hint">{t("minCharsHint")}</small>
+              </label>
+            </div>
+            {#if promptBudgetHasError}
+              <div class="inline-warning">
+                <AlertCircle size={16} />
+                <span>{t("llmBudgetRepairHint")}</span>
+              </div>
+              <div class="form-grid">
+                <label class:field-invalid={Boolean(fieldError("llm_post_edit.screen_context_max_chars"))}>
+                  <span>{t("llmScreenContextMaxChars")}</span>
+                  <input type="number" min="0" max="2000" step="1" bind:value={config.llm_post_edit.screen_context_max_chars} />
+                  {#if fieldError("llm_post_edit.screen_context_max_chars")}<small class="field-error">{fieldError("llm_post_edit.screen_context_max_chars")}</small>{/if}
+                </label>
+                <label class:field-invalid={Boolean(fieldError("llm_post_edit.screen_context_max_lines"))}>
+                  <span>{t("llmScreenContextMaxLines")}</span>
+                  <input type="number" min="0" max="100" step="1" bind:value={config.llm_post_edit.screen_context_max_lines} />
+                  {#if fieldError("llm_post_edit.screen_context_max_lines")}<small class="field-error">{fieldError("llm_post_edit.screen_context_max_lines")}</small>{/if}
+                </label>
+                <label class:field-invalid={Boolean(fieldError("llm_post_edit.recent_context_max_chars"))}>
+                  <span>{t("llmRecentContextMaxChars")}</span>
+                  <input type="number" min="0" max="2000" step="1" bind:value={config.llm_post_edit.recent_context_max_chars} />
+                  {#if fieldError("llm_post_edit.recent_context_max_chars")}<small class="field-error">{fieldError("llm_post_edit.recent_context_max_chars")}</small>{/if}
+                </label>
+                <label class:field-invalid={Boolean(fieldError("llm_post_edit.reference_hotwords_limit"))}>
+                  <span>{t("llmReferenceHotwordsLimit")}</span>
+                  <input type="number" min="0" max="500" step="1" bind:value={config.llm_post_edit.reference_hotwords_limit} />
+                  {#if fieldError("llm_post_edit.reference_hotwords_limit")}<small class="field-error">{fieldError("llm_post_edit.reference_hotwords_limit")}</small>{/if}
+                </label>
+              </div>
+            {/if}
+          </div>
+        {/if}
       </div>
     </div>
     <div id="settings-auto-hotwords" class="form-panel auto-hotwords-panel">
@@ -266,6 +301,64 @@
 
   .inline-warning :global(svg) {
     flex: 0 0 auto;
+  }
+
+  .advanced-settings {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .advanced-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--text-main);
+    background: #f8fbff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: left;
+  }
+
+  .advanced-toggle span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .advanced-toggle strong {
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .advanced-toggle small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .advanced-toggle :global(svg) {
+    color: var(--text-secondary);
+    transition: transform 0.16s ease;
+  }
+
+  .advanced-toggle :global(svg.expanded) {
+    transform: rotate(180deg);
+  }
+
+  .advanced-panel {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    background: #fbfdff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
   }
 
   .auto-hotword-list-editor {

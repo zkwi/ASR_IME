@@ -153,11 +153,10 @@ Keep output concise and do not expand.
 Preserve English technical terms and project names.
 ```
 
-In daily use, start with hotwords and scene notes. Edit the prompt only when you need a fixed rewriting style:
+In daily use, start with hotwords and scene notes. Open Advanced prompt settings only when you need a fixed rewriting style:
 
-- User Prompt template is available from the default page.
-- Minimum polishing length is available on Hotwords & prompts.
-- System Prompt stays in `config.toml`.
+- User Prompt template and minimum polishing length are in Advanced prompt settings on Hotwords & prompts.
+- LLM reference budgets and System Prompt stay in `config.toml`.
 - Final prompt preview shows how recognition terms, writing/product preferences, optional recent context, and screen OCR are appended as budgeted reference information.
 - The default prompt separates short and long text: short messages, one-line commands, and questions get light correction, with natural punctuation allowed but no expansion; long spoken notes, records, retrospectives, explanations, meeting notes, product feedback, and investment reviews are polished into publishable prose, usually as 2-4 natural paragraphs.
 - The default prompt preserves proper nouns, English abbreviations, finance terms, and programming terms.
@@ -193,7 +192,7 @@ Privacy and stability:
 - OCR text is used only for the current request and is not written to logs, stats, config, or cache.
 - When included in LLM polishing, OCR is trimmed, deduplicated, budget-capped, and appended as a separate reference-information block that is explicitly marked as not text to polish or user instructions.
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
-- Switch to current-window-only or disable it in Options or Privacy & local data when the screen contains sensitive content.
+- Switch to current-window-only or disable it in Options when the screen contains sensitive content; Privacy & local data can jump back to that setting through Manage settings.
 
 ## 11. Privacy & Local Data
 

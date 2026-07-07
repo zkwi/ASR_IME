@@ -7,7 +7,7 @@
   import type { CopyKey } from "$lib/i18n";
   import type { AppConfig } from "$lib/types/app";
   import { ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO } from "$lib/utils/asrProvider";
-  import { ExternalLink, ShieldCheck } from "lucide-svelte";
+  import { ChevronDown, ExternalLink, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -119,6 +119,19 @@
     onTestAsrConfig,
     onTestLlmConfig,
   }: Props = $props();
+
+  let showAsrAdvanced = $state(false);
+  let showLlmAdvanced = $state(false);
+  let asrAdvancedHasError = $derived(Boolean(
+    fieldError("aliyun_asr.region") ||
+      fieldError("aliyun_asr.model") ||
+      fieldError("aliyun_asr.websocket_url") ||
+      fieldError("aliyun_asr.language_hint") ||
+      fieldError("request.language"),
+  ));
+  let llmAdvancedHasError = $derived(Boolean(fieldError("llm_post_edit.thinking_strategy")));
+  let asrAdvancedExpanded = $derived(showAsrAdvanced || asrAdvancedHasError);
+  let llmAdvancedExpanded = $derived(showLlmAdvanced || llmAdvancedHasError);
 </script>
 
 <section class="settings-stack">
@@ -233,27 +246,6 @@
             {#if fieldError("aliyun_asr.workspace_id")}<small class="field-error">{fieldError("aliyun_asr.workspace_id")}</small>{/if}
             <small class="field-hint">{t("aliyunWorkspaceHint")}</small>
           </label>
-          <label class:field-invalid={Boolean(fieldError("aliyun_asr.region"))}>
-            <span>{t("aliyunRegion")}</span>
-            <select bind:value={config.aliyun_asr.region}>
-              {#each aliyunRegionOptions as option}
-                <option value={option.value}>{t(option.labelKey)}</option>
-              {/each}
-            </select>
-            {#if fieldError("aliyun_asr.region")}<small class="field-error">{fieldError("aliyun_asr.region")}</small>{/if}
-          </label>
-          <label class:field-invalid={Boolean(fieldError("aliyun_asr.model"))}>
-            <span>{t("model")}</span>
-            <input autocomplete="off" bind:value={config.aliyun_asr.model} />
-            {#if fieldError("aliyun_asr.model")}<small class="field-error">{fieldError("aliyun_asr.model")}</small>{/if}
-            <small class="field-hint">{t("aliyunModelHint")}</small>
-          </label>
-          <label class:field-invalid={Boolean(fieldError("aliyun_asr.websocket_url"))}>
-            <span>{t("aliyunWebsocketUrl")}</span>
-            <input autocomplete="off" bind:value={config.aliyun_asr.websocket_url} />
-            {#if fieldError("aliyun_asr.websocket_url")}<small class="field-error">{fieldError("aliyun_asr.websocket_url")}</small>{/if}
-            <small class="field-hint">{t("aliyunWebsocketUrlHint")}</small>
-          </label>
         {:else}
           <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
             <span>{t("appKey")}</span>
@@ -267,38 +259,68 @@
           </label>
         {/if}
       </div>
-    </div>
-    <div id="settings-asr-language" class="form-panel">
-      <div class="section-heading">
-        <div class="section-heading-copy">
-          <h3>{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunLanguageTitle") : t("asrLanguageTitle")}</h3>
-          <p>{config.asr.provider === ASR_PROVIDER_ALIYUN_FUN ? t("aliyunLanguageDescription") : t("asrLanguageDescription")}</p>
-          <SettingTags tags={[t("tagOptional")]} />
-        </div>
-      </div>
-      <div class="form-grid">
-        {#if config.asr.provider === ASR_PROVIDER_ALIYUN_FUN}
-          <label class:field-invalid={Boolean(fieldError("aliyun_asr.language_hint"))}>
-            <span>{t("aliyunInputLanguage")}</span>
-            <select bind:value={config.aliyun_asr.language_hint}>
-              {#each aliyunLanguageOptions as option}
-                <option value={option.value}>{t(option.labelKey)}</option>
-              {/each}
-            </select>
-            {#if fieldError("aliyun_asr.language_hint")}<small class="field-error">{fieldError("aliyun_asr.language_hint")}</small>{/if}
-            <small class="field-hint">{t("aliyunInputLanguageHint")}</small>
-          </label>
-        {:else}
-          <label class:field-invalid={Boolean(fieldError("request.language"))}>
-            <span>{t("asrInputLanguage")}</span>
-            <select bind:value={config.request.language}>
-              {#each asrLanguageOptions as option}
-                <option value={option.value}>{t(option.labelKey)}</option>
-              {/each}
-            </select>
-            {#if fieldError("request.language")}<small class="field-error">{fieldError("request.language")}</small>{/if}
-            <small class="field-hint">{t("asrInputLanguageHint")}</small>
-          </label>
+      <div class="advanced-settings">
+        <button
+          type="button"
+          class="advanced-toggle"
+          aria-expanded={asrAdvancedExpanded}
+          onclick={() => (showAsrAdvanced = !showAsrAdvanced)}
+        >
+          <span>
+            <strong>{t("asrAdvancedSettings")}</strong>
+            <small>{t("asrAdvancedSettingsHint")}</small>
+          </span>
+          <ChevronDown size={16} class={asrAdvancedExpanded ? "expanded" : ""} />
+        </button>
+        {#if asrAdvancedExpanded}
+          <div id="settings-asr-language" class="advanced-panel">
+            <div class="form-grid">
+              {#if config.asr.provider === ASR_PROVIDER_ALIYUN_FUN}
+                <label class:field-invalid={Boolean(fieldError("aliyun_asr.region"))}>
+                  <span>{t("aliyunRegion")}</span>
+                  <select bind:value={config.aliyun_asr.region}>
+                    {#each aliyunRegionOptions as option}
+                      <option value={option.value}>{t(option.labelKey)}</option>
+                    {/each}
+                  </select>
+                  {#if fieldError("aliyun_asr.region")}<small class="field-error">{fieldError("aliyun_asr.region")}</small>{/if}
+                </label>
+                <label class:field-invalid={Boolean(fieldError("aliyun_asr.model"))}>
+                  <span>{t("model")}</span>
+                  <input autocomplete="off" bind:value={config.aliyun_asr.model} />
+                  {#if fieldError("aliyun_asr.model")}<small class="field-error">{fieldError("aliyun_asr.model")}</small>{/if}
+                  <small class="field-hint">{t("aliyunModelHint")}</small>
+                </label>
+                <label class:field-invalid={Boolean(fieldError("aliyun_asr.websocket_url"))}>
+                  <span>{t("aliyunWebsocketUrl")}</span>
+                  <input autocomplete="off" bind:value={config.aliyun_asr.websocket_url} />
+                  {#if fieldError("aliyun_asr.websocket_url")}<small class="field-error">{fieldError("aliyun_asr.websocket_url")}</small>{/if}
+                  <small class="field-hint">{t("aliyunWebsocketUrlHint")}</small>
+                </label>
+                <label class:field-invalid={Boolean(fieldError("aliyun_asr.language_hint"))}>
+                  <span>{t("aliyunInputLanguage")}</span>
+                  <select bind:value={config.aliyun_asr.language_hint}>
+                    {#each aliyunLanguageOptions as option}
+                      <option value={option.value}>{t(option.labelKey)}</option>
+                    {/each}
+                  </select>
+                  {#if fieldError("aliyun_asr.language_hint")}<small class="field-error">{fieldError("aliyun_asr.language_hint")}</small>{/if}
+                  <small class="field-hint">{t("aliyunInputLanguageHint")}</small>
+                </label>
+              {:else}
+                <label class:field-invalid={Boolean(fieldError("request.language"))}>
+                  <span>{t("asrInputLanguage")}</span>
+                  <select bind:value={config.request.language}>
+                    {#each asrLanguageOptions as option}
+                      <option value={option.value}>{t(option.labelKey)}</option>
+                    {/each}
+                  </select>
+                  {#if fieldError("request.language")}<small class="field-error">{fieldError("request.language")}</small>{/if}
+                  <small class="field-hint">{t("asrInputLanguageHint")}</small>
+                </label>
+              {/if}
+            </div>
+          </div>
         {/if}
       </div>
     </div>
@@ -354,16 +376,36 @@
             {#if fieldError("llm_post_edit.model")}<small class="field-error">{fieldError("llm_post_edit.model")}</small>{/if}
             <small class="field-hint">{t("llmApiModelHint")}</small>
           </label>
-          <label class:field-invalid={Boolean(fieldError("llm_post_edit.thinking_strategy"))}>
-            <span>{t("llmThinkingStrategy")}</span>
-            <select bind:value={config.llm_post_edit.thinking_strategy}>
-              {#each llmThinkingStrategyOptions as option}
-                <option value={option.value}>{t(option.labelKey)}</option>
-              {/each}
-            </select>
-            {#if fieldError("llm_post_edit.thinking_strategy")}<small class="field-error">{fieldError("llm_post_edit.thinking_strategy")}</small>{/if}
-            <small class="field-hint">{t("llmThinkingStrategyHint")}</small>
-          </label>
+        </div>
+        <div class="advanced-settings">
+          <button
+            type="button"
+            class="advanced-toggle"
+            aria-expanded={llmAdvancedExpanded}
+            onclick={() => (showLlmAdvanced = !showLlmAdvanced)}
+          >
+            <span>
+              <strong>{t("llmAdvancedSettings")}</strong>
+              <small>{t("llmAdvancedSettingsHint")}</small>
+            </span>
+            <ChevronDown size={16} class={llmAdvancedExpanded ? "expanded" : ""} />
+          </button>
+          {#if llmAdvancedExpanded}
+            <div class="advanced-panel">
+              <div class="form-grid">
+                <label class:field-invalid={Boolean(fieldError("llm_post_edit.thinking_strategy"))}>
+                  <span>{t("llmThinkingStrategy")}</span>
+                  <select bind:value={config.llm_post_edit.thinking_strategy}>
+                    {#each llmThinkingStrategyOptions as option}
+                      <option value={option.value}>{t(option.labelKey)}</option>
+                    {/each}
+                  </select>
+                  {#if fieldError("llm_post_edit.thinking_strategy")}<small class="field-error">{fieldError("llm_post_edit.thinking_strategy")}</small>{/if}
+                  <small class="field-hint">{t("llmThinkingStrategyHint")}</small>
+                </label>
+              </div>
+            </div>
+          {/if}
         </div>
         <button class="test-button" type="button" onclick={onTestLlmConfig} disabled={testingLlm}>
           <ShieldCheck size={16} />{testingLlm ? t("testingConnection") : t("testConnection")}
@@ -404,6 +446,64 @@
   .llm-api-config-fields {
     display: grid;
     gap: 14px;
+  }
+
+  .advanced-settings {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .advanced-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--text-main);
+    background: #f8fbff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: left;
+  }
+
+  .advanced-toggle span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .advanced-toggle strong {
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .advanced-toggle small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .advanced-toggle :global(svg) {
+    color: var(--text-secondary);
+    transition: transform 0.16s ease;
+  }
+
+  .advanced-toggle :global(svg.expanded) {
+    transform: rotate(180deg);
+  }
+
+  .advanced-panel {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    background: #fbfdff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
   }
 
   .setup-note {

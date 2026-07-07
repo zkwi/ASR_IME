@@ -8,7 +8,7 @@
     UpdateStatus,
   } from "$lib/types/app";
   import type { CopyKey } from "$lib/i18n";
-  import { ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
+  import { ChevronDown, ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type OverlayColorPreset = { label: CopyKey; background: string; text: string };
@@ -118,6 +118,21 @@
     }
     return "";
   });
+
+  let showBackupTriggers = $state(false);
+  let showRecordingTroubleshooting = $state(false);
+  let backupTriggersActive = $derived(Boolean(
+    config.triggers.middle_mouse_enabled ||
+      config.triggers.right_alt_enabled,
+  ));
+  let recordingTroubleshootingActive = $derived(Boolean(
+    config.audio.silence_auto_stop_seconds > 0 ||
+      config.audio.input_gain_db !== 0 ||
+      fieldError("audio.silence_auto_stop_seconds") ||
+      fieldError("audio.input_gain_db"),
+  ));
+  let backupTriggersExpanded = $derived(showBackupTriggers || backupTriggersActive);
+  let recordingTroubleshootingExpanded = $derived(showRecordingTroubleshooting || recordingTroubleshootingActive);
 </script>
 
 <section class="settings-stack">
@@ -153,15 +168,29 @@
           <small class="field-hint">{hotkeyValidationMessage || fieldError("hotkey") || t("hotkeyRecordHint")}</small>
         </label>
       </div>
-      <div class="subsection-heading">
-        <strong>{t("backupTriggers")}</strong>
-        <span>{t("backupTriggersDescription")}</span>
+      <div class="advanced-settings">
+        <button
+          type="button"
+          class="advanced-toggle"
+          aria-expanded={backupTriggersExpanded}
+          onclick={() => (showBackupTriggers = !showBackupTriggers)}
+        >
+          <span>
+            <strong>{t("backupTriggers")}</strong>
+            <small>{backupTriggersActive ? t("backupTriggersActiveHint") : t("backupTriggersDescription")}</small>
+          </span>
+          <ChevronDown size={16} class={backupTriggersExpanded ? "expanded" : ""} />
+        </button>
+        {#if backupTriggersExpanded}
+          <div class="advanced-panel">
+            <div class="toggle-grid">
+              <label class="check"><input type="checkbox" bind:checked={config.triggers.middle_mouse_enabled} onchange={(event) => onOptionEnabledNotice("middle_mouse_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("middleMouse")}</span><small>{t("tagConflictRisk")}</small></span></label>
+              <label class="check"><input type="checkbox" bind:checked={config.triggers.right_alt_enabled} onchange={(event) => onOptionEnabledNotice("right_alt_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("rightAlt")}</span><small>{t("tagConflictRisk")}</small></span></label>
+            </div>
+            <p class="field-hint">{t("triggerConflictHint")}</p>
+          </div>
+        {/if}
       </div>
-      <div class="toggle-grid">
-        <label class="check"><input type="checkbox" bind:checked={config.triggers.middle_mouse_enabled} onchange={(event) => onOptionEnabledNotice("middle_mouse_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("middleMouse")}</span><small>{t("tagConflictRisk")}</small></span></label>
-        <label class="check"><input type="checkbox" bind:checked={config.triggers.right_alt_enabled} onchange={(event) => onOptionEnabledNotice("right_alt_enabled", event.currentTarget.checked)} /><span class="check-copy"><span>{t("rightAlt")}</span><small>{t("tagConflictRisk")}</small></span></label>
-      </div>
-      <p class="field-hint">{t("triggerConflictHint")}</p>
     </div>
     <div id="settings-audio" class="form-panel">
       <div class="section-heading"><h3>{t("microphoneTitle")}</h3><p>{t("microphoneDescription")}</p></div>
@@ -179,25 +208,37 @@
           </select>
         </label>
       </div>
-      <div id="settings-recording-troubleshooting" class="subsection-panel">
-        <div class="subsection-heading">
-          <strong>{t("recordingTroubleshooting")}</strong>
-          <span>{t("recordingTroubleshootingDescription")}</span>
-        </div>
-        <div class="form-grid">
-          <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
-            <span>{t("silenceAutoStopSeconds")}</span>
-            <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
-            {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
-          </label>
-          <label class:field-invalid={Boolean(fieldError("audio.input_gain_db"))}>
-            <span>{t("inputGainDb")}</span>
-            <input type="number" min="-12" max="24" step="1" bind:value={config.audio.input_gain_db} />
-            {#if fieldError("audio.input_gain_db")}<small class="field-error">{fieldError("audio.input_gain_db")}</small>{/if}
-          </label>
-        </div>
-        <p class="field-hint">{t("silenceAutoStopHint")}</p>
-        <p class="field-hint">{t("inputGainHint")}</p>
+      <div id="settings-recording-troubleshooting" class="advanced-settings">
+        <button
+          type="button"
+          class="advanced-toggle"
+          aria-expanded={recordingTroubleshootingExpanded}
+          onclick={() => (showRecordingTroubleshooting = !showRecordingTroubleshooting)}
+        >
+          <span>
+            <strong>{t("recordingTroubleshooting")}</strong>
+            <small>{recordingTroubleshootingActive ? t("recordingTroubleshootingActiveHint") : t("recordingTroubleshootingDescription")}</small>
+          </span>
+          <ChevronDown size={16} class={recordingTroubleshootingExpanded ? "expanded" : ""} />
+        </button>
+        {#if recordingTroubleshootingExpanded}
+          <div class="advanced-panel">
+            <div class="form-grid">
+              <label class:field-invalid={Boolean(fieldError("audio.silence_auto_stop_seconds"))}>
+                <span>{t("silenceAutoStopSeconds")}</span>
+                <input type="number" min="0" max="300" step="1" bind:value={config.audio.silence_auto_stop_seconds} />
+                {#if fieldError("audio.silence_auto_stop_seconds")}<small class="field-error">{fieldError("audio.silence_auto_stop_seconds")}</small>{/if}
+              </label>
+              <label class:field-invalid={Boolean(fieldError("audio.input_gain_db"))}>
+                <span>{t("inputGainDb")}</span>
+                <input type="number" min="-12" max="24" step="1" bind:value={config.audio.input_gain_db} />
+                {#if fieldError("audio.input_gain_db")}<small class="field-error">{fieldError("audio.input_gain_db")}</small>{/if}
+              </label>
+            </div>
+            <p class="field-hint">{t("silenceAutoStopHint")}</p>
+            <p class="field-hint">{t("inputGainHint")}</p>
+          </div>
+        {/if}
       </div>
     </div>
     <div id="settings-basic-output" class="form-panel">
@@ -464,6 +505,64 @@
     min-width: 0;
     padding-top: 14px;
     border-top: 1px solid var(--border);
+  }
+
+  .advanced-settings {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .advanced-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: var(--text-main);
+    background: #f8fbff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: left;
+  }
+
+  .advanced-toggle span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .advanced-toggle strong {
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .advanced-toggle small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .advanced-toggle :global(svg) {
+    color: var(--text-secondary);
+    transition: transform 0.16s ease;
+  }
+
+  .advanced-toggle :global(svg.expanded) {
+    transform: rotate(180deg);
+  }
+
+  .advanced-panel {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    background: #fbfdff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
   }
 
   .hotkey-recorder {
