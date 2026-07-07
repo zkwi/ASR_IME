@@ -41,8 +41,7 @@
 按改动范围选择最小集；发布前仍跑完整发布检查。
 
 ```powershell
-cargo test asr_ws::tests::final_output_
-cargo test asr_ws::tests::formal_connect_
+cargo test asr_ws
 cargo test session::tests::reset_recognition_failure
 cargo test audio::tests
 cargo test session::tests

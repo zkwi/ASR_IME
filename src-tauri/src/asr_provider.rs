@@ -2,7 +2,7 @@
 //!
 //! This module is intentionally small: it owns provider selection, shared
 //! configuration gates, and the call shape used by the recording session.
-//! Provider-specific protocol details stay in `asr_ws.rs` and `aliyun_asr.rs`.
+//! Provider-specific protocol details stay in `asr_ws/` and `aliyun_asr.rs`.
 
 use crate::config::{AppConfig, ASR_PROVIDER_ALIYUN_FUN};
 use crate::session::SessionController;

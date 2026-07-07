@@ -73,7 +73,7 @@ ASR 速度、识别效果、OCR 等待、尾音和最终包选择相关改动，
 - `src-tauri/src/session.rs`：录音会话状态机。
 - `src-tauri/src/audio.rs`：麦克风采集。
 - `src-tauri/src/asr.rs`：ASR 请求组装、上下文和结果解析。
-- `src-tauri/src/asr_ws.rs`：豆包 WebSocket ASR 会话。
+- `src-tauri/src/asr_ws/`：豆包 WebSocket ASR 会话、音频发送、最终文本和错误映射。
 - `src-tauri/src/llm_post_edit.rs`：LLM 润色。
 - `src-tauri/src/text_output.rs`：剪贴板写入和模拟粘贴。
 - `src-tauri/src/hotkey.rs`：全局热键、右 Alt、鼠标中键输入钩子。

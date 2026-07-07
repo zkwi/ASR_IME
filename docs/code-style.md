@@ -30,7 +30,7 @@ cargo test
 
 - `session.rs` 只处理会话状态和启动/停止流程。
 - `audio.rs` 只处理音频采集。
-- `asr_ws.rs` 只处理 ASR WebSocket 会话和最终结果流转。
+- `asr_ws/` 只处理豆包 WebSocket 会话、音频发送、最终结果流转和错误映射。
 - `llm_post_edit.rs` 只处理 LLM 润色判断和调用。
 - `text_output.rs` 只处理剪贴板和粘贴。
 - `hotkey.rs` 只处理热键和输入钩子。

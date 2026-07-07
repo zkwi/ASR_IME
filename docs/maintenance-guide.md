@@ -28,7 +28,9 @@ VoxType 的核心链路是：
 - 做启动前配置门禁。
 - 把录音会话参数转交给具体 provider。
 
-豆包协议细节放在 `asr_ws.rs`，阿里云 FunASR 协议细节放在 `aliyun_asr.rs`。不要把 provider-specific WebSocket payload、事件解析或最终文本选择逻辑塞回 `asr_provider.rs`。
+豆包协议细节放在 `src-tauri/src/asr_ws/`，阿里云 FunASR 协议细节放在 `aliyun_asr.rs`。不要把 provider-specific WebSocket payload、事件解析或最终文本选择逻辑塞回 `asr_provider.rs`。
+
+豆包 ASR 目录按职责拆分：`worker.rs` 只编排 ASR、LLM 和输出；`session.rs` 处理豆包 WebSocket 会话循环；`audio_stream.rs` 处理音频队列和发送节奏；`connection.rs` 处理连接测试和握手；`final_text.rs` 处理最终文本选择；`partial_text.rs` 处理实时字幕节流；`output.rs` 处理最终输出事件和副作用；`errors.rs` 处理错误归类。新增豆包行为时先放到对应模块，不要重新把逻辑堆回 `mod.rs`。
 
 新增 provider 时，优先沿用当前轻量分发方式。只有 provider 数量和共享行为复杂到明显重复时，再考虑 trait 或更重的抽象。
 

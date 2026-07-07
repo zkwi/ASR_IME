@@ -75,7 +75,7 @@ src-tauri/
 ├── src/
 │   ├── app_log.rs
 │   ├── asr.rs
-│   ├── asr_ws.rs
+│   ├── asr_ws/
 │   ├── audio.rs
 │   ├── autostart.rs
 │   ├── config.rs
@@ -102,7 +102,7 @@ src-tauri/
 1. `session.rs`：录音会话状态。
 2. `audio.rs`：麦克风采集。
 3. `asr.rs`：ASR 请求组装、上下文和结果解析。
-4. `asr_ws.rs`：ASR WebSocket 会话。
+4. `asr_ws/`：豆包 WebSocket ASR 会话、音频发送、最终文本和错误映射。
 5. `protocol.rs`：豆包二进制协议。
 6. `llm_post_edit.rs`：LLM 润色。
 7. `text_output.rs`：剪贴板和自动粘贴。
@@ -121,7 +121,7 @@ src-tauri/
 1. 新增 Rust 模块必须有明确职责。
 2. 不要新建 `utils.rs` 这种大杂烩模块。
 3. 不要让 `lib.rs` 承担大量业务逻辑。
-4. 不要在 `asr_ws.rs` 中直接处理 UI 复杂逻辑。
+4. 不要在 `asr_ws/` 中直接处理 UI 复杂逻辑。
 5. 不要在 `text_output.rs` 之外写剪贴板逻辑。
 6. 不要在 `hotkey.rs` 之外写全局热键或输入钩子逻辑。
 7. 不要在 `stats.rs` 中保存识别正文。

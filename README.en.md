@@ -385,7 +385,7 @@ VoxType/
 │   ├── src/
 │   │   ├── audio.rs             # Microphone capture
 │   │   ├── asr.rs               # ASR request and result parsing
-│   │   ├── asr_ws.rs            # Doubao WebSocket session
+│   │   ├── asr_ws/              # Doubao WebSocket session modules
 │   │   ├── autostart.rs         # Windows startup integration
 │   │   ├── config.rs            # TOML config model and IO
 │   │   ├── hotkey.rs            # Global hotkey and input hooks

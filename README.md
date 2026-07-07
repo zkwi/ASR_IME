@@ -529,7 +529,7 @@ VoxType/
 │   ├── src/
 │   │   ├── audio.rs             # 麦克风采集
 │   │   ├── asr.rs               # ASR 请求组装与结果解析
-│   │   ├── asr_ws.rs            # 豆包 WebSocket 会话
+│   │   ├── asr_ws/              # 豆包 WebSocket 会话模块
 │   │   ├── autostart.rs         # Windows 开机自启动
 │   │   ├── config.rs            # TOML 配置加载
 │   │   ├── hotkey.rs            # 全局热键与输入钩子
