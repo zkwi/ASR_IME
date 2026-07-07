@@ -65,6 +65,19 @@ export function isConfigError(message: string) {
   );
 }
 
+export function isLlmConfigError(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    message.includes("大模型") ||
+    message.includes("LLM") ||
+    message.includes("Base URL") ||
+    message.includes("llm_post_edit.") ||
+    lower.includes("ai polishing") ||
+    lower.includes("thinking adapter") ||
+    lower.includes("thinking strategy")
+  );
+}
+
 export function userErrorDetail(
   code: string | null | undefined,
   fallback: string,
@@ -126,8 +139,7 @@ export function shouldOpenSettingsForError(message: string, code?: string | null
     code === "MIC_DEVICE_NOT_FOUND" ||
     code === "MIC_STREAM_FAILED" ||
     isConfigError(message) ||
-    message.includes("API Key") ||
-    message.includes("Base URL")
+    isLlmConfigError(message)
   );
 }
 
@@ -139,6 +151,9 @@ export function settingsPanelForError(message: string, code?: string | null) {
     message.toLowerCase().includes("microphone")
   ) {
     return "settings-audio";
+  }
+  if (isLlmConfigError(message)) {
+    return "settings-llm-api";
   }
   return "settings-auth";
 }
