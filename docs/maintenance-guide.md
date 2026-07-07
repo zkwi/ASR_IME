@@ -50,6 +50,7 @@ VoxType 的核心链路是：
 - 已启用、非默认或有校验错误的高级区要能自动展开。
 - 字段校验跳转由 `src/lib/utils/settingsFields.ts` 维护，panel id 必须和组件里的 `id` 对齐。
 - 复用折叠面板时使用 `src/lib/components/common/AdvancedSettings.svelte`，不要在页面里重复写同一套 DOM 和 CSS。
+- 复用“说明 + 元信息 + 操作按钮”的卡片时使用 `src/lib/components/common/ActionPanel.svelte`；页面只保留业务按钮和状态判断。
 
 新增设置字段时，按 `AGENTS.md` 的配置同步清单执行，不要只改 Rust 或只改前端。
 

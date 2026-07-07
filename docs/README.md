@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 操作面板优化发布审计：[2026-07-07 VoxType 0.6.3 操作面板优化发布审计](audits/2026-07-07-release-0.6.3-action-panel-audit.md)
 - CI 检查修复发布审计：[2026-07-07 VoxType 0.6.2 CI 检查修复发布审计](audits/2026-07-07-release-0.6.2-ci-checks-audit.md)
 - 维护文档发布审计：[2026-07-07 VoxType 0.6.1 维护文档发布审计](audits/2026-07-07-release-0.6.1-maintenance-docs-audit.md)
 - 设置页简化发布审计：[2026-07-07 VoxType 0.6.0 设置页简化发布审计](audits/2026-07-07-release-0.6.0-settings-simplification-audit.md)

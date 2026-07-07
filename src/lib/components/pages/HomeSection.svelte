@@ -7,6 +7,7 @@
     UsageStats,
     UserErrorAction,
   } from "$lib/types/app";
+  import ActionPanel from "$lib/components/common/ActionPanel.svelte";
   import type { CopyKey, UserErrorDetail } from "$lib/i18n";
   import { savedHoursForUsage } from "$lib/utils/stats";
   import {
@@ -309,29 +310,25 @@
   </section>
 {/if}
 {#if visibleAudioQualityDiagnostic}
-  <section
-    class:issue={visibleAudioQualityDiagnostic.status !== "ok"}
-    class="audio-quality-card"
-    aria-live="polite"
+  <ActionPanel
+    title={audioQualityTitle(visibleAudioQualityDiagnostic)}
+    description={audioQualityDescription(visibleAudioQualityDiagnostic)}
+    meta={t("audioQualityMetrics", {
+      rms: formatDbfs(visibleAudioQualityDiagnostic.rms_dbfs),
+      peak: formatDbfs(visibleAudioQualityDiagnostic.peak_dbfs),
+      active: `${Math.round(visibleAudioQualityDiagnostic.active_ratio * 100)}%`,
+      duration: formatDuration(visibleAudioQualityDiagnostic.duration_ms)
+    })}
+    tone={visibleAudioQualityDiagnostic.status === "ok" ? "info" : "warning"}
+    actionVisible={visibleAudioQualityDiagnostic.status !== "ok"}
+    ariaLive="polite"
   >
-    <div class="audio-quality-copy">
-      <strong>{audioQualityTitle(visibleAudioQualityDiagnostic)}</strong>
-      <p>{audioQualityDescription(visibleAudioQualityDiagnostic)}</p>
-      <small>
-        {t("audioQualityMetrics", {
-          rms: formatDbfs(visibleAudioQualityDiagnostic.rms_dbfs),
-          peak: formatDbfs(visibleAudioQualityDiagnostic.peak_dbfs),
-          active: `${Math.round(visibleAudioQualityDiagnostic.active_ratio * 100)}%`,
-          duration: formatDuration(visibleAudioQualityDiagnostic.duration_ms)
-        })}
-      </small>
-    </div>
-    {#if visibleAudioQualityDiagnostic.status !== "ok"}
+    {#snippet actions()}
       <button type="button" class="link-action compact" onclick={onOpenRecordingTroubleshooting}>
         {t("audioQualityOpenTroubleshooting")} <ChevronRight size={14} />
       </button>
-    {/if}
-  </section>
+    {/snippet}
+  </ActionPanel>
 {/if}
 <section class="performance-card">
   <div class="section-title-row">
@@ -369,7 +366,6 @@
 <style>
   .voice-card,
   .last-outcome-card,
-  .audio-quality-card,
   .performance-card {
     width: 100%;
     margin-inline: 0;
@@ -383,7 +379,6 @@
   }
 
   .last-outcome-card,
-  .audio-quality-card,
   .performance-card {
     padding: 18px;
     overflow: hidden;
@@ -403,56 +398,6 @@
 
   .performance-card {
     order: 2;
-  }
-
-  .audio-quality-card {
-    order: 2;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    background: #f7fbff;
-    border-color: rgba(47, 128, 237, 0.16);
-    box-shadow: none;
-  }
-
-  .audio-quality-card.issue {
-    background: #fffaf3;
-    border-color: rgba(217, 119, 6, 0.26);
-  }
-
-  .audio-quality-copy {
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .audio-quality-copy strong {
-    color: var(--text-main);
-    font-size: 14px;
-    font-weight: 800;
-  }
-
-  .audio-quality-copy p,
-  .audio-quality-copy small {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-  }
-
-  .audio-quality-copy small {
-    color: var(--text-muted);
-  }
-
-  .audio-quality-card.issue .audio-quality-copy strong {
-    color: #8a4b00;
-  }
-
-  .audio-quality-card .link-action {
-    align-self: center;
   }
 
   .section-title-row {
@@ -1067,7 +1012,6 @@
   }
 
   :global(.ui-compact) .last-outcome-card,
-  :global(.ui-compact) .audio-quality-card,
   :global(.ui-compact) .performance-card {
     padding: 14px;
   }
@@ -1133,15 +1077,6 @@
 
     .last-outcome-actions {
       justify-content: flex-start;
-    }
-
-    .audio-quality-card {
-      grid-template-columns: minmax(0, 1fr);
-      align-items: stretch;
-    }
-
-    .audio-quality-card .link-action {
-      justify-self: flex-start;
     }
 
     .stats-row,

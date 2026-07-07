@@ -7,6 +7,7 @@
     SoftConfigNoticeKey,
     UpdateStatus,
   } from "$lib/types/app";
+  import ActionPanel from "$lib/components/common/ActionPanel.svelte";
   import AdvancedSettings from "$lib/components/common/AdvancedSettings.svelte";
   import type { CopyKey } from "$lib/i18n";
   import { ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
@@ -266,24 +267,21 @@
         </label>
       </div>
       <p class="field-hint">{t("screenContextPrivacyHint")}</p>
-      <div class="update-card">
-        <div>
-          <strong>{t("screenContextTestTitle")}</strong>
-          <p>{t("screenContextTestDescription")}</p>
-          {#if screenContextTestResult}
-            <small>{t("screenContextTestMeta", {
-              chars: String(screenContextTestResult.text_chars),
-              ms: String(screenContextTestResult.elapsed_ms),
-              lang: screenContextTestResult.selected_language ?? "-"
-            })}</small>
-          {/if}
-        </div>
-        <div class="update-actions">
+      <ActionPanel
+        title={t("screenContextTestTitle")}
+        description={t("screenContextTestDescription")}
+        meta={screenContextTestResult ? t("screenContextTestMeta", {
+          chars: String(screenContextTestResult.text_chars),
+          ms: String(screenContextTestResult.elapsed_ms),
+          lang: screenContextTestResult.selected_language ?? "-"
+        }) : ""}
+      >
+        {#snippet actions()}
           <button type="button" onclick={onTestScreenContext} disabled={testingScreenContext}>
             <ScanText size={16} />{testingScreenContext ? t("testingScreenContext") : t("testScreenContext")}
           </button>
-        </div>
-      </div>
+        {/snippet}
+      </ActionPanel>
       {#if screenContextTestResult}
         <div class="ocr-preview" class:empty={!screenContextTestResult.text.trim()}>
           <strong>{screenContextTestResult.warning ?? t("screenContextRecognizedText")}</strong>
@@ -361,13 +359,13 @@
     </div>
     <div id="settings-update" class="form-panel update-panel">
       <div class="section-heading"><h3>{t("updatesAndDiagnostics")}</h3><p>{t("updatesAndDiagnosticsDescription")}</p></div>
-      <div class:available={updateStatus?.update_available} class="update-card">
-        <div>
-          <strong>{updatePanelTitle()}</strong>
-          <p>{updatePanelDescription()}</p>
-          <small>{updateMetaText()}</small>
-        </div>
-        <div class="update-actions">
+      <ActionPanel
+        title={updatePanelTitle()}
+        description={updatePanelDescription()}
+        meta={updateMetaText()}
+        available={Boolean(updateStatus?.update_available)}
+      >
+        {#snippet actions()}
           <button type="button" onclick={() => onCheckUpdate(true)} disabled={checkingUpdate}>
             <ShieldCheck size={16} />{checkingUpdate ? t("checkingUpdates") : t("checkUpdates")}
           </button>
@@ -376,8 +374,8 @@
               <Download size={16} />{installingUpdate ? t("downloadingInstall") : t("updateNow")}
             </button>
           {/if}
-        </div>
-      </div>
+        {/snippet}
+      </ActionPanel>
       <div class="toggle-grid">
         <label class="check"><input type="checkbox" bind:checked={config.update.auto_check_on_startup} />{t("autoCheckUpdates")}</label>
       </div>
@@ -386,20 +384,16 @@
           <strong>{t("diagnosticsAndLogs")}</strong>
           <span>{t("diagnosticsDescription")}</span>
         </div>
-        <div class="update-card">
-          <div>
-            <strong>{t("logStatusTitle")}</strong>
-            <p>{t("logStatusDescription")}</p>
-          </div>
-          <div class="update-actions">
+        <ActionPanel title={t("logStatusTitle")} description={t("logStatusDescription")}>
+          {#snippet actions()}
             <button type="button" onclick={onOpenLog} disabled={openingLog}>
               <FileText size={16} />{openingLog ? t("openingLog") : t("openLog")}
             </button>
             <button type="button" onclick={onCopyDiagnosticReport} disabled={copyingDiagnosticReport}>
               <ClipboardCopy size={16} />{copyingDiagnosticReport ? t("copyingReport") : t("copyDiagnosticReport")}
             </button>
-          </div>
-        </div>
+          {/snippet}
+        </ActionPanel>
       </div>
     </div>
   </section>
@@ -651,81 +645,6 @@
     padding: 6px 8px;
   }
 
-  .update-actions button:disabled {
-    cursor: wait;
-    opacity: 0.66;
-  }
-
-  .update-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 14px;
-    background: #f8fbff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-  }
-
-  .update-card > div:first-child {
-    min-width: 0;
-  }
-
-  .update-card.available {
-    background: #fff7ed;
-    border-color: #fed7aa;
-  }
-
-  .update-card strong {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--text-main);
-    font-size: 15px;
-    font-weight: 800;
-  }
-
-  .update-card p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 13px;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-  }
-
-  .update-card small {
-    display: block;
-    margin-top: 6px;
-    color: var(--text-muted);
-    font-size: 12px;
-  }
-
-  .update-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: flex-end;
-    min-width: 0;
-  }
-
-  .update-actions button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 36px;
-    min-width: 118px;
-    padding: 0 12px;
-    color: var(--text-main);
-    background: #ffffff;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-weight: 700;
-    line-height: 1.2;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
   .ocr-preview {
     display: grid;
     gap: 8px;
@@ -758,26 +677,7 @@
     overflow-wrap: anywhere;
   }
 
-  .update-actions .primary {
-    color: #ffffff;
-    background: var(--primary);
-    border-color: var(--primary);
-  }
-
   @media (max-width: 920px) {
-    .update-card {
-      grid-template-columns: 1fr;
-      align-items: stretch;
-    }
-
-    .update-actions {
-      justify-content: stretch;
-    }
-
-    .update-actions button {
-      flex: 1 1 150px;
-    }
-
     .preset-row {
       grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
     }
