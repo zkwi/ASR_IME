@@ -28,18 +28,26 @@ try {
   assert.equal(layout.preferredOverlayLineLimit(3, 20), 1);
 
   assert.equal(layout.normalizeOverlayText("第一行\r\n第二行"), "第一行\n第二行");
+  assert.equal(
+    layout.normalizeOverlayText("领导都这么说了，  要主动拥抱 。"),
+    "领导都这么说了，要主动拥抱。",
+  );
   assert.deepEqual(
     layout.splitOverlayLine("还有一个问题是，宝宝整体"),
-    ["还有一个问题是，", "宝宝整体"],
+    ["还有一个问题是，宝宝整体"],
   );
   assert.deepEqual(layout.splitOverlayLine("你好，世界"), ["你好，世界"]);
   assert.deepEqual(
-    layout.rebalanceOverlayDisplayLines(["还有一个问题是，宝宝整体"], 2),
-    ["还有一个问题是，", "宝宝整体"],
+    layout.splitOverlayLine("这是一个超过十八个字的实时字幕测试文本"),
+    ["这是一个超过十八个字", "的实时字幕测试文本"],
   );
   assert.deepEqual(
-    layout.rebalanceOverlayDisplayLines(["显反转效应的东西动量也会有"], 2, true),
-    ["显反转效应的", "东西动量也会有"],
+    layout.rebalanceOverlayDisplayLines(["还有一个问题是，宝宝整体"], 2),
+    ["还有一个问题是，宝宝整体"],
+  );
+  assert.deepEqual(
+    layout.rebalanceOverlayDisplayLines(["这是一个超过十八个字的实时字幕测试文本"], 2),
+    ["这是一个超过十八个字", "的实时字幕测试文本"],
   );
 
   assert.deepEqual(
@@ -59,28 +67,32 @@ try {
   });
 
   assert.deepEqual(layout.resolveOverlayLayout("还有一个问题是，宝宝整体", false, 72, 1), {
-    mode: "double",
+    mode: "single",
     fontSize: 20,
-    lineLimit: 2,
+    lineLimit: 1,
   });
-  assert.deepEqual(layout.resolveOverlayLayout("还有一个问题是，宝宝整体", false, 48, 1), {
-    mode: "double",
-    fontSize: 19,
-    lineLimit: 2,
-  });
-  const screenshotTextLayout = layout.resolveOverlayLayout("还有一个问题是，宝宝整体", false, 72, 1);
-  const screenshotTextLines = layout.rebalanceOverlayDisplayLines(
-    layout.wrapOverlayText("还有一个问题是，宝宝整体", screenshotTextLayout.fontSize, 400, measureByChar),
-    screenshotTextLayout.lineLimit,
-  );
-  assert.deepEqual(screenshotTextLines, ["还有一个问题是，", "宝宝整体"]);
   assert.deepEqual(
-    layout.fitOverlayDisplayText("还有一个问题是，宝宝整体", 2, 20, 72, 400, measureByChar),
-    { fontSize: 20, lines: ["还有一个问题是，", "宝宝整体"] },
+    layout.resolveOverlayLayout("这是一个超过十八个字的实时字幕测试文本", false, 72, 1),
+    {
+      mode: "double",
+      fontSize: 20,
+      lineLimit: 2,
+    },
   );
   assert.deepEqual(
-    layout.fitOverlayDisplayText("还有一个问题是，宝宝整体", 2, 20, 48, 400, measureByChar),
-    { fontSize: 19, lines: ["还有一个问题是，", "宝宝整体"] },
+    layout.fitOverlayDisplayText("这是一个超过十八个字的实时字幕测试文本", 2, 20, 72, 400, measureByChar),
+    { fontSize: 20, lines: ["这是一个超过十八个字", "的实时字幕测试文本"] },
+  );
+  assert.deepEqual(
+    layout.fitOverlayDisplayText(
+      layout.normalizeOverlayText("领导都这么说了，  要主动拥抱 。"),
+      2,
+      20,
+      72,
+      260,
+      measureByChar,
+    ),
+    { fontSize: 18, lines: ["领导都这么说了，要主动拥抱。"] },
   );
 
   assert.deepEqual(layout.resolveOverlayLayout("一二三四五", false, 72, 3), {

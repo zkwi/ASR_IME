@@ -134,7 +134,6 @@ export function createOverlayController(options: OverlayControllerOptions) {
       availableHeight,
       availableWidth,
       measureText,
-      singleLineCount > 1,
     );
     fontSize = fitted.fontSize;
     allLines = fitted.lines;

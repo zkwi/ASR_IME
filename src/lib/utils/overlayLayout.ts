@@ -3,10 +3,8 @@ import type { OverlayMode } from "$lib/types/app";
 
 const DOUBLE_LINE_MIN_FONT_SIZE = 14;
 const DOUBLE_LINE_MAX_FONT_SIZE = 20;
-const MIN_SEMANTIC_SPLIT_LENGTH = 10;
-const MIN_HARD_SPLIT_LENGTH = 12;
+const SINGLE_LINE_MAX_CHARS = 18;
 const STRONG_BREAK_CHARS = new Set(["，", "。", "！", "？", "；", "：", ",", ".", "!", "?", ";", ":"]);
-const SOFT_BREAK_CHARS = new Set(["、", " ", "\t"]);
 
 export function normalizeOverlayText(text: string) {
   const raw = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
@@ -14,7 +12,7 @@ export function normalizeOverlayText(text: string) {
   const lines: string[] = [];
   let blankPending = false;
   for (const line of raw.split("\n")) {
-    const cleaned = line.trim();
+    const cleaned = normalizeOverlayInlineSpacing(line.trim());
     if (!cleaned) {
       blankPending = lines.length > 0;
       continue;
@@ -35,14 +33,14 @@ export function resolveOverlayLayout(
   const compactLength = Array.from(text.replace(/\s/g, "")).length;
   const singleFont = fontForVisibleLines(1, 20, 18, availableHeight);
   const doubleFont = fontForVisibleLines(2, DOUBLE_LINE_MAX_FONT_SIZE, DOUBLE_LINE_MIN_FONT_SIZE, availableHeight);
-  const canSplitSingleLine = canSplitOverlayLine(text);
-  if (!forceSmall && singleWrappedLineCount <= 1 && compactLength <= 18 && !canSplitSingleLine) {
+  const preferDouble = compactLength > SINGLE_LINE_MAX_CHARS;
+  if (!forceSmall && singleWrappedLineCount <= 1 && !preferDouble) {
     return { mode: "single", fontSize: singleFont, lineLimit: 1 };
   }
   const lineLimit = preferredOverlayLineLimit(
     singleWrappedLineCount,
     availableHeight,
-    canSplitSingleLine,
+    preferDouble,
   );
   return {
     mode: lineLimit >= 2 ? "double" : "single",
@@ -62,14 +60,15 @@ export function canFitOverlayLines(lines: number, availableHeight: number, minFo
   return fitted >= minFontSize;
 }
 
-export function preferredOverlayLineLimit(wrappedLineCount: number, availableHeight: number, canSplitSingleLine = false) {
-  if (wrappedLineCount <= 1 && !canSplitSingleLine) return 1;
+export function preferredOverlayLineLimit(wrappedLineCount: number, availableHeight: number, preferDouble = false) {
+  if (wrappedLineCount <= 1 && !preferDouble) return 1;
   return canFitOverlayLines(2, availableHeight) ? 2 : 1;
 }
 
-export function rebalanceOverlayDisplayLines(lines: string[], lineLimit: number, allowHardSplit = false) {
-  if (lineLimit < 2 || lines.length !== 1) return lines;
-  return splitOverlayLine(lines[0], allowHardSplit);
+export function rebalanceOverlayDisplayLines(lines: string[], lineLimit: number) {
+  if (lineLimit < 2) return lines;
+  if (lines.length === 1) return splitOverlayLine(lines[0]);
+  return lines;
 }
 
 export function fitOverlayDisplayText(
@@ -79,7 +78,6 @@ export function fitOverlayDisplayText(
   availableHeight: number,
   maxWidth: number,
   measureText: (text: string, fontSize: number) => number,
-  allowHardSplit = false,
   minFontSize = DOUBLE_LINE_MIN_FONT_SIZE,
 ) {
   const visibleLines = overlayVisibleLineCount(lineLimit);
@@ -88,7 +86,6 @@ export function fitOverlayDisplayText(
     const lines = rebalanceOverlayDisplayLines(
       wrapOverlayText(text, size, maxWidth, measureText),
       lineLimit,
-      allowHardSplit,
     );
     if (overlayLinesFitWidth(lines, size, maxWidth, measureText)) {
       return { fontSize: size, lines };
@@ -98,52 +95,16 @@ export function fitOverlayDisplayText(
   const lines = rebalanceOverlayDisplayLines(
     wrapOverlayText(text, minFontSize, maxWidth, measureText),
     lineLimit,
-    allowHardSplit,
   );
   return { fontSize: minFontSize, lines };
 }
 
-export function canSplitOverlayLine(line: string, allowHardSplit = false) {
-  return splitOverlayLine(line, allowHardSplit).length > 1;
-}
-
-export function splitOverlayLine(line: string, allowHardSplit = false) {
+export function splitOverlayLine(line: string) {
   const trimmed = String(line || "").trim();
   const chars = Array.from(trimmed);
   const compactLength = Array.from(trimmed.replace(/\s/g, "")).length;
-  if (compactLength < MIN_SEMANTIC_SPLIT_LENGTH) return [line];
-
-  const semanticIndex = bestOverlayBreakIndex(chars);
-  if (semanticIndex > 0) {
-    return splitAtCharIndex(trimmed, semanticIndex);
-  }
-
-  if (!allowHardSplit || compactLength < MIN_HARD_SPLIT_LENGTH) return [line];
-  return splitAtCharIndex(trimmed, Math.floor(chars.length / 2));
-}
-
-function bestOverlayBreakIndex(chars: string[]) {
-  const minLeft = 4;
-  const minRight = 3;
-  const center = chars.length / 2;
-  let best = 0;
-  let bestScore = Number.POSITIVE_INFINITY;
-
-  for (let index = 0; index < chars.length; index += 1) {
-    const char = chars[index];
-    const breakAfter = STRONG_BREAK_CHARS.has(char) || SOFT_BREAK_CHARS.has(char);
-    if (!breakAfter) continue;
-
-    const splitIndex = index + 1;
-    if (splitIndex < minLeft || chars.length - splitIndex < minRight) continue;
-    const score = Math.abs(splitIndex - center) + (SOFT_BREAK_CHARS.has(char) ? 1.5 : 0);
-    if (score < bestScore) {
-      best = splitIndex;
-      bestScore = score;
-    }
-  }
-
-  return best;
+  if (compactLength <= SINGLE_LINE_MAX_CHARS) return [line];
+  return splitAtCharIndex(trimmed, Math.ceil(chars.length / 2));
 }
 
 function splitAtCharIndex(text: string, splitIndex: number) {
@@ -152,6 +113,15 @@ function splitAtCharIndex(text: string, splitIndex: number) {
   const second = chars.slice(splitIndex).join("").trimStart();
   if (!first || !second) return [text];
   return [first, second];
+}
+
+function normalizeOverlayInlineSpacing(line: string) {
+  return line
+    .replace(/[ \t]+/g, " ")
+    .replace(/([\u3400-\u9fff]) ([\u3400-\u9fff])/g, "$1$2")
+    .replace(/([，。！？；：、]) /g, "$1")
+    .replace(/ ([，。！？；：、])/g, "$1")
+    .trim();
 }
 
 function overlayLinesFitWidth(
@@ -177,8 +147,12 @@ export function wrapOverlayText(text: string, fontSize: number, maxWidth: number
     for (const char of Array.from(paragraph)) {
       const candidate = current + char;
       if (current && measureText(candidate, fontSize) > maxWidth) {
-        lines.push(current);
-        current = char.trimStart();
+        if (STRONG_BREAK_CHARS.has(char)) {
+          current = candidate;
+        } else {
+          lines.push(current);
+          current = char.trimStart();
+        }
       } else {
         current = candidate;
       }
