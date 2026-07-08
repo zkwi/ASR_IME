@@ -2,9 +2,18 @@ import { overlayLineHeight } from "$lib/app/defaults";
 import type { OverlayMode } from "$lib/types/app";
 
 const DOUBLE_LINE_MIN_FONT_SIZE = 14;
-const DOUBLE_LINE_MAX_FONT_SIZE = 20;
+const DOUBLE_LINE_FONT_SIZE = 18;
+const SINGLE_LINE_FONT_SIZE = 20;
+const SINGLE_LINE_MIN_FONT_SIZE = 18;
 const SINGLE_LINE_MAX_CHARS = 18;
 const STRONG_BREAK_CHARS = new Set(["，", "。", "！", "？", "；", "：", ",", ".", "!", "?", ";", ":"]);
+
+export type OverlayDisplayLayout = {
+  mode: OverlayMode;
+  fontSize: number;
+  lineLimit: number;
+  lines: string[];
+};
 
 export function normalizeOverlayText(text: string) {
   const raw = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
@@ -24,28 +33,35 @@ export function normalizeOverlayText(text: string) {
   return lines.join("\n");
 }
 
-export function resolveOverlayLayout(
+export function resolveOverlayDisplayText(
   text: string,
-  forceSmall: boolean,
   availableHeight: number,
-  singleWrappedLineCount: number,
-): { mode: OverlayMode; fontSize: number; lineLimit: number } {
-  const compactLength = Array.from(text.replace(/\s/g, "")).length;
-  const singleFont = fontForVisibleLines(1, 20, 18, availableHeight);
-  const doubleFont = fontForVisibleLines(2, DOUBLE_LINE_MAX_FONT_SIZE, DOUBLE_LINE_MIN_FONT_SIZE, availableHeight);
-  const preferDouble = compactLength > SINGLE_LINE_MAX_CHARS;
-  if (!forceSmall && singleWrappedLineCount <= 1 && !preferDouble) {
-    return { mode: "single", fontSize: singleFont, lineLimit: 1 };
+  maxWidth: number,
+  measureText: (text: string, fontSize: number) => number,
+): OverlayDisplayLayout {
+  const singleFont = fontForVisibleLines(1, SINGLE_LINE_FONT_SIZE, SINGLE_LINE_MIN_FONT_SIZE, availableHeight);
+  const compactLength = compactTextLength(text);
+  const canUseSingleLine =
+    !text.includes("\n") &&
+    compactLength <= SINGLE_LINE_MAX_CHARS &&
+    overlayLinesFitWidth([text], singleFont, maxWidth, measureText);
+
+  if (canUseSingleLine || !canFitOverlayLines(2, availableHeight)) {
+    const lines = limitOverlayLines(wrapOverlayText(text, singleFont, maxWidth, measureText), 1);
+    return { mode: "single", fontSize: singleFont, lineLimit: 1, lines };
   }
-  const lineLimit = preferredOverlayLineLimit(
-    singleWrappedLineCount,
-    availableHeight,
-    preferDouble,
+
+  const doubleFont = Math.min(
+    singleFont,
+    fontForVisibleLines(2, DOUBLE_LINE_FONT_SIZE, DOUBLE_LINE_MIN_FONT_SIZE, availableHeight),
   );
+  const fitted = fitOverlayDisplayText(text, 2, doubleFont, availableHeight, maxWidth, measureText);
+  const lineLimit = overlayVisibleLineCount(fitted.lines.length);
   return {
     mode: lineLimit >= 2 ? "double" : "single",
-    fontSize: lineLimit >= 2 ? doubleFont : fontForVisibleLines(1, 18, 14, availableHeight),
+    fontSize: fitted.fontSize,
     lineLimit,
+    lines: fitted.lines,
   };
 }
 
@@ -58,11 +74,6 @@ export function canFitOverlayLines(lines: number, availableHeight: number, minFo
   if (lines <= 1) return availableHeight > 0;
   const fitted = Math.floor((availableHeight - 2) / (lines * overlayLineHeight));
   return fitted >= minFontSize;
-}
-
-export function preferredOverlayLineLimit(wrappedLineCount: number, availableHeight: number, preferDouble = false) {
-  if (wrappedLineCount <= 1 && !preferDouble) return 1;
-  return canFitOverlayLines(2, availableHeight) ? 2 : 1;
 }
 
 export function rebalanceOverlayDisplayLines(lines: string[], lineLimit: number) {
@@ -83,18 +94,24 @@ export function fitOverlayDisplayText(
   const visibleLines = overlayVisibleLineCount(lineLimit);
   const maxFontSize = fontForVisibleLines(visibleLines, preferredFontSize, minFontSize, availableHeight);
   for (let size = maxFontSize; size >= minFontSize; size -= 1) {
-    const lines = rebalanceOverlayDisplayLines(
-      wrapOverlayText(text, size, maxWidth, measureText),
-      lineLimit,
+    const lines = limitOverlayLines(
+      rebalanceOverlayDisplayLines(
+        wrapOverlayText(text, size, maxWidth, measureText),
+        lineLimit,
+      ),
+      visibleLines,
     );
     if (overlayLinesFitWidth(lines, size, maxWidth, measureText)) {
       return { fontSize: size, lines };
     }
   }
 
-  const lines = rebalanceOverlayDisplayLines(
-    wrapOverlayText(text, minFontSize, maxWidth, measureText),
-    lineLimit,
+  const lines = limitOverlayLines(
+    rebalanceOverlayDisplayLines(
+      wrapOverlayText(text, minFontSize, maxWidth, measureText),
+      lineLimit,
+    ),
+    visibleLines,
   );
   return { fontSize: minFontSize, lines };
 }
@@ -122,6 +139,16 @@ function normalizeOverlayInlineSpacing(line: string) {
     .replace(/([，。！？；：、]) /g, "$1")
     .replace(/ ([，。！？；：、])/g, "$1")
     .trim();
+}
+
+function compactTextLength(text: string) {
+  return Array.from(text.replace(/\s/g, "")).length;
+}
+
+function limitOverlayLines(lines: string[], visibleLines: number) {
+  const count = overlayVisibleLineCount(visibleLines);
+  if (lines.length <= count) return lines;
+  return lines.slice(-count);
 }
 
 function overlayLinesFitWidth(

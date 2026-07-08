@@ -9,12 +9,9 @@ import {
   overlayTextColor as getOverlayTextColor,
 } from "$lib/utils/overlayAppearance";
 import {
-  fitOverlayDisplayText,
   normalizeOverlayText,
   overlayAvailableTextHeight as getOverlayAvailableTextHeight,
-  overlayVisibleLineCount as getOverlayVisibleLineCount,
-  resolveOverlayLayout as getOverlayLayout,
-  wrapOverlayText as wrapOverlayTextLines,
+  resolveOverlayDisplayText,
 } from "$lib/utils/overlayLayout";
 
 type SafeInvoke = <T>(
@@ -37,17 +34,11 @@ export function createOverlayController(options: OverlayControllerOptions) {
   let text = $state(defaultOverlayText);
   let mode = $state<OverlayMode>("single");
   let fontSize = $state(20);
-  let lineLimit = $state(1);
   let displayLines = $state<string[]>([defaultOverlayText]);
   let textElement = $state<HTMLDivElement | null>(null);
-  let allLines: string[] = [];
-  let scrollOffset = 0;
-  let tailHoldSteps = 0;
-  let scrollTimer: number | undefined;
   let pollPending = false;
   let configPollPending = false;
   let lastConfigPollAt = 0;
-  let smallLayoutLocked = false;
   const configPollIntervalMs = 1000;
 
   async function refreshText() {
@@ -84,7 +75,6 @@ export function createOverlayController(options: OverlayControllerOptions) {
     if (!options.isOverlay()) return;
     if (!uiConfigChanged(ui)) return;
     options.updateUi(ui);
-    stopScroll();
     applyText(text, true);
   }
 
@@ -95,7 +85,6 @@ export function createOverlayController(options: OverlayControllerOptions) {
       current.height !== ui.height ||
       current.margin_bottom !== ui.margin_bottom ||
       current.opacity !== ui.opacity ||
-      current.scroll_interval_ms !== ui.scroll_interval_ms ||
       current.background_color !== ui.background_color ||
       current.text_color !== ui.text_color
     );
@@ -106,50 +95,18 @@ export function createOverlayController(options: OverlayControllerOptions) {
     if (!force && normalized === text) return;
     text = normalized;
 
-    if (normalized === defaultOverlayText) {
-      smallLayoutLocked = false;
-    }
-
-    const availableHeight = availableTextHeight();
-    const availableWidth = textContentWidth();
-    const singleFontSize = 20;
-    const singleLineCount = wrapText(normalized, singleFontSize, availableWidth).length;
-    const layout = getOverlayLayout(
+    const layout = resolveOverlayDisplayText(
       normalized,
-      smallLayoutLocked,
-      availableHeight,
-      singleLineCount,
-    );
-
-    if (layout.mode === "double" && normalized !== defaultOverlayText) {
-      smallLayoutLocked = true;
-    }
-
-    mode = layout.mode;
-    lineLimit = layout.lineLimit;
-    const fitted = fitOverlayDisplayText(
-      normalized,
-      layout.lineLimit,
-      layout.fontSize,
-      availableHeight,
-      availableWidth,
+      availableTextHeight(),
+      textContentWidth(),
       measureText,
     );
-    fontSize = fitted.fontSize;
-    allLines = fitted.lines;
-    const visibleCount = visibleLineCount();
-    scrollOffset = Math.max(0, allLines.length - visibleCount);
-    tailHoldSteps = allLines.length > visibleCount ? 2 : 1;
-    refreshVisibleLines();
+    mode = layout.mode;
+    fontSize = layout.fontSize;
+    displayLines = layout.lines;
   }
 
-  function dispose() {
-    stopScroll();
-  }
-
-  function wrapText(value: string, size: number, width = textContentWidth()) {
-    return wrapOverlayTextLines(value, size, width, measureText);
-  }
+  function dispose() {}
 
   function textContentWidth() {
     if (!textElement) {
@@ -170,62 +127,11 @@ export function createOverlayController(options: OverlayControllerOptions) {
     return context.measureText(value).width;
   }
 
-  function visibleLineCount() {
-    return getOverlayVisibleLineCount(lineLimit);
-  }
-
   function availableTextHeight() {
     if (textElement?.clientHeight) {
       return Math.max(1, textElement.clientHeight);
     }
     return getOverlayAvailableTextHeight(window.innerHeight);
-  }
-
-  function refreshVisibleLines() {
-    const visibleCount = visibleLineCount();
-    if (allLines.length <= visibleCount) {
-      stopScroll();
-      displayLines = allLines;
-      return;
-    }
-
-    const end = scrollOffset + visibleCount;
-    displayLines = allLines.slice(scrollOffset, end);
-    startScroll();
-  }
-
-  function startScroll() {
-    if (scrollTimer !== undefined) return;
-    const intervalMs = Math.max(300, options.getConfig().ui.scroll_interval_ms || 1200);
-    scrollTimer = window.setInterval(advanceScroll, intervalMs);
-  }
-
-  function stopScroll() {
-    if (scrollTimer !== undefined) {
-      window.clearInterval(scrollTimer);
-      scrollTimer = undefined;
-    }
-  }
-
-  function advanceScroll() {
-    const visibleCount = visibleLineCount();
-    if (allLines.length <= visibleCount) {
-      stopScroll();
-      return;
-    }
-
-    if (tailHoldSteps > 0) {
-      tailHoldSteps -= 1;
-      return;
-    }
-
-    if (scrollOffset <= 0) {
-      stopScroll();
-      return;
-    }
-
-    scrollOffset -= 1;
-    displayLines = allLines.slice(scrollOffset, scrollOffset + visibleCount);
   }
 
   function clampAudioLevel(value: number) {

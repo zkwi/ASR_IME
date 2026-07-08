@@ -21,12 +21,6 @@ try {
   const layout = await server.ssrLoadModule("/src/lib/utils/overlayLayout.ts");
   const measureByChar = (text, fontSize) => Array.from(text).length * fontSize;
 
-  assert.equal(layout.preferredOverlayLineLimit(1, 72), 1);
-  assert.equal(layout.preferredOverlayLineLimit(3, 72), 2);
-  assert.equal(layout.preferredOverlayLineLimit(1, 72, true), 2);
-  assert.equal(layout.preferredOverlayLineLimit(2, 33), 1);
-  assert.equal(layout.preferredOverlayLineLimit(3, 20), 1);
-
   assert.equal(layout.normalizeOverlayText("第一行\r\n第二行"), "第一行\n第二行");
   assert.equal(
     layout.normalizeOverlayText("领导都这么说了，  要主动拥抱 。"),
@@ -60,52 +54,52 @@ try {
     ["第一行", "第二行"],
   );
 
-  assert.deepEqual(layout.resolveOverlayLayout("短句", false, 72, 1), {
+  const shortLayout = layout.resolveOverlayDisplayText("短句", 72, 260, measureByChar);
+  assert.deepEqual(shortLayout, {
     mode: "single",
     fontSize: 20,
     lineLimit: 1,
+    lines: ["短句"],
   });
 
-  assert.deepEqual(layout.resolveOverlayLayout("还有一个问题是，宝宝整体", false, 72, 1), {
+  assert.deepEqual(layout.resolveOverlayDisplayText("还有一个问题是，宝宝整体", 72, 260, measureByChar), {
     mode: "single",
     fontSize: 20,
     lineLimit: 1,
-  });
-  assert.deepEqual(
-    layout.resolveOverlayLayout("这是一个超过十八个字的实时字幕测试文本", false, 72, 1),
-    {
-      mode: "double",
-      fontSize: 20,
-      lineLimit: 2,
-    },
-  );
-  assert.deepEqual(
-    layout.fitOverlayDisplayText("这是一个超过十八个字的实时字幕测试文本", 2, 20, 72, 400, measureByChar),
-    { fontSize: 20, lines: ["这是一个超过十八个字", "的实时字幕测试文本"] },
-  );
-  assert.deepEqual(
-    layout.fitOverlayDisplayText(
-      layout.normalizeOverlayText("领导都这么说了，  要主动拥抱 。"),
-      2,
-      20,
-      72,
-      260,
-      measureByChar,
-    ),
-    { fontSize: 18, lines: ["领导都这么说了，要主动拥抱。"] },
-  );
-
-  assert.deepEqual(layout.resolveOverlayLayout("一二三四五", false, 72, 3), {
-    mode: "double",
-    fontSize: 20,
-    lineLimit: 2,
+    lines: ["还有一个问题是，宝宝整体"],
   });
 
-  assert.deepEqual(layout.resolveOverlayLayout("一二三四五", false, 20, 3), {
-    mode: "single",
-    fontSize: 15,
-    lineLimit: 1,
-  });
+  const doubleLayout = layout.resolveOverlayDisplayText(
+    "这是一个超过十八个字的实时字幕测试文本",
+    72,
+    400,
+    measureByChar,
+  );
+  assert.equal(doubleLayout.mode, "double");
+  assert.equal(doubleLayout.lineLimit, 2);
+  assert.ok(doubleLayout.fontSize <= shortLayout.fontSize);
+  assert.deepEqual(doubleLayout.lines, ["这是一个超过十八个字", "的实时字幕测试文本"]);
+
+  assert.deepEqual(
+    layout.resolveOverlayDisplayText("第一行\n第二行", 72, 260, measureByChar),
+    { mode: "double", fontSize: 18, lineLimit: 2, lines: ["第一行", "第二行"] },
+  );
+
+  assert.deepEqual(
+    layout.fitOverlayDisplayText("这是一个超过十八个字的实时字幕测试文本", 2, 18, 72, 400, measureByChar),
+    { fontSize: 18, lines: ["这是一个超过十八个字", "的实时字幕测试文本"] },
+  );
+  const longLayout = layout.resolveOverlayDisplayText(
+    "这是一段更长的实时字幕测试文本，用来模拟较长口述时的两行显示效果",
+    72,
+    260,
+    measureByChar,
+  );
+  assert.equal(longLayout.mode, "double");
+  assert.equal(longLayout.fontSize, 18);
+  assert.equal(longLayout.lineLimit, 2);
+  assert.equal(longLayout.lines.length, 2);
+  assert.ok(longLayout.lines.every((line) => measureByChar(line, longLayout.fontSize) <= 260));
 } finally {
   await server.close();
 }
