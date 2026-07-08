@@ -213,10 +213,11 @@ Captions are designed for recording feedback:
 - Real-time text.
 - Elapsed or processing state.
 - Errors.
+- One-line text stays on one line. Wrapped text or ASR newline output prefers two visible lines when height allows, capped at two lines.
 
 Captions do not show paste-state noise, internal paths, or debug stacks.
 
-Use presets first. Fine-tune width, height, colors, and bottom margin in `config.toml` only if captions block your content.
+Use presets first. Fine-tune width, height, colors, and bottom margin in `config.toml` only if captions block your content. If long captions should more consistently show two lines, increase `height` instead of shortening ASR audio segments.
 
 ## 13. Statistics
 

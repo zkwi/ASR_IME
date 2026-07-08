@@ -20,27 +20,29 @@ function Invoke-CheckedCommand {
   }
 }
 
-Invoke-CheckedCommand "[1/10] Frontend type check" { npm run check }
+Invoke-CheckedCommand "[1/11] Frontend type check" { npm run check }
 
-Invoke-CheckedCommand "[2/10] Frontend build" { npm run build }
+Invoke-CheckedCommand "[2/11] Frontend build" { npm run build }
 
-Invoke-CheckedCommand "[3/10] Stats utility regression tests" { npm run test:stats }
+Invoke-CheckedCommand "[3/11] Overlay layout regression tests" { npm run test:overlay }
 
-Invoke-CheckedCommand "[4/10] Secret scan" { npm run scan:secrets }
+Invoke-CheckedCommand "[4/11] Stats utility regression tests" { npm run test:stats }
 
-Invoke-CheckedCommand "[5/10] Secret scan self-test" { npm run test:secrets }
+Invoke-CheckedCommand "[5/11] Secret scan" { npm run scan:secrets }
 
-Invoke-CheckedCommand "[6/10] Governance checks" { npm run check:governance }
+Invoke-CheckedCommand "[6/11] Secret scan self-test" { npm run test:secrets }
 
-Invoke-CheckedCommand "[7/10] Governance check self-test" { npm run test:governance }
+Invoke-CheckedCommand "[7/11] Governance checks" { npm run check:governance }
+
+Invoke-CheckedCommand "[8/11] Governance check self-test" { npm run test:governance }
 
 Push-Location ".\src-tauri"
 try {
-  Invoke-CheckedCommand "[8/10] Rust fmt check" { cargo fmt --check }
+  Invoke-CheckedCommand "[9/11] Rust fmt check" { cargo fmt --check }
 
-  Invoke-CheckedCommand "[9/10] Rust check" { cargo check }
+  Invoke-CheckedCommand "[10/11] Rust check" { cargo check }
 
-  Invoke-CheckedCommand "[10/10] Rust tests" { cargo test }
+  Invoke-CheckedCommand "[11/11] Rust tests" { cargo test }
 } finally {
   Pop-Location
 }

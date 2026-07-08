@@ -165,6 +165,9 @@ export function createOverlayController(options: OverlayControllerOptions) {
   }
 
   function availableTextHeight() {
+    if (textElement?.clientHeight) {
+      return Math.max(1, textElement.clientHeight);
+    }
     return getOverlayAvailableTextHeight(window.innerHeight);
   }
 
@@ -276,7 +279,10 @@ export function createOverlayController(options: OverlayControllerOptions) {
     get fontSize() { return fontSize; },
     get displayLines() { return displayLines; },
     get textElement() { return textElement; },
-    set textElement(value: HTMLDivElement | null) { textElement = value; },
+    set textElement(value: HTMLDivElement | null) {
+      textElement = value;
+      if (value && options.isOverlay()) applyText(text, true);
+    },
     get rootStyle() {
       return `--overlay-bg: ${backgroundColor()}; --overlay-bg-rgb: ${backgroundRgb()}; --overlay-opacity: ${opacity()}; --overlay-text: ${textColor()};`;
     },

@@ -1,6 +1,8 @@
 import { overlayLineHeight } from "$lib/app/defaults";
 import type { OverlayMode } from "$lib/types/app";
 
+const DOUBLE_LINE_MIN_FONT_SIZE = 14;
+
 export function normalizeOverlayText(text: string) {
   const raw = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
   if (!raw) return "";
@@ -31,12 +33,28 @@ export function resolveOverlayLayout(
   if (!forceSmall && singleWrappedLineCount <= 1 && compactLength <= 18) {
     return { mode: "single", fontSize: singleFont, lineLimit: 1 };
   }
-  return { mode: "double", fontSize: doubleFont, lineLimit: 2 };
+  const lineLimit = preferredOverlayLineLimit(singleWrappedLineCount, availableHeight);
+  return {
+    mode: lineLimit >= 2 ? "double" : "single",
+    fontSize: lineLimit >= 2 ? doubleFont : fontForVisibleLines(1, 18, 14, availableHeight),
+    lineLimit,
+  };
 }
 
 export function fontForVisibleLines(lines: number, preferred: number, min: number, availableHeight: number) {
   const fitted = Math.floor((availableHeight - 2) / (lines * overlayLineHeight));
   return Math.max(min, Math.min(preferred, fitted || preferred));
+}
+
+export function canFitOverlayLines(lines: number, availableHeight: number, minFontSize = DOUBLE_LINE_MIN_FONT_SIZE) {
+  if (lines <= 1) return availableHeight > 0;
+  const fitted = Math.floor((availableHeight - 2) / (lines * overlayLineHeight));
+  return fitted >= minFontSize;
+}
+
+export function preferredOverlayLineLimit(wrappedLineCount: number, availableHeight: number) {
+  if (wrappedLineCount <= 1) return 1;
+  return canFitOverlayLines(2, availableHeight) ? 2 : 1;
 }
 
 export function wrapOverlayText(text: string, fontSize: number, maxWidth: number, measureText: (text: string, fontSize: number) => number) {

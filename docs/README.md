@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 悬浮字幕双行显示发布审计：[2026-07-08 VoxType 0.7.3 悬浮字幕双行显示发布审计](audits/2026-07-08-release-0.7.3-overlay-two-line-caption-audit.md)
 - UX 与自动适配反馈发布审计：[2026-07-07 VoxType 0.7.2 UX 与自动适配反馈发布审计](audits/2026-07-07-release-0.7.2-ux-logic-polish-audit.md)
 - 大模型自动适配自动保存热修审计：[2026-07-07 VoxType 0.7.1 大模型自动适配自动保存热修审计](audits/2026-07-07-release-0.7.1-llm-auto-adapt-autosave-hotfix-audit.md)
 - 自动适配与 ASR 无反馈停录发布审计：[2026-07-07 VoxType 0.7.0 自动适配与 ASR 无反馈停录发布审计](audits/2026-07-07-release-0.7.0-llm-asr-auto-stop-audit.md)
