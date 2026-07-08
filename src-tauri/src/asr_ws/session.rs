@@ -5,7 +5,9 @@ use super::final_text::{
     missing_final_result_error, select_final_output_text, should_finish_final_packet_settle,
     should_timeout_waiting_final, upsert_definite_segment,
 };
-use super::partial_text::{emit_partial_text, normalize_live_text, PartialTextLimiter};
+use super::partial_text::{
+    emit_partial_text, normalize_live_text, LiveCaptionBuffer, PartialTextLimiter,
+};
 use crate::session::{SessionController, SessionPhase};
 use crate::{app_log, asr, asr_activity::AsrActivityReporter, config::AppConfig, protocol};
 use futures_util::{SinkExt, StreamExt};
@@ -68,6 +70,7 @@ pub(crate) async fn run_doubao_websocket_session(
     let mut final_packet_text: Option<String> = None;
     let mut definitive_segments = Vec::new();
     let mut partial_limiter = PartialTextLimiter::new();
+    let mut live_caption = LiveCaptionBuffer::new();
     let mut connection_closed_before_final = false;
     let mut final_packet_settle_started: Option<Instant> = None;
 
@@ -162,8 +165,10 @@ pub(crate) async fn run_doubao_websocket_session(
                 let mut definite_feedback_seen = false;
                 if live_packet_text_seen && packet_text != display_text {
                     display_text = packet_text.clone();
-                    if let Some(text) = partial_limiter.emit_or_defer(&display_text) {
-                        emit_partial_text(&app, &text);
+                    if let Some(caption) = live_caption.update(&display_text) {
+                        if let Some(text) = partial_limiter.emit_or_defer(&caption) {
+                            emit_partial_text(&app, &text);
+                        }
                     }
                 }
                 let mut final_update_seen = false;
@@ -183,8 +188,10 @@ pub(crate) async fn run_doubao_websocket_session(
                         if !live_packet_text_seen && !text.trim().is_empty() {
                             let normalized =
                                 asr::normalize_final_text(&text, remove_trailing_period);
-                            if let Some(text) = partial_limiter.emit_or_defer(&normalized) {
-                                emit_partial_text(&app, &text);
+                            if let Some(caption) = live_caption.update(&normalized) {
+                                if let Some(text) = partial_limiter.emit_or_defer(&caption) {
+                                    emit_partial_text(&app, &text);
+                                }
                             }
                         }
                     }

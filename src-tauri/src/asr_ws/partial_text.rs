@@ -20,6 +20,30 @@ pub(super) struct PartialTextLimiter {
     pending_text: Option<String>,
 }
 
+pub(crate) struct LiveCaptionBuffer {
+    text: String,
+}
+
+impl LiveCaptionBuffer {
+    pub(crate) fn new() -> Self {
+        Self {
+            text: String::new(),
+        }
+    }
+
+    pub(crate) fn update(&mut self, text: &str) -> Option<String> {
+        let text = normalize_live_text(text);
+        if text.is_empty() || text == self.text {
+            return None;
+        }
+        if should_keep_current_caption(&self.text, &text) {
+            return None;
+        }
+        self.text = text.clone();
+        Some(text)
+    }
+}
+
 impl PartialTextLimiter {
     pub(super) fn new() -> Self {
         Self {
@@ -70,9 +94,27 @@ pub(super) fn normalize_live_text(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn should_keep_current_caption(current: &str, next: &str) -> bool {
+    let current = compact_caption_text(current);
+    let next = compact_caption_text(next);
+    let current_len = current.chars().count();
+    let next_len = next.chars().count();
+    if current_len < 8 || next_len == 0 {
+        return false;
+    }
+    if current_len < next_len + 6 {
+        return false;
+    }
+    current.contains(&next)
+}
+
+fn compact_caption_text(text: &str) -> String {
+    text.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{PartialTextLimiter, PARTIAL_TEXT_MIN_INTERVAL};
+    use super::{LiveCaptionBuffer, PartialTextLimiter, PARTIAL_TEXT_MIN_INTERVAL};
     use std::time::{Duration, Instant};
 
     #[test]
@@ -113,6 +155,54 @@ mod tests {
         assert_eq!(
             limiter.emit_pending_if_ready().as_deref(),
             Some("第一段第二段第三段")
+        );
+    }
+
+    #[test]
+    fn live_caption_buffer_keeps_context_when_short_tail_fragment_arrives() {
+        let mut buffer = LiveCaptionBuffer::new();
+
+        assert_eq!(
+            buffer
+                .update("识别较长文本时，最后可能只剩一个七")
+                .as_deref(),
+            Some("识别较长文本时，最后可能只剩一个七")
+        );
+        assert!(buffer.update("七").is_none());
+    }
+
+    #[test]
+    fn live_caption_buffer_keeps_context_when_one_line_tail_arrives() {
+        let mut buffer = LiveCaptionBuffer::new();
+
+        assert_eq!(
+            buffer
+                .update("这是一段较长的实时字幕，后面只剩最后一行内容")
+                .as_deref(),
+            Some("这是一段较长的实时字幕，后面只剩最后一行内容")
+        );
+        assert!(buffer.update("后面只剩最后一行内容").is_none());
+    }
+
+    #[test]
+    fn live_caption_buffer_accepts_new_non_overlapping_short_text() {
+        let mut buffer = LiveCaptionBuffer::new();
+
+        assert_eq!(
+            buffer.update("前面是一段比较长的实时字幕").as_deref(),
+            Some("前面是一段比较长的实时字幕")
+        );
+        assert_eq!(buffer.update("八").as_deref(), Some("八"));
+    }
+
+    #[test]
+    fn live_caption_buffer_accepts_more_complete_update() {
+        let mut buffer = LiveCaptionBuffer::new();
+
+        assert_eq!(buffer.update("较长文本").as_deref(), Some("较长文本"));
+        assert_eq!(
+            buffer.update("较长文本继续补全").as_deref(),
+            Some("较长文本继续补全")
         );
     }
 }

@@ -7,7 +7,13 @@
 
 use crate::config::effective_hotwords;
 use crate::session::{SessionController, SessionPhase};
-use crate::{app_log, asr, asr_activity::AsrActivityReporter, asr_ws, audio, config::AppConfig};
+use crate::{
+    app_log, asr,
+    asr_activity::AsrActivityReporter,
+    asr_ws::{self, LiveCaptionBuffer},
+    audio,
+    config::AppConfig,
+};
 use futures_util::{Sink, SinkExt, Stream, StreamExt};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
@@ -185,6 +191,7 @@ pub(crate) async fn recognize_stream(
     let mut final_wait_started: Option<Instant> = None;
     let final_timeout =
         Duration::from_secs_f64(config.request.final_result_timeout_seconds.max(0.5));
+    let mut live_caption = LiveCaptionBuffer::new();
     let mut gate = AliyunFinalGate {
         task_started: true,
         ..AliyunFinalGate::default()
@@ -248,7 +255,9 @@ pub(crate) async fn recognize_stream(
                 match surface_event {
                     ProviderSurfaceEvent::PartialText(text)
                     | ProviderSurfaceEvent::StableText(text) => {
-                        asr_ws::emit_partial_text(&app, &text);
+                        if let Some(text) = live_caption.update(&text) {
+                            asr_ws::emit_partial_text(&app, &text);
+                        }
                     }
                     ProviderSurfaceEvent::Finished => break,
                     ProviderSurfaceEvent::Started => {}
