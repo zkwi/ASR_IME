@@ -9,6 +9,7 @@ import {
   overlayTextColor as getOverlayTextColor,
 } from "$lib/utils/overlayAppearance";
 import {
+  fitOverlayDisplayText,
   normalizeOverlayText,
   overlayAvailableTextHeight as getOverlayAvailableTextHeight,
   overlayVisibleLineCount as getOverlayVisibleLineCount,
@@ -110,8 +111,9 @@ export function createOverlayController(options: OverlayControllerOptions) {
     }
 
     const availableHeight = availableTextHeight();
+    const availableWidth = textContentWidth();
     const singleFontSize = 20;
-    const singleLineCount = wrapText(normalized, singleFontSize).length;
+    const singleLineCount = wrapText(normalized, singleFontSize, availableWidth).length;
     const layout = getOverlayLayout(
       normalized,
       smallLayoutLocked,
@@ -124,9 +126,18 @@ export function createOverlayController(options: OverlayControllerOptions) {
     }
 
     mode = layout.mode;
-    fontSize = layout.fontSize;
     lineLimit = layout.lineLimit;
-    allLines = wrapText(normalized, layout.fontSize);
+    const fitted = fitOverlayDisplayText(
+      normalized,
+      layout.lineLimit,
+      layout.fontSize,
+      availableHeight,
+      availableWidth,
+      measureText,
+      singleLineCount > 1,
+    );
+    fontSize = fitted.fontSize;
+    allLines = fitted.lines;
     const visibleCount = visibleLineCount();
     scrollOffset = Math.max(0, allLines.length - visibleCount);
     tailHoldSteps = allLines.length > visibleCount ? 2 : 1;
@@ -137,8 +148,8 @@ export function createOverlayController(options: OverlayControllerOptions) {
     stopScroll();
   }
 
-  function wrapText(value: string, size: number) {
-    return wrapOverlayTextLines(value, size, textContentWidth(), measureText);
+  function wrapText(value: string, size: number, width = textContentWidth()) {
+    return wrapOverlayTextLines(value, size, width, measureText);
   }
 
   function textContentWidth() {
