@@ -105,7 +105,8 @@ fn should_keep_current_caption(current: &str, next: &str) -> bool {
     if current_len < next_len + 6 {
         return false;
     }
-    current.contains(&next)
+    // 最终包不经过这里；只阻止中间包骤降成几个无关字符，避免实时字幕丢失上下文。
+    next_len <= 4 || current.contains(&next)
 }
 
 fn compact_caption_text(text: &str) -> String {
@@ -185,14 +186,28 @@ mod tests {
     }
 
     #[test]
-    fn live_caption_buffer_accepts_new_non_overlapping_short_text() {
+    fn live_caption_buffer_keeps_context_when_non_overlapping_tiny_fragment_arrives() {
         let mut buffer = LiveCaptionBuffer::new();
 
         assert_eq!(
             buffer.update("前面是一段比较长的实时字幕").as_deref(),
             Some("前面是一段比较长的实时字幕")
         );
-        assert_eq!(buffer.update("八").as_deref(), Some("八"));
+        assert!(buffer.update("八").is_none());
+    }
+
+    #[test]
+    fn live_caption_buffer_accepts_substantial_non_overlapping_revision() {
+        let mut buffer = LiveCaptionBuffer::new();
+
+        assert_eq!(
+            buffer.update("前面是一段比较长的实时字幕").as_deref(),
+            Some("前面是一段比较长的实时字幕")
+        );
+        assert_eq!(
+            buffer.update("完全不同但内容完整的新识别结果").as_deref(),
+            Some("完全不同但内容完整的新识别结果")
+        );
     }
 
     #[test]

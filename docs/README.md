@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 悬浮字幕双行保障发布审计：[2026-07-11 VoxType 0.7.8 悬浮字幕双行保障发布审计](audits/2026-07-11-release-0.7.8-overlay-two-line-guard-audit.md)
 - 悬浮字幕简化排版发布审计：[2026-07-08 VoxType 0.7.5 悬浮字幕简化排版发布审计](audits/2026-07-08-release-0.7.5-overlay-simple-layout-audit.md)
 - 悬浮字幕字号与双行显示发布审计：[2026-07-08 VoxType 0.7.4 悬浮字幕字号与双行显示发布审计](audits/2026-07-08-release-0.7.4-overlay-caption-fit-audit.md)
 - 悬浮字幕双行显示发布审计：[2026-07-08 VoxType 0.7.3 悬浮字幕双行显示发布审计](audits/2026-07-08-release-0.7.3-overlay-two-line-caption-audit.md)

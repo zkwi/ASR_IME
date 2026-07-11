@@ -1,5 +1,5 @@
 use crate::config::{
-    AppConfig, ConfigValidationError, ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO,
+    AppConfig, ConfigValidationError, ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO, MIN_UI_HEIGHT,
 };
 use crate::llm_request_adapter::is_valid_thinking_strategy;
 
@@ -248,9 +248,9 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         &mut errors,
         "ui.height",
         config.ui.height,
-        40,
+        MIN_UI_HEIGHT,
         400,
-        "悬浮窗高度需在 40 到 400 之间。",
+        "悬浮窗高度需在 52 到 400 之间。",
     );
     validate_hex_color(
         &mut errors,

@@ -213,7 +213,8 @@ Captions are designed for recording feedback:
 - Real-time text.
 - Elapsed or processing state.
 - Errors.
-- Captions first collapse temporary spacing from interim ASR text. Short text stays on one line; long text, wrapped text, or ASR newline output uses up to two visible lines when height allows, with the largest font size that does not clip.
+- Captions first collapse temporary spacing from interim ASR text. Short text stays on one line; long text, wrapped text, or ASR newline output uses up to two visible lines with the largest font size that does not clip. The runtime window is at least `52px` high, including for legacy low-height settings.
+- An anomalous one-to-four-character interim drop in the same recording session does not replace an already complete caption; substantial revisions still update normally.
 
 Captions do not show paste-state noise, internal paths, or debug stacks.
 

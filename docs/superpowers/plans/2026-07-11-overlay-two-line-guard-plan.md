@@ -28,11 +28,11 @@
 **Interfaces:**
 - Produces: `config::MIN_UI_HEIGHT: u32` and `overlay::effective_overlay_height(u32) -> u32`。
 
-- [ ] **Step 1: 添加失败测试**
+- [x] **Step 1: 添加失败测试**
 
 在 Rust 测试中断言 `51px` 配置不可保存、`52px` 可保存，并断言运行时把 `40px`、`51px` 钳制为 `52px`。前端布局脚本增加 `36px` 可用高度下长文本返回两行的断言。
 
-- [ ] **Step 2: 验证测试因缺少高度保障而失败**
+- [x] **Step 2: 验证测试因缺少高度保障而失败**
 
 Run: `cargo test overlay::tests::clamps_legacy_low_height_for_two_lines --manifest-path src-tauri/Cargo.toml`
 
@@ -42,11 +42,11 @@ Run: `cargo test rejects_overlay_height_that_cannot_show_two_lines --manifest-pa
 
 Expected: FAIL，因为当前仍接受 `51px`。
 
-- [ ] **Step 3: 实现最小高度保障**
+- [x] **Step 3: 实现最小高度保障**
 
 在 `config.rs` 定义 `pub const MIN_UI_HEIGHT: u32 = 52;`；配置校验使用该下限；`overlay.rs` 在设置尺寸和计算纵向位置时使用 `ui.height.max(MIN_UI_HEIGHT)`。
 
-- [ ] **Step 4: 验证高度测试通过**
+- [x] **Step 4: 验证高度测试通过**
 
 Run: `cargo test overlay::tests::clamps_legacy_low_height_for_two_lines --manifest-path src-tauri/Cargo.toml`
 
@@ -69,21 +69,21 @@ Expected: `Overlay layout tests passed.`
 - Consumes: 每次录音会话独立创建的 `LiveCaptionBuffer`。
 - Produces: `LiveCaptionBuffer::update` 对明显异常的 1-4 字骤降返回 `None`。
 
-- [ ] **Step 1: 添加失败测试**
+- [x] **Step 1: 添加失败测试**
 
 将“长字幕后接受非重合单字”的预期改为保留长字幕，并增加超过短片段阈值的正常修订仍可更新的测试。
 
-- [ ] **Step 2: 验证单字骤降测试失败**
+- [x] **Step 2: 验证单字骤降测试失败**
 
 Run: `cargo test live_caption_buffer_keeps_context_when_non_overlapping_tiny_fragment_arrives --manifest-path src-tauri/Cargo.toml`
 
 Expected: FAIL，当前实现会返回单字更新。
 
-- [ ] **Step 3: 实现保守过滤**
+- [x] **Step 3: 实现保守过滤**
 
 当当前字幕不少于 8 字、下一条不超过 4 字且长度至少骤降 6 字时保留当前字幕；其他非重合更新继续正常通过。
 
-- [ ] **Step 4: 验证字幕缓冲测试通过**
+- [x] **Step 4: 验证字幕缓冲测试通过**
 
 Run: `cargo test live_caption_buffer --manifest-path src-tauri/Cargo.toml`
 
@@ -106,11 +106,11 @@ Expected: 所有字幕缓冲测试 PASS。
 **Interfaces:**
 - Produces: 版本 `0.7.8` 和对应 Windows NSIS 安装包。
 
-- [ ] **Step 1: 同步用户文档和版本号**
+- [x] **Step 1: 同步用户文档和版本号**
 
 说明字幕最低有效高度、旧配置兼容策略和异常短中间包保护；将五处版本号同步为 `0.7.8`。
 
-- [ ] **Step 2: 运行完整验证**
+- [x] **Step 2: 运行完整验证**
 
 Run: `npm run ai:check`
 

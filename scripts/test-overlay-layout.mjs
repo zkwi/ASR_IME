@@ -80,6 +80,16 @@ try {
   assert.ok(doubleLayout.fontSize <= shortLayout.fontSize);
   assert.deepEqual(doubleLayout.lines, ["这是一个超过十八个字", "的实时字幕测试文本"]);
 
+  const minimumHeightLayout = layout.resolveOverlayDisplayText(
+    "这是一个超过十八个字的实时字幕测试文本",
+    36,
+    400,
+    measureByChar,
+  );
+  assert.equal(minimumHeightLayout.mode, "double");
+  assert.equal(minimumHeightLayout.fontSize, 14);
+  assert.equal(minimumHeightLayout.lines.length, 2);
+
   assert.deepEqual(
     layout.resolveOverlayDisplayText("第一行\n第二行", 72, 260, measureByChar),
     { mode: "double", fontSize: 18, lineLimit: 2, lines: ["第一行", "第二行"] },

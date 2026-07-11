@@ -1,4 +1,4 @@
-use crate::config::UiConfig;
+use crate::config::{UiConfig, MIN_UI_HEIGHT};
 use serde::Serialize;
 use std::sync::{Mutex, OnceLock};
 use tauri::{
@@ -72,7 +72,8 @@ fn show_with_text(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {
     let Some(window) = app.get_webview_window(OVERLAY_LABEL) else {
         return;
     };
-    let _ = window.set_size(LogicalSize::new(ui.width as f64, ui.height as f64));
+    let effective_height = effective_overlay_height(ui.height);
+    let _ = window.set_size(LogicalSize::new(ui.width as f64, effective_height as f64));
     if let Some(monitor) = current_monitor(app).or_else(|| window.primary_monitor().ok().flatten())
     {
         let position = monitor.position();
@@ -83,7 +84,8 @@ fn show_with_text(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {
         let monitor_width = size.width as f64 / scale;
         let monitor_height = size.height as f64 / scale;
         let x = monitor_x + ((monitor_width - ui.width as f64).max(0.0) / 2.0);
-        let y = monitor_y + (monitor_height - ui.height as f64 - ui.margin_bottom as f64).max(0.0);
+        let y = monitor_y
+            + (monitor_height - effective_height as f64 - ui.margin_bottom as f64).max(0.0);
         let _ = window.set_position(LogicalPosition::new(x, y));
     }
     update_config(app, ui);
@@ -99,6 +101,10 @@ fn show_with_text(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {
         refresh_visible_window(&window);
         crate::app_log::info("悬浮字幕窗已显示");
     }
+}
+
+fn effective_overlay_height(configured_height: u32) -> u32 {
+    configured_height.max(MIN_UI_HEIGHT)
 }
 
 fn refresh_visible_window(window: &WebviewWindow) {
@@ -224,5 +230,18 @@ fn set_current_config(ui: &UiConfig) {
         .lock()
     {
         *current = ui.clone();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::effective_overlay_height;
+
+    #[test]
+    fn clamps_legacy_low_height_for_two_lines() {
+        assert_eq!(effective_overlay_height(40), 52);
+        assert_eq!(effective_overlay_height(51), 52);
+        assert_eq!(effective_overlay_height(52), 52);
+        assert_eq!(effective_overlay_height(88), 88);
     }
 }

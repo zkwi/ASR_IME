@@ -9,6 +9,7 @@ pub(crate) const ASR_PROVIDER_ALIYUN_FUN: &str = "aliyun_fun";
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 const APP_DATA_DIR_NAME: &str = "VoxType";
+pub(crate) const MIN_UI_HEIGHT: u32 = 52;
 
 use crate::config_validation::format_validation_errors;
 pub use crate::config_validation::validate_config;
@@ -1551,6 +1552,18 @@ mod tests {
     #[test]
     fn accepts_default_config() {
         assert!(validate_config(&AppConfig::default()).is_ok());
+    }
+
+    #[test]
+    fn rejects_overlay_height_that_cannot_show_two_lines() {
+        let mut config = AppConfig::default();
+        config.ui.height = super::MIN_UI_HEIGHT - 1;
+
+        let errors = validate_config(&config).expect_err("51px overlay height should fail");
+        assert!(errors.iter().any(|error| error.field == "ui.height"));
+
+        config.ui.height = super::MIN_UI_HEIGHT;
+        assert!(validate_config(&config).is_ok());
     }
 
     #[test]
