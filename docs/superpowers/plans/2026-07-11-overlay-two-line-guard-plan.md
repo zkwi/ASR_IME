@@ -124,10 +124,10 @@ Run: `npm run tauri -- build`
 
 Expected: 生成 `src-tauri/target/release/bundle/nsis/VoxType_0.7.8_x64-setup.exe`。
 
-- [ ] **Step 3: 发布**
+- [x] **Step 3: 发布**
 
 检查 `git status` 和 diff 后，使用简体中文提交信息；推送 `main`，创建并推送 `v0.7.8` 标签，创建 GitHub Release 并上传 NSIS 安装包。
 
-- [ ] **Step 4: 验证远端结果**
+- [x] **Step 4: 验证远端结果**
 
 确认 Release 资产可见、校验和可读取，并等待对应 GitHub Actions 工作流完成。

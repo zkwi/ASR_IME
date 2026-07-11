@@ -183,13 +183,11 @@ fn redact_key_values(message: &str, key: &str) -> String {
         while cursor < output.len() && output.as_bytes()[cursor].is_ascii_whitespace() {
             cursor += 1;
         }
-        let quote = output.as_bytes().get(cursor).copied().and_then(|byte| {
-            if byte == b'"' || byte == b'\'' {
-                Some(byte)
-            } else {
-                None
-            }
-        });
+        let quote = output
+            .as_bytes()
+            .get(cursor)
+            .copied()
+            .filter(|&byte| byte == b'"' || byte == b'\'');
         if quote.is_some() {
             cursor += 1;
         }
