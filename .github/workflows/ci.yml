@@ -30,11 +30,18 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
       - name: Install frontend dependencies
         run: npm ci
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked --version 0.22.1
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit@0.22.1
 
       - name: Release-grade check suite
         run: npm run ai:release-check
