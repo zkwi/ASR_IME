@@ -2,11 +2,11 @@ use crate::{
     app_log,
     config::{effective_hotwords, AppConfig},
     hotword_history,
-    llm_endpoint::chat_completions_endpoint,
-    llm_request_adapter::{
-        apply_thinking_strategy, remove_thinking_controls,
-        should_retry_without_unsupported_thinking,
+    llm_client::{
+        base_chat_body, build_client, extract_message_content, response_was_truncated,
+        send_chat_with_thinking_fallback,
     },
+    llm_request_adapter::apply_thinking_strategy,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -188,10 +188,8 @@ async fn call_openai_compatible_for_hotwords(
     let api_key = settings.api_key.trim();
     let model = settings.model.trim();
     let timeout = Duration::from_secs_f64(hotword_timeout_seconds(settings.timeout_seconds));
-    let client = reqwest::Client::builder()
-        .timeout(timeout)
-        .build()
-        .map_err(|err| format!("创建自动热词生成客户端失败: {}", err))?;
+    let client =
+        build_client(timeout).map_err(|err| format!("创建自动热词生成客户端失败: {}", err))?;
     let body = chat_body(
         model,
         system_prompt,
@@ -201,41 +199,16 @@ async fn call_openai_compatible_for_hotwords(
         &settings.thinking_strategy,
         hotword_max_tokens(max_candidates),
     );
-    let response = send_hotword_request(&client, base_url, api_key, &body)
-        .await
-        .map_err(|err| friendly_generation_error(&err))?;
-    match handle_generation_response(response).await {
-        Ok(content) => Ok(content),
-        Err(err) if should_retry_without_unsupported_thinking(base_url, &body, &err) => {
-            app_log::info(
-                "LLM provider rejected disabled thinking controls for hotwords, retrying without them",
-            );
-            let mut retry_body = body.clone();
-            remove_thinking_controls(&mut retry_body);
-            let response = send_hotword_request(&client, base_url, api_key, &retry_body)
-                .await
-                .map_err(|err| friendly_generation_error(&err))?;
-            handle_generation_response(response)
-                .await
-                .map_err(|err| generation_error_for_user(&err))
-        }
-        Err(err) => Err(generation_error_for_user(&err)),
-    }
-}
-
-async fn send_hotword_request(
-    client: &reqwest::Client,
-    base_url: &str,
-    api_key: &str,
-    body: &Value,
-) -> Result<reqwest::Response, String> {
-    client
-        .post(chat_completions_endpoint(base_url))
-        .bearer_auth(api_key)
-        .json(body)
-        .send()
-        .await
-        .map_err(|err| format!("调用 LLM 失败: {}", err))
+    let result = send_chat_with_thinking_fallback(
+        &client,
+        base_url,
+        api_key,
+        &body,
+        "解析自动热词生成响应失败",
+    )
+    .await
+    .map_err(|err| generation_error_for_user(&err))?;
+    handle_generation_value(&result.value)
 }
 
 fn chat_body(
@@ -247,15 +220,9 @@ fn chat_body(
     thinking_strategy: &str,
     max_tokens: u32,
 ) -> Value {
-    let mut body = json!({
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            "temperature": 0.2,
-            "max_tokens": max_tokens
-    });
+    let mut body = base_chat_body(model, system_prompt, user_prompt);
+    body["temperature"] = json!(0.2);
+    body["max_tokens"] = json!(max_tokens);
     apply_thinking_strategy(
         &mut body,
         base_url,
@@ -266,23 +233,11 @@ fn chat_body(
     body
 }
 
-async fn handle_generation_response(response: reqwest::Response) -> Result<String, String> {
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(format!("LLM 返回状态码: {}; {}", status, body));
-    }
-    let value: Value = response
-        .json()
-        .await
-        .map_err(|err| format!("解析自动热词生成响应失败: {}", err))?;
-    if let Some(error) = value.get("error") {
-        return Err(format!("LLM 返回错误: {}", error));
-    }
-    if response_was_truncated(&value) {
+fn handle_generation_value(value: &Value) -> Result<String, String> {
+    if response_was_truncated(value) {
         return Err("大模型返回的热词候选被截断。请减少历史文本上限或候选数量后重试。".to_string());
     }
-    let content = extract_message_content(&value);
+    let content = extract_message_content(value);
     if content.trim().is_empty() {
         return Err("大模型没有返回热词候选内容，请稍后重试或检查模型配置。".to_string());
     }
@@ -481,29 +436,6 @@ fn strip_code_fence(raw: &str) -> String {
         text.truncate(index);
     }
     text.trim().to_string()
-}
-
-fn extract_message_content(value: &Value) -> String {
-    value
-        .get("choices")
-        .and_then(Value::as_array)
-        .and_then(|choices| choices.first())
-        .and_then(|choice| choice.get("message"))
-        .and_then(|message| message.get("content"))
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string()
-}
-
-fn response_was_truncated(value: &Value) -> bool {
-    value
-        .get("choices")
-        .and_then(Value::as_array)
-        .and_then(|choices| choices.first())
-        .and_then(|choice| choice.get("finish_reason"))
-        .and_then(Value::as_str)
-        .map(|reason| matches!(reason, "length" | "max_tokens"))
-        .unwrap_or(false)
 }
 
 fn generation_error_for_user(error: &str) -> String {

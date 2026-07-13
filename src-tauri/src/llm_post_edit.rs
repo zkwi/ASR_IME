@@ -1,10 +1,13 @@
 use crate::{
     app_log,
     config::{effective_hotwords, AppConfig},
-    llm_endpoint::chat_completions_endpoint,
+    llm_client::{
+        base_chat_body, build_client, extract_message_content, extract_reasoning_content,
+        send_chat_with_thinking_fallback,
+    },
     llm_request_adapter::{
-        apply_thinking_strategy, is_thinking_only_model, remove_thinking_controls,
-        should_retry_without_unsupported_thinking, thinking_strategy_candidates, STRATEGY_OMIT,
+        apply_thinking_strategy, is_thinking_only_model, thinking_strategy_candidates,
+        STRATEGY_OMIT,
     },
 };
 use serde_json::{json, Value};
@@ -27,11 +30,6 @@ pub struct PolishOutcome {
 pub struct LlmConnectionTestResult {
     pub elapsed_ms: u64,
     pub thinking_strategy: String,
-}
-
-struct ChatJsonResult {
-    value: Value,
-    retried_without_thinking: bool,
 }
 
 pub fn should_polish(config: &AppConfig, text: &str) -> bool {
@@ -315,17 +313,23 @@ pub async fn test_connection(config: &AppConfig) -> Result<LlmConnectionTestResu
 
     app_log::info(format!("LLM connection test started: model={}", model));
     let timeout = Duration::from_secs_f64(settings.timeout_seconds.clamp(1.0, 60.0));
-    let client = reqwest::Client::builder()
-        .timeout(timeout)
-        .build()
-        .map_err(|err| format!("创建大模型测试客户端失败: {}", err))?;
+    let client =
+        build_client(timeout).map_err(|err| format!("创建大模型测试客户端失败: {}", err))?;
     let candidates = thinking_strategy_candidates(base_url, model, &settings.thinking_strategy);
     let mut best_result: Option<LlmConnectionTestResult> = None;
     let mut last_error = None;
     for candidate in candidates {
         let body = connection_test_chat_body(config, base_url, model, candidate);
         let started_at = Instant::now();
-        match post_chat_json(&client, base_url, api_key, &body).await {
+        match send_chat_with_thinking_fallback(
+            &client,
+            base_url,
+            api_key,
+            &body,
+            "解析 LLM 响应失败",
+        )
+        .await
+        {
             Ok(result) if has_connection_test_output(&result.value) => {
                 let elapsed_ms = elapsed_millis(started_at);
                 let thinking_strategy = if result.retried_without_thinking {
@@ -392,10 +396,7 @@ async fn call_openai_compatible(
     max_tokens: Option<u32>,
 ) -> Result<String, String> {
     let timeout = Duration::from_secs_f64(config.llm_post_edit.timeout_seconds.max(1.0));
-    let client = reqwest::Client::builder()
-        .timeout(timeout)
-        .build()
-        .map_err(|err| format!("创建 LLM 客户端失败: {}", err))?;
+    let client = build_client(timeout).map_err(|err| format!("创建 LLM 客户端失败: {}", err))?;
     let body = chat_body(
         model,
         &system_prompt_for_request(config),
@@ -405,7 +406,9 @@ async fn call_openai_compatible(
         &config.llm_post_edit.thinking_strategy,
         max_tokens,
     );
-    let result = post_chat_json(&client, base_url, api_key, &body).await?;
+    let result =
+        send_chat_with_thinking_fallback(&client, base_url, api_key, &body, "解析 LLM 响应失败")
+            .await?;
     Ok(extract_message_content(&result.value))
 }
 
@@ -423,66 +426,6 @@ fn polish_max_tokens_for_input(input_chars: usize) -> u32 {
         161..=400 => 384,
         _ => 1_024,
     }
-}
-
-async fn post_chat_json(
-    client: &reqwest::Client,
-    base_url: &str,
-    api_key: &str,
-    body: &Value,
-) -> Result<ChatJsonResult, String> {
-    let response = send_chat_request(client, base_url, api_key, body).await?;
-    match parse_chat_response(response).await {
-        Ok(value) => Ok(ChatJsonResult {
-            value,
-            retried_without_thinking: false,
-        }),
-        Err(err) if should_retry_without_unsupported_thinking(base_url, body, &err) => {
-            app_log::info(
-                "LLM provider rejected disabled thinking controls, retrying without them",
-            );
-            let mut retry_body = body.clone();
-            remove_thinking_controls(&mut retry_body);
-            let response = send_chat_request(client, base_url, api_key, &retry_body).await?;
-            let value = parse_chat_response(response).await?;
-            Ok(ChatJsonResult {
-                value,
-                retried_without_thinking: true,
-            })
-        }
-        Err(err) => Err(err),
-    }
-}
-
-async fn send_chat_request(
-    client: &reqwest::Client,
-    base_url: &str,
-    api_key: &str,
-    body: &Value,
-) -> Result<reqwest::Response, String> {
-    client
-        .post(chat_completions_endpoint(base_url))
-        .bearer_auth(api_key)
-        .json(body)
-        .send()
-        .await
-        .map_err(|err| format!("调用 LLM 失败: {}", err))
-}
-
-async fn parse_chat_response(response: reqwest::Response) -> Result<Value, String> {
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(format!("LLM 返回状态码: {}; {}", status, body));
-    }
-    let value: Value = response
-        .json()
-        .await
-        .map_err(|err| format!("解析 LLM 响应失败: {}", err))?;
-    if let Some(error) = value.get("error") {
-        return Err(format!("LLM 返回错误: {}", error));
-    }
-    Ok(value)
 }
 
 fn system_prompt_for_request(config: &AppConfig) -> String {
@@ -505,13 +448,7 @@ fn chat_body(
     thinking_strategy: &str,
     max_tokens: Option<u32>,
 ) -> Value {
-    let mut body = json!({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    });
+    let mut body = base_chat_body(model, system_prompt, user_prompt);
     apply_thinking_strategy(
         &mut body,
         base_url,
@@ -549,26 +486,6 @@ fn connection_test_chat_body(
 
 fn elapsed_millis(started_at: Instant) -> u64 {
     started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
-}
-
-fn extract_message_content(value: &Value) -> String {
-    extract_message_string_field(value, "content")
-}
-
-fn extract_reasoning_content(value: &Value) -> String {
-    extract_message_string_field(value, "reasoning_content")
-}
-
-fn extract_message_string_field(value: &Value, field: &str) -> String {
-    value
-        .get("choices")
-        .and_then(Value::as_array)
-        .and_then(|choices| choices.first())
-        .and_then(|choice| choice.get("message"))
-        .and_then(|message| message.get(field))
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string()
 }
 
 fn has_connection_test_output(value: &Value) -> bool {
