@@ -141,6 +141,7 @@ npm run ai:check
 ```powershell
 npm run check
 npm run build
+npm run test:unit
 npm run scan:secrets
 Set-Location .\src-tauri
 cargo fmt --check

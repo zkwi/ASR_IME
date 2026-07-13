@@ -73,6 +73,7 @@ VoxType 的核心链路是：
 日常改动：
 
 ```powershell
+npm run test:unit
 npm run ai:check
 ```
 

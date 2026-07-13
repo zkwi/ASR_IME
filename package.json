@@ -13,8 +13,7 @@
     "audit:rust": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/rust-audit.ps1",
     "check:governance": "node scripts/check-governance.mjs",
     "test:governance": "node scripts/test-governance.mjs",
-    "test:overlay": "node scripts/test-overlay-layout.mjs",
-    "test:stats": "node scripts/test-stats.mjs",
+    "test:unit": "vitest run",
     "scan:secrets": "node scripts/scan-secrets.mjs --git-visible",
     "scan:secrets:staged": "node scripts/scan-secrets.mjs --staged",
     "test:secrets": "node scripts/test-scan-secrets.mjs",
@@ -37,7 +36,8 @@
     "svelte": "^5.0.0",
     "svelte-check": "^4.4.7",
     "typescript": "~6.0.3",
-    "vite": "^8.1.3"
+    "vite": "^8.1.3",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "cookie": "0.7.2"
