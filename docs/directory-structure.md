@@ -155,7 +155,7 @@ docs/
 1. 面向用户的说明优先放 README。
 2. Wiki 页面草稿放 `docs/wiki/`，线上 Wiki 更新时同步检查本地草稿。
 3. 面向开发和 AI 的规则放 docs。
-4. 发布审计记录放 `docs/audits/`，计划和设计草稿放 `docs/plans/`。
+4. 发布审计记录放 `docs/audits/`，项目计划和设计草稿放 `docs/plans/`；按 Superpowers 工作流生成的可执行计划放 `docs/superpowers/plans/`。
 5. 接口参考文档可以放 docs，但不要混入真实密钥。
 6. 大改功能时，如果影响维护规则，应同步更新 docs。
 
@@ -167,13 +167,14 @@ docs/
 scripts/
 ├── ai-check.ps1
 ├── ai-release-check.ps1
+├── release-preflight.ps1
+├── test-release-preflight.ps1
 ├── enable_git_hooks.ps1
 ├── rust-audit.ps1
 ├── scan-secrets.mjs
 ├── test-scan-secrets.mjs
 ├── check-governance.mjs
-├── test-governance.mjs
-└── test-stats.mjs
+└── test-governance.mjs
 ```
 
 ### 规则

@@ -2,6 +2,14 @@
 
 本规划基于对当前代码库(0.7.9 + 未提交改动)的全面审计,面向 codex 逐项执行。
 
+## 执行结果（2026-07-13，VoxType 0.8.0）
+
+- P0-1、P0-2、P0-3、P1-1、P1-2、P1-3 已完成并发布。
+- P1-3 同时关闭了 `reqwest` 默认 native-tls 特性，豆包与阿里云均通过真实凭据 + 程序生成短静音包的 rustls 连接测试；未采集真实麦克风，因此原计划中的“各录一句并粘贴”未声称完成。
+- P0-3 使用 Tauri CSP 对象配置并保留 `style-src` 资产注入例外；主窗口、IPC、更新检查和 WebView 控制台已验证。
+- P2-1 与 P2-2 明确延后：没有缺陷驱动，且会扩大本次发布回归面，不符合个人项目的局部改动原则。
+- 最终自动化基线为 234 项 Rust 测试和 21 项 Vitest；下文 231 项是规划制定时的快照，不应当作当前动态数量。
+
 ## 审计结论摘要
 
 项目整体健康度**很高**,不存在需要"抢救"的技术债:
@@ -16,7 +24,7 @@
 
 ---
 
-## P0-1 收尾未提交的 dashscope thinking 策略改动
+## P0-1 收尾未提交的 dashscope thinking 策略改动（已完成）
 
 **现状**:工作区有 `src-tauri/src/llm_request_adapter.rs` 的未提交改动(dashscope 平台 `omit` 策略改为强制 `enable_thinking`,候选列表去掉 `omit` 回退),测试已补且全部通过。
 
@@ -29,7 +37,7 @@
 
 ---
 
-## P0-2 收敛 LLM HTTP 客户端重复代码
+## P0-2 收敛 LLM HTTP 客户端重复代码（已完成）
 
 **现状**:`llm_post_edit.rs`(978 行)和 `hotword_generator.rs`(803 行)各自实现了一套几乎相同的:
 
@@ -54,7 +62,7 @@ provider 兼容性问题(thinking 策略)是当前活跃修改区,每次都要�
 
 ---
 
-## P0-3 设置 Tauri CSP(安全加固)
+## P0-3 设置 Tauri CSP(安全加固，已完成）
 
 **现状**:`src-tauri/tauri.conf.json` 中 `"security": { "csp": null }`。前端为纯本地静态资源,风险可控,但设置 CSP 是 Tauri 官方推荐的低成本加固,对处理剪贴板和键盘注入的应用尤其值得。
 
@@ -66,7 +74,7 @@ provider 兼容性问题(thinking 策略)是当前活跃修改区,每次都要�
 
 ---
 
-## P1-1 前端测试迁移到 vitest 并补齐纯函数测试
+## P1-1 前端测试迁移到 vitest 并补齐纯函数测试（已完成）
 
 **现状**:前端测试是三个手写 node 脚本(`test-overlay-layout.mjs`、`test-stats.mjs`、`test-governance.mjs`),每个脚本自己启动一个 Vite server 用 `ssrLoadModule` 加载 TS,再手写 assert。可用但难扩展。悬浮字幕在 0.7.3~0.7.8 连续 6 个版本修复,说明这类展示层纯逻辑恰恰最需要低摩擦的回归测试。同时 `setupStatus.ts`(222 行)、`appRouting.ts`(159 行)、`hotwords.ts`、`autoHotwords.ts`、`sessionState.ts` 等纯函数完全无测试。
 
@@ -80,7 +88,7 @@ provider 兼容性问题(thinking 策略)是当前活跃修改区,每次都要�
 
 ---
 
-## P1-2 CI 提速:缓存 Rust 构建与 cargo-audit
+## P1-2 CI 提速:缓存 Rust 构建与 cargo-audit（已完成）
 
 **现状**:CI 每次 push 在 windows-latest 上冷编译整个 Tauri 项目并 `cargo install cargo-audit`(即使 `--locked` 也要现场编译),单次 30 分钟上限经常吃紧。
 
@@ -93,7 +101,7 @@ provider 兼容性问题(thinking 策略)是当前活跃修改区,每次都要�
 
 ---
 
-## P1-3 统一 TLS 栈为 rustls
+## P1-3 统一 TLS 栈为 rustls（已完成，验收范围有说明）
 
 **现状**:`reqwest` 用 `rustls-tls`,`tokio-tungstenite` 用 `native-tls`,二进制里同时链接两套 TLS,行为不一致且体积浪费。
 
@@ -107,7 +115,7 @@ provider 兼容性问题(thinking 策略)是当前活跃修改区,每次都要�
 
 ---
 
-## P2-1 config.rs 机械拆分(仅移动,不改逻辑)
+## P2-1 config.rs 机械拆分(延后)
 
 **现状**:`config.rs` 1732 行,混合了 19 个 struct 定义 + Default 实现、路径解析、旧配置迁移、加载/保存、recent context 文件 IO。AGENTS.md 禁止一次性大规模重构它,但纯移动式拆分风险低。
 
@@ -121,7 +129,7 @@ provider 兼容性问题(thinking 策略)是当前活跃修改区,每次都要�
 
 ---
 
-## P2-2 VoxTypeController 瘦身(可选,按需执行)
+## P2-2 VoxTypeController 瘦身(延后)
 
 **现状**:`VoxTypeController.svelte.ts` 1320 行,是组合根,但仍残留一批可归位的领域函数(setup status 相关 ~10 个函数、asr 连接状态文案、mic 状态文案等),以及两个巨型 props 构建器。
 

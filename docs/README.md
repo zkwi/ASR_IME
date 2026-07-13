@@ -26,6 +26,8 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 工程治理增强发布审计：[2026-07-13 VoxType 0.8.1 工程治理增强发布审计](audits/2026-07-13-release-0.8.1-engineering-governance-audit.md)
+- 代码健康度改进发布审计：[2026-07-13 VoxType 0.8.0 代码健康度改进发布审计](audits/2026-07-13-release-0.8.0-code-health-audit.md)
 - CI 兼容热修发布审计：[2026-07-11 VoxType 0.7.9 CI 兼容热修发布审计](audits/2026-07-11-release-0.7.9-ci-compatibility-audit.md)
 - 悬浮字幕双行保障发布审计：[2026-07-11 VoxType 0.7.8 悬浮字幕双行保障发布审计](audits/2026-07-11-release-0.7.8-overlay-two-line-guard-audit.md)
 - 悬浮字幕简化排版发布审计：[2026-07-08 VoxType 0.7.5 悬浮字幕简化排版发布审计](audits/2026-07-08-release-0.7.5-overlay-simple-layout-audit.md)
@@ -71,10 +73,16 @@ npm run ai:check
 npm run check:governance
 ```
 
-该检查会验证版本号一致性、本地 Markdown 链接、截图引用、README 中 GitHub Wiki 链接对应的 `docs/wiki/` 草稿是否存在。
+该检查会验证 `package.json`、两个 lockfile、Cargo 和 Tauri 版本号一致性，当前版本 CHANGELOG、发布审计与本文索引是否齐全，以及本地 Markdown 链接、截图引用、三语言 key 和 GitHub Wiki 镜像是否同步。
 
 治理检查脚本自身的最小回归测试：
 
 ```powershell
 npm run test:governance
+```
+
+发布前置诊断的最小回归测试：
+
+```powershell
+npm run test:release-preflight
 ```

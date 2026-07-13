@@ -191,6 +191,40 @@ function readCargoPackageVersion(cargoTomlPath) {
   return null;
 }
 
+function readCargoLockPackageVersion(cargoLockPath) {
+  const text = fs.readFileSync(cargoLockPath, "utf8");
+  for (const match of text.matchAll(/\[\[package\]\]([\s\S]*?)(?=\r?\n\[\[package\]\]|$)/g)) {
+    const block = match[1];
+    const name = block.match(/^name\s*=\s*"([^"]+)"/m)?.[1];
+    if (name !== "voxtype-desktop") continue;
+    return block.match(/^version\s*=\s*"([^"]+)"/m)?.[1] ?? null;
+  }
+  return null;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function checkReleaseDocumentation(root, version, failures) {
+  const auditsDir = path.join(root, "docs", "audits");
+  const releasePattern = new RegExp(`release-${escapeRegExp(version)}(?:-|\\.)`);
+  const audits = fs.existsSync(auditsDir)
+    ? fs.readdirSync(auditsDir).filter((file) => file.endsWith(".md") && releasePattern.test(file))
+    : [];
+  if (!audits.length) {
+    failures.push(`docs/audits: missing release audit for version ${version}`);
+    return;
+  }
+
+  // 发布审计只有进入活文档索引才算完成同步，避免文件存在但维护者无法发现。
+  const indexPath = path.join(root, "docs", "README.md");
+  const index = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : "";
+  if (!audits.some((audit) => index.includes(`audits/${audit}`))) {
+    failures.push(`docs/README.md: missing release audit link for version ${version}`);
+  }
+}
+
 function checkVersionConsistency(root, failures) {
   const packageVersion = readJson(path.join(root, "package.json")).version;
   const tauriVersion = readJson(path.join(root, "src-tauri", "tauri.conf.json")).version;
@@ -199,6 +233,7 @@ function checkVersionConsistency(root, failures) {
     ["package.json", packageVersion],
     ["src-tauri/tauri.conf.json", tauriVersion],
     ["src-tauri/Cargo.toml", cargoVersion],
+    ["src-tauri/Cargo.lock", readCargoLockPackageVersion(path.join(root, "src-tauri", "Cargo.lock"))],
   ]);
   const packageLockPath = path.join(root, "package-lock.json");
   if (fs.existsSync(packageLockPath)) {
@@ -220,6 +255,7 @@ function checkVersionConsistency(root, failures) {
   if (!changelog.includes(`## [${packageVersion}]`)) {
     failures.push(`CHANGELOG.md: missing release section for package version ${packageVersion}`);
   }
+  checkReleaseDocumentation(root, packageVersion, failures);
 }
 
 function propertyNameText(name) {

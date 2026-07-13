@@ -359,11 +359,15 @@ AI-maintenance local check:
 npm run ai:check
 ```
 
+Choose tests by purpose: `npm run test:unit` uses local pure-function data only. The ASR test in API Config uses real credentials and sends a short program-generated silence packet to the selected provider, but it does not open the microphone. A full recording regression captures and uploads real microphone audio and should be run deliberately only when the changed path requires it.
+
 Release check:
 
 ```powershell
 npm run ai:release-check
 ```
+
+The release check first detects whether a running VoxType debug app still locks `voxtype-desktop.exe`. Close the debug app named in the error and retry before starting another release run.
 
 Rust dependency audit requires `cargo-audit`. Install it first when missing:
 

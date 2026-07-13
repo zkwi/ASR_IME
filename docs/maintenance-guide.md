@@ -84,7 +84,13 @@ npm run ai:release-check
 npx tauri build
 ```
 
-`ai:release-check` 会覆盖日常检查、npm audit、Rust audit、clippy 和 Tauri debug build。GitHub Actions CI 复用同一入口；如果本地发布检查没过，不要推送发布分支。
+`ai:release-check` 会先确认调试版 EXE 没有被运行中的 VoxType 占用，再覆盖日常检查、npm audit、Rust audit、clippy 和 Tauri debug build。若前置检查提示文件锁定，先关闭本轮启动的调试应用再重试，不要等到最后的 Tauri build 才排查。GitHub Actions CI 复用同一入口；如果本地发布检查没过，不要推送发布分支。
+
+测试证据分为三层，不要混写：
+
+- 单元/治理测试只使用合成或本地临时数据，不访问服务商。
+- API配置页 ASR 连接测试会使用真实凭据并向所选服务发送程序生成的短静音包，但不会开启麦克风。
+- 真实录音回归会采集并发送当前环境的麦克风音频；只有改动确实触及采集或完整 ASR 主链路且维护者明确执行时才记录为已完成。
 
 发布版本号要反映影响范围：
 
@@ -92,4 +98,4 @@ npx tauri build
 - minor：用户可见功能、明显体验调整、默认策略变化。
 - major：破坏兼容或需要用户重新理解核心使用方式。
 
-发布时同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock`、`src-tauri/tauri.conf.json`、`CHANGELOG.md` 和 `docs/audits/`。
+发布时同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock`、`src-tauri/tauri.conf.json`、`CHANGELOG.md`、`docs/audits/` 和 `docs/README.md` 的当前发布审计入口。

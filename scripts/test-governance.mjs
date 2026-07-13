@@ -56,6 +56,10 @@ function createValidProject(dir) {
     '[package]\nname = "voxtype-desktop"\nversion = "1.2.3"\n\n[dependencies]\n',
   );
   writeFile(
+    path.join(dir, "src-tauri", "Cargo.lock"),
+    'version = 4\n\n[[package]]\nname = "voxtype-desktop"\nversion = "1.2.3"\n',
+  );
+  writeFile(
     path.join(dir, "src-tauri", "tauri.conf.json"),
     JSON.stringify({ version: "1.2.3" }, null, 2),
   );
@@ -73,6 +77,14 @@ function createValidProject(dir) {
     ].join("\n"),
   );
   writeFile(path.join(dir, "screenshots", "home.png"), "not a real png");
+  writeFile(
+    path.join(dir, "docs", "audits", "2026-07-13-release-1.2.3-test-audit.md"),
+    "# 1.2.3 release audit\n",
+  );
+  writeFile(
+    path.join(dir, "docs", "README.md"),
+    "# Docs\n\n[Current release audit](audits/2026-07-13-release-1.2.3-test-audit.md)\n",
+  );
 
   for (const page of [
     "_Sidebar",
@@ -104,6 +116,30 @@ withProject((dir) => {
   const result = runGovernance(dir);
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, /\[governance\] checks passed/);
+});
+
+withProject((dir) => {
+  writeFile(
+    path.join(dir, "src-tauri", "Cargo.lock"),
+    'version = 4\n\n[[package]]\nname = "voxtype-desktop"\nversion = "9.9.9"\n',
+  );
+  const result = runGovernance(dir);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /src-tauri\/Cargo\.lock.*9\.9\.9/);
+});
+
+withProject((dir) => {
+  fs.rmSync(path.join(dir, "docs", "audits", "2026-07-13-release-1.2.3-test-audit.md"));
+  const result = runGovernance(dir);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /missing release audit for version 1\.2\.3/);
+});
+
+withProject((dir) => {
+  writeFile(path.join(dir, "docs", "README.md"), "# Docs\n");
+  const result = runGovernance(dir);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /docs\/README\.md.*release audit.*1\.2\.3/);
 });
 
 withProject((dir) => {

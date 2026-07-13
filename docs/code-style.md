@@ -177,10 +177,16 @@ npm run ai:check
 npm run check:governance
 ```
 
-统计展示口径可单独回归：
+前端纯函数（包含统计展示口径）可单独回归：
 
 ```powershell
-npm run test:stats
+npm run test:unit
+```
+
+发布前置诊断可单独回归：
+
+```powershell
+npm run test:release-preflight
 ```
 
 发布前可运行：
@@ -189,7 +195,7 @@ npm run test:stats
 npm run ai:release-check
 ```
 
-如果不能运行，提交说明中必须写明原因。
+`ai:release-check` 会在耗时检查开始前检测调试版 EXE 是否被占用；提示锁定时先关闭本轮启动的 VoxType 调试进程。如果不能运行检查，提交说明中必须写明原因。
 
 ---
 
@@ -201,4 +207,4 @@ npm run ai:release-check
 2. 用户明显能感知的新功能、默认策略调整、性能或识别体验优化、设置项扩展，优先升 minor。
 3. 破坏兼容的配置、数据、安装路径或核心使用方式变化，升 major，或至少在发布说明里明确破坏性影响。
 
-如果一轮迭代已经包含多项用户可见体验优化，可以直接从 `0.1.x` 跳到 `0.2.0`，不要因为项目仍是个人项目就长期压低版本号。版本号调整仍需保持 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock`、`src-tauri/tauri.conf.json`、`CHANGELOG.md` 和发布审计记录一致。
+如果一轮迭代已经包含多项用户可见体验优化，可以直接从 `0.1.x` 跳到 `0.2.0`，不要因为项目仍是个人项目就长期压低版本号。版本号调整仍需保持 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock`、`src-tauri/tauri.conf.json`、`CHANGELOG.md`、发布审计记录和 `docs/README.md` 审计索引一致。

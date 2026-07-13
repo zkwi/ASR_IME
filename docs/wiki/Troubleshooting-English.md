@@ -104,6 +104,8 @@ Common fixes:
 4. Failure after changing recognition language: switch back to Auto/service default and test again.
 5. Test passes but recording returns no text: check Windows microphone permission, input device, and mic volume.
 
+"Test passes" only proves that the real credentials, network/TLS path, and service permission work. The test sends a short program-generated silence packet and does not open the microphone. Empty real recordings still require separate checks for microphone capture, real audio, the provider's final event, and output.
+
 When asking publicly, include only redacted diagnostic error codes and statuses. Do not paste real keys, full logs, or transcript text.
 
 ## Recognition Works but Text Is Not Pasted

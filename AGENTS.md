@@ -142,6 +142,7 @@ npm run ai:check
 npm run check
 npm run build
 npm run test:unit
+npm run test:release-preflight
 npm run scan:secrets
 Set-Location .\src-tauri
 cargo fmt --check
@@ -154,6 +155,8 @@ cargo test
 ```powershell
 npm run ai:release-check
 ```
+
+`ai:release-check` 会先检测 `src-tauri/target/debug/voxtype-desktop.exe` 是否被运行中的调试应用占用；若失败，关闭本轮启动的调试版后重试，不要删除或覆盖不明进程。
 
 ---
 

@@ -68,7 +68,7 @@ The default Resource ID is `volc.seedasr.sauc.duration`. Most users do not need 
 
 VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id` as documented by Doubao streaming ASR. If the console shows multiple keys, confirm that they belong to the same Doubao speech recognition service and billing resource. Do not paste a Bailian/DashScope LLM key, GitHub token, or unrelated cloud secret into ASR credentials. The Doubao credentials panel includes an official docs link for checking the field descriptions during first-time setup.
 
-Click **Test** after filling credentials. When the test passes, return to Home and start voice input.
+Click **Test** after filling credentials. This connection test uses the current real credentials and sends a short program-generated silence packet to the selected ASR provider to verify authentication, TLS, and service access. It does not open the microphone and does not replace a real recording, final-event, and paste regression. When it passes, return to Home and start voice input.
 
 In Doubao mode, API Config normally only needs the provider and credential fields. **Recognition language** is under Advanced connection and language settings. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
 

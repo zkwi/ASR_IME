@@ -486,13 +486,17 @@ cargo test
 - `docs/code-style.md`
 - `docs/directory-structure.md`
 
-仓库包含一个最小 GitHub Actions CI：`.github/workflows/ci.yml`。CI 在 Windows runner 上执行前端类型检查、前端构建、密钥扫描、Rust 格式检查、clippy 和测试；本地仍以 `npm run ai:check` 作为日常提交前入口。
+仓库包含一个最小 GitHub Actions CI：`.github/workflows/ci.yml`。CI 在 Windows runner 上复用发布级入口，覆盖前端类型检查与构建、Vitest、密钥扫描、治理检查、Rust 格式/测试、双端依赖审计、clippy 和 Tauri 调试构建；Rust 依赖与构建产物使用缓存。本地仍以 `npm run ai:check` 作为日常提交前入口。
+
+按验证目的选择测试：`npm run test:unit` 只运行本地纯函数测试；API配置页的 ASR 测试会用真实凭据向当前服务发送程序生成的短静音包，不会开启麦克风；完整录音回归会采集并发送真实麦克风音频，应由维护者在明确需要时主动执行。
 
 发布前可运行：
 
 ```powershell
 npm run ai:release-check
 ```
+
+发布检查会先检测调试版 `voxtype-desktop.exe` 是否仍被运行中的 VoxType 占用；如果提示文件锁定，关闭本轮启动的调试应用后重试。
 
 Rust 依赖审计依赖 `cargo-audit`。本机未安装时先运行：
 

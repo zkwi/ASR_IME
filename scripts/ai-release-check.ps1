@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "== VoxType AI Release Check =="
 
+. "$PSScriptRoot\release-preflight.ps1"
+
 function Invoke-CheckedCommand {
   param(
     [string]$Name,
@@ -15,6 +17,8 @@ function Invoke-CheckedCommand {
     throw "$Name failed with exit code $LASTEXITCODE"
   }
 }
+
+Assert-ReleaseBuildArtifactWritable -Path ".\src-tauri\target\debug\voxtype-desktop.exe"
 
 Invoke-CheckedCommand "[1/5] Local checks" { .\scripts\ai-check.ps1 }
 
