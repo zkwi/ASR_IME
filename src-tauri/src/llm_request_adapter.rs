@@ -20,7 +20,21 @@ pub fn is_valid_thinking_strategy(strategy: &str) -> bool {
     ALLOWED_STRATEGIES.contains(&strategy)
 }
 
+pub fn is_thinking_only_model(base_url: &str, model: &str) -> bool {
+    if !is_dashscope(base_url) {
+        return false;
+    }
+
+    matches!(
+        model.trim().to_ascii_lowercase().as_str(),
+        "qwen3.7-max-preview" | "qwen3.7-max-2026-05-17"
+    )
+}
+
 pub fn effective_thinking_strategy(base_url: &str, model: &str, configured: &str) -> &'static str {
+    if is_dashscope(base_url) && configured == STRATEGY_OMIT {
+        return STRATEGY_DASHSCOPE_ENABLE_THINKING;
+    }
     if configured != STRATEGY_AUTO {
         return normalize_thinking_strategy(configured);
     }
@@ -33,7 +47,7 @@ pub fn thinking_strategy_candidates(
     configured: &str,
 ) -> Vec<&'static str> {
     if configured != STRATEGY_AUTO {
-        let normalized = normalize_thinking_strategy(configured);
+        let normalized = effective_thinking_strategy(base_url, model, configured);
         if normalized == STRATEGY_OMIT || normalized == preferred_auto_strategy(base_url, model) {
             return vec![normalized];
         }
@@ -42,7 +56,7 @@ pub fn thinking_strategy_candidates(
     let base_url = base_url.to_ascii_lowercase();
     let model = model.to_ascii_lowercase();
     if base_url.contains("dashscope.aliyuncs.com") {
-        return vec![STRATEGY_DASHSCOPE_ENABLE_THINKING, STRATEGY_OMIT];
+        return vec![STRATEGY_DASHSCOPE_ENABLE_THINKING];
     }
     if base_url.contains("api.deepseek.com") || base_url.contains("api.xiaomimimo.com") {
         return vec![
@@ -190,6 +204,12 @@ fn preferred_auto_strategy(base_url: &str, model: &str) -> &'static str {
     STRATEGY_DASHSCOPE_ENABLE_THINKING
 }
 
+fn is_dashscope(base_url: &str) -> bool {
+    base_url
+        .to_ascii_lowercase()
+        .contains("dashscope.aliyuncs.com")
+}
+
 fn normalize_thinking_strategy(strategy: &str) -> &'static str {
     match strategy {
         STRATEGY_DASHSCOPE_ENABLE_THINKING => STRATEGY_DASHSCOPE_ENABLE_THINKING,
@@ -205,10 +225,10 @@ fn normalize_thinking_strategy(strategy: &str) -> &'static str {
 mod tests {
     use super::{
         apply_thinking_strategy, disabled_thinking_controls, effective_thinking_strategy,
-        is_valid_thinking_strategy, should_retry_without_unsupported_thinking,
-        thinking_strategy_candidates, STRATEGY_AUTO, STRATEGY_DASHSCOPE_ENABLE_THINKING,
-        STRATEGY_OMIT, STRATEGY_OPENROUTER_REASONING_LOW, STRATEGY_OPENROUTER_REASONING_MINIMAL,
-        STRATEGY_THINKING_DISABLED,
+        is_thinking_only_model, is_valid_thinking_strategy,
+        should_retry_without_unsupported_thinking, thinking_strategy_candidates, STRATEGY_AUTO,
+        STRATEGY_DASHSCOPE_ENABLE_THINKING, STRATEGY_OMIT, STRATEGY_OPENROUTER_REASONING_LOW,
+        STRATEGY_OPENROUTER_REASONING_MINIMAL, STRATEGY_THINKING_DISABLED,
     };
     use serde_json::json;
 
@@ -217,6 +237,18 @@ mod tests {
         assert!(is_valid_thinking_strategy(STRATEGY_AUTO));
         assert!(is_valid_thinking_strategy(STRATEGY_THINKING_DISABLED));
         assert!(!is_valid_thinking_strategy("reasoning_none"));
+    }
+
+    #[test]
+    fn recognizes_dashscope_thinking_only_models() {
+        let base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+        assert!(is_thinking_only_model(base_url, "qwen3.7-max-2026-05-17"));
+        assert!(is_thinking_only_model(base_url, "qwen3.7-max-preview"));
+        assert!(!is_thinking_only_model(base_url, "qwen3.7-max"));
+        assert!(!is_thinking_only_model(
+            "https://api.example.com/v1",
+            "qwen3.7-max-2026-05-17"
+        ));
     }
 
     #[test]
@@ -267,6 +299,14 @@ mod tests {
     fn builds_candidate_sets_for_connection_test() {
         assert_eq!(
             thinking_strategy_candidates(
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "qwen3.7-max",
+                STRATEGY_AUTO
+            ),
+            vec![STRATEGY_DASHSCOPE_ENABLE_THINKING]
+        );
+        assert_eq!(
+            thinking_strategy_candidates(
                 "https://api.deepseek.com",
                 "deepseek-v4-pro",
                 STRATEGY_AUTO
@@ -307,6 +347,17 @@ mod tests {
             "qwen3.7-max",
             false,
             STRATEGY_AUTO,
+        );
+        assert_eq!(used, STRATEGY_DASHSCOPE_ENABLE_THINKING);
+        assert_eq!(body["enable_thinking"], json!(false));
+
+        let mut body = json!({});
+        let used = apply_thinking_strategy(
+            &mut body,
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "qwen3.7-max",
+            false,
+            STRATEGY_OMIT,
         );
         assert_eq!(used, STRATEGY_DASHSCOPE_ENABLE_THINKING);
         assert_eq!(body["enable_thinking"], json!(false));

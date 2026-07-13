@@ -159,6 +159,7 @@ Notes:
 
 Try:
 
+- `qwen3.7-max-preview` and `qwen3.7-max-2026-05-17` are thinking-only and cannot be switched off. Use `qwen3.7-max`, `qwen3.7-max-2026-05-20`, or `qwen3.7-max-2026-06-08` instead.
 - After changing Base URL, API Key, model, or the thinking toggle, wait for the automatic adapter test after auto-save; if polishing is still slow, rerun the LLM test manually in API Config and keep thinking disabled.
 - Increase `min_chars` so short text skips polishing.
 - Lower the LLM reference budgets for terms, recent context, and screen OCR to send less context.

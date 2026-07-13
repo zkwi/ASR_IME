@@ -141,6 +141,8 @@ Click **Test** after configuration, or wait for the automatic test after auto-sa
 
 The default example uses Alibaba Cloud Bailian/DashScope's OpenAI-compatible endpoint. The Beijing Base URL is `https://dashscope.aliyuncs.com/compatible-mode/v1`; if you use Singapore, US, or another region, update Base URL, API Key, and model access together instead of changing only one field. For standard OpenAI-compatible services such as DeepSeek, service root, `/v1` URL, and full `/chat/completions` URL are treated as equivalent, for example `https://api.deepseek.com`, `https://api.deepseek.com/v1/`, and `https://api.deepseek.com/v1/chat/completions`.
 
+DashScope requires an explicit `enable_thinking=false` to disable thinking; omitting the field does not mean disabled. `qwen3.7-max-preview` and `qwen3.7-max-2026-05-17` are thinking-only models and cannot be switched off. VoxType blocks these slow requests and asks you to use `qwen3.7-max`, `qwen3.7-max-2026-05-20`, or `qwen3.7-max-2026-06-08` instead.
+
 For DashScope model-selection notes, see [2026-05-28 LLM polishing model test](../audits/2026-05-28-llm-polishing-model-test.md). The 2026-05-30 retest corrects the old conclusion: `qwen3.7-max` remains the daily default choice; `qwen3.6-flash-2026-04-16` is still the lower-latency option but is riskier for prompt-like text and technical paths; do not switch to `deepseek-v4-pro` only for technical text, because the simplified prompt can still rewrite code paths. Actual availability depends on the current account and region.
 
 Recommendations:
@@ -160,6 +162,7 @@ Recommendations:
 | Connection failure | Base URL belongs to the configured provider, network/proxy is usable |
 | Test passes but polishing does not run | Polishing is enabled and polishing length reaches `min_chars` |
 | Test passes but real polishing is slow | Rerun the thinking adapter test and confirm thinking/reasoning is disabled or minimized |
+| Model only supports thinking | Use a hybrid-thinking model that supports disabling thinking; do not use `qwen3.7-max-2026-05-17` |
 | Code paths are often rewritten | Enable screen OCR, or add common paths, filenames, and field names to hotwords |
 
 If LLM polishing fails during input, VoxType keeps the original ASR text and still tries to copy/paste it.

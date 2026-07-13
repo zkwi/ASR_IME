@@ -3,7 +3,7 @@ use crate::{
     config::{effective_hotwords, AppConfig},
     llm_endpoint::chat_completions_endpoint,
     llm_request_adapter::{
-        apply_thinking_strategy, remove_thinking_controls,
+        apply_thinking_strategy, is_thinking_only_model, remove_thinking_controls,
         should_retry_without_unsupported_thinking, thinking_strategy_candidates, STRATEGY_OMIT,
     },
 };
@@ -66,6 +66,15 @@ pub async fn polish(config: &AppConfig, text: &str, screen_context: Option<&str>
             text,
             "大模型润色已启用，但 Base URL、API Key 或模型未填写完整，已使用原始识别文本。",
         );
+    }
+    if let Some(warning) =
+        thinking_disabled_model_warning(base_url, model, settings.enable_thinking)
+    {
+        app_log::warn(format!(
+            "LLM polish skipped: configured model only supports thinking; model={}",
+            model
+        ));
+        return with_warning(text, warning);
     }
 
     let user_prompt = build_polish_user_prompt(config, text, screen_context);
@@ -297,6 +306,11 @@ pub async fn test_connection(config: &AppConfig) -> Result<LlmConnectionTestResu
     let model = settings.model.trim();
     if api_key.is_empty() || base_url.is_empty() || model.is_empty() {
         return Err("请先填写大模型 Base URL、API Key 和模型名称。".to_string());
+    }
+    if let Some(warning) =
+        thinking_disabled_model_warning(base_url, model, settings.enable_thinking)
+    {
+        return Err(warning.to_string());
     }
 
     app_log::info(format!("LLM connection test started: model={}", model));
@@ -610,6 +624,20 @@ fn friendly_llm_test_error(error: &str) -> String {
     }
 }
 
+fn thinking_disabled_model_warning(
+    base_url: &str,
+    model: &str,
+    enable_thinking: bool,
+) -> Option<&'static str> {
+    if enable_thinking || !is_thinking_only_model(base_url, model) {
+        return None;
+    }
+
+    Some(
+        "当前模型仅支持思考模式，无法关闭。为避免长时间等待，VoxType 不会发送润色请求；请改用支持关闭思考的 qwen3.7-max、qwen3.7-max-2026-05-20 或 qwen3.7-max-2026-06-08。",
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -617,8 +645,8 @@ mod tests {
         compact_screen_context_for_llm, connection_test_chat_body, extract_message_content,
         friendly_llm_error, friendly_llm_test_error, has_connection_test_output,
         polish_max_tokens_for_input, polish_max_tokens_for_request, polish_trigger_units,
-        should_polish, system_prompt_for_request, LLM_CONNECTION_TEST_MAX_TOKENS,
-        LLM_CONNECTION_TEST_TEXT,
+        should_polish, system_prompt_for_request, thinking_disabled_model_warning,
+        LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT,
     };
     use crate::config::{AppConfig, TextContext};
     use crate::llm_request_adapter::{
@@ -633,6 +661,31 @@ mod tests {
         assert!(friendly_llm_error("model not found").contains("模型名称"));
         assert!(friendly_llm_test_error("403 forbidden").contains("权限"));
         assert!(friendly_llm_test_error("connection reset").contains("网络"));
+    }
+
+    #[test]
+    fn warns_before_calling_a_dashscope_thinking_only_model() {
+        let warning = thinking_disabled_model_warning(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "qwen3.7-max-2026-05-17",
+            false,
+        )
+        .expect("thinking-only model should be rejected when thinking is disabled");
+
+        assert!(warning.contains("仅支持思考模式"));
+        assert!(warning.contains("qwen3.7-max"));
+        assert!(thinking_disabled_model_warning(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "qwen3.7-max-2026-05-17",
+            true,
+        )
+        .is_none());
+        assert!(thinking_disabled_model_warning(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "qwen3.7-max",
+            false,
+        )
+        .is_none());
     }
 
     #[test]

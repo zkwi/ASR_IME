@@ -146,6 +146,8 @@ VoxType 当前按豆包流式语音识别文档发送 `X-Api-App-Key`、`X-Api-A
 
 默认示例使用阿里云百炼/DashScope 的 OpenAI 兼容接口。北京地域 Base URL 是 `https://dashscope.aliyuncs.com/compatible-mode/v1`；如果使用新加坡、美国或其他地域，需要同步更换 Base URL、API Key 和模型权限，不要只改其中一个字段。DeepSeek 等标准 OpenAI 兼容服务可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址，例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。
 
+DashScope 关闭 thinking 时必须显式发送 `enable_thinking=false`，省略字段不代表关闭。`qwen3.7-max-preview` 和 `qwen3.7-max-2026-05-17` 属于仅思考模型，无法关闭思考；VoxType 会阻止这类慢请求并提示改用 `qwen3.7-max`、`qwen3.7-max-2026-05-20` 或 `qwen3.7-max-2026-06-08`。
+
 DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../audits/2026-05-28-llm-polishing-model-test.md)。其中 2026-05-30 复测修正了旧结论：日常仍优先考虑 `qwen3.7-max`；低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，但它对提示词样式文本和技术路径更容易改偏；不要仅因技术文本切换到 `deepseek-v4-pro`，当前简化 prompt 下它也会改写代码路径。实际能否调用取决于当前账号和地域权限。
 
 性能建议：
@@ -165,6 +167,7 @@ DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../aud
 | 连接失败 | Base URL 是否属于当前服务商，代理/网络是否可用 |
 | 测试通过但润色没触发 | 是否开启润色，润色触发长度是否达到 `min_chars` |
 | 测试通过但实际很慢 | 重新测试思考适配策略，确认 thinking/reasoning 已关闭或降到最低 |
+| 提示模型仅支持思考模式 | 改用支持关闭思考的混合思考模型；不要选择 `qwen3.7-max-2026-05-17` |
 | 代码路径经常被改错 | 开启屏幕 OCR，或把常用路径、文件名、字段名加入热词 |
 
 大模型润色失败不会丢失 ASR 原文；VoxType 会保留原始识别文本并继续尝试复制/粘贴。
