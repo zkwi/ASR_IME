@@ -84,10 +84,14 @@ impl AliyunFinalGate {
                     return None;
                 }
                 if sentence_end {
-                    self.final_sentences.push(text.clone());
-                    Some(ProviderSurfaceEvent::StableText(text))
+                    self.final_sentences.push(text);
+                    Some(ProviderSurfaceEvent::StableText(
+                        self.accumulated_text(None),
+                    ))
                 } else {
-                    Some(ProviderSurfaceEvent::PartialText(text))
+                    Some(ProviderSurfaceEvent::PartialText(
+                        self.accumulated_text(Some(&text)),
+                    ))
                 }
             }
             AliyunServerEvent::TaskFinished => {
@@ -112,15 +116,15 @@ impl AliyunFinalGate {
         if !self.task_finished {
             return Ok(None);
         }
-        Ok(Some(
-            self.final_sentences
-                .iter()
-                .map(String::as_str)
-                .collect::<Vec<_>>()
-                .join("")
-                .trim()
-                .to_string(),
-        ))
+        Ok(Some(self.accumulated_text(None)))
+    }
+
+    fn accumulated_text(&self, current: Option<&str>) -> String {
+        let mut text = self.final_sentences.concat();
+        if let Some(current) = current {
+            text.push_str(current);
+        }
+        text.trim().to_string()
     }
 
     fn has_final_text(&self) -> bool {
@@ -885,6 +889,51 @@ mod tests {
             Some(ProviderSurfaceEvent::Finished)
         );
         assert_eq!(gate.final_text().unwrap(), Some("最终文本".to_string()));
+    }
+
+    #[test]
+    fn live_caption_accumulates_confirmed_sentences_with_current_partial() {
+        let mut gate = AliyunFinalGate::default();
+
+        assert_eq!(
+            gate.apply(AliyunServerEvent::ResultGenerated {
+                text: "第一句已经确认。".to_string(),
+                sentence_end: true,
+            }),
+            Some(ProviderSurfaceEvent::StableText(
+                "第一句已经确认。".to_string()
+            ))
+        );
+        assert_eq!(
+            gate.apply(AliyunServerEvent::ResultGenerated {
+                text: "第二句正在识别".to_string(),
+                sentence_end: false,
+            }),
+            Some(ProviderSurfaceEvent::PartialText(
+                "第一句已经确认。第二句正在识别".to_string()
+            ))
+        );
+        assert_eq!(gate.final_text().unwrap(), None);
+
+        assert_eq!(
+            gate.apply(AliyunServerEvent::ResultGenerated {
+                text: "第二句已经完成。".to_string(),
+                sentence_end: true,
+            }),
+            Some(ProviderSurfaceEvent::StableText(
+                "第一句已经确认。第二句已经完成。".to_string()
+            ))
+        );
+        assert_eq!(gate.final_text().unwrap(), None);
+
+        assert_eq!(
+            gate.apply(AliyunServerEvent::TaskFinished),
+            Some(ProviderSurfaceEvent::Finished)
+        );
+        assert_eq!(
+            gate.final_text().unwrap(),
+            Some("第一句已经确认。第二句已经完成。".to_string())
+        );
     }
 
     #[test]

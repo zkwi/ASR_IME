@@ -87,7 +87,7 @@ VoxType 当前按豆包流式语音识别文档发送 `X-Api-App-Key`、`X-Api-A
 | Workspace ID | 是，除非填写自定义 WebSocket URL | 百炼工作空间 ID，用于拼接实时语音识别 WebSocket 地址 |
 | 高级连接与语言设置 | 通常不用改 | 地域、模型、自定义 WebSocket URL 和语言提示；仅在切换地域、固定语种或官方要求自定义 endpoint 时展开 |
 
-阿里云模式会在连接后发送 `run-task`，等待 `task-started` 后上传 16kHz 单声道 PCM，停止录音时发送 `finish-task`，最终只接受 `task-finished` 前确认的最终分句文本。`result-generated` 中间文本只用于悬浮字幕反馈，不进入润色、粘贴、最近上下文、自动热词历史或成功统计。
+阿里云模式会在连接后发送 `run-task`，等待 `task-started` 后上传 16kHz 单声道 PCM，停止录音时发送 `finish-task`，最终只接受 `task-finished` 前确认的最终分句文本。FunASR 实时字幕会把已确认分句与当前未完成分句合并显示；`result-generated` 中间文本仍只用于悬浮字幕反馈，不进入润色、粘贴、最近上下文、自动热词历史或成功统计。
 
 阿里云模式下的语言提示使用 FunASR 的 `language_hints`，默认留空表示自动识别；需要排查非默认语种时再到高级区选择中文、英文、日文、韩文或粤语。
 

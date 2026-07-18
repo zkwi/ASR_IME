@@ -82,7 +82,7 @@ Open **API Config -> Speech recognition provider**, choose "Alibaba Cloud FunASR
 | Workspace ID | Yes, unless custom WebSocket URL is filled | Bailian workspace ID used to build the realtime ASR WebSocket endpoint |
 | Advanced connection and language settings | Usually not needed | Region, model, custom WebSocket URL, and language hint. Expand only for region changes, fixed languages, or custom endpoints required by docs |
 
-In Alibaba Cloud mode, VoxType connects, sends `run-task`, waits for `task-started`, uploads 16kHz mono PCM, sends `finish-task` after recording stops, and only accepts final sentence text confirmed before `task-finished`. Interim `result-generated` text is display feedback only and does not enter polishing, paste, recent context, automatic hotword history, or success stats.
+In Alibaba Cloud mode, VoxType connects, sends `run-task`, waits for `task-started`, uploads 16kHz mono PCM, sends `finish-task` after recording stops, and only accepts final sentence text confirmed before `task-finished`. FunASR live captions combine confirmed sentences with the current unfinished sentence; interim `result-generated` text remains display feedback only and does not enter polishing, paste, recent context, automatic hotword history, or success stats.
 
 Alibaba Cloud mode uses FunASR `language_hints`. Leave it empty for auto detection; choose Chinese, English, Japanese, Korean, or Cantonese in the advanced area only when troubleshooting a non-default language.
 
