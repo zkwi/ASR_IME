@@ -16,21 +16,8 @@ export type OverlayDisplayLayout = {
 };
 
 export function normalizeOverlayText(text: string) {
-  const raw = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
-  if (!raw) return "";
-  const lines: string[] = [];
-  let blankPending = false;
-  for (const line of raw.split("\n")) {
-    const cleaned = normalizeOverlayInlineSpacing(line.trim());
-    if (!cleaned) {
-      blankPending = lines.length > 0;
-      continue;
-    }
-    if (blankPending) lines.push("");
-    lines.push(cleaned);
-    blankPending = false;
-  }
-  return lines.join("\n");
+  const collapsed = String(text || "").replace(/\s+/g, " ").trim();
+  return collapsed ? normalizeOverlayInlineSpacing(collapsed) : "";
 }
 
 export function resolveOverlayDisplayText(

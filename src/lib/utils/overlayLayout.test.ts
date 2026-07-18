@@ -11,8 +11,10 @@ import {
 const measureByChar = (text: string, fontSize: number) => Array.from(text).length * fontSize;
 
 describe("overlay layout", () => {
-  it("normalizes line endings and inline spacing", () => {
-    expect(normalizeOverlayText("第一行\r\n第二行")).toBe("第一行\n第二行");
+  it("collapses preview line breaks and inline spacing", () => {
+    expect(normalizeOverlayText("第一行\r\n第二行")).toBe("第一行第二行");
+    expect(normalizeOverlayText("第一行\n\n\t第二行")).toBe("第一行第二行");
+    expect(normalizeOverlayText("hello\rworld")).toBe("hello world");
     expect(normalizeOverlayText("领导都这么说了，  要主动拥抱 。")).toBe("领导都这么说了，要主动拥抱。");
   });
 
@@ -50,6 +52,24 @@ describe("overlay layout", () => {
       lineLimit: 1,
       lines: ["还有一个问题是，宝宝整体"],
     });
+  });
+
+  it("selects line count after preview whitespace normalization", () => {
+    const shortText = normalizeOverlayText("短句\n测试");
+    expect(resolveOverlayDisplayText(shortText, 72, 260, measureByChar)).toEqual({
+      mode: "single",
+      fontSize: 20,
+      lineLimit: 1,
+      lines: ["短句测试"],
+    });
+
+    const longText = normalizeOverlayText(
+      "这是一段超过十八个字的实时字幕\n\n用于验证连续换行不会占用显示行",
+    );
+    const layout = resolveOverlayDisplayText(longText, 72, 260, measureByChar);
+    expect(layout).toMatchObject({ mode: "double", lineLimit: 2 });
+    expect(layout.lines).toHaveLength(2);
+    expect(layout.lines.every((line) => line.length > 0)).toBe(true);
   });
 
   it("uses at most two fitted lines for longer text", () => {
