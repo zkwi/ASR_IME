@@ -71,6 +71,8 @@ VoxType uses Doubao `bigmodel_async` WebSocket by default, and Alibaba Cloud Fun
 
 Doubao mode keeps two-pass recognition enabled by default. Live captions are feedback only, while pasted output waits for Doubao's final package, prefers final `definite=true` utterances, and can use a highly overlapping final full text to recover missing head or tail words. Alibaba Cloud FunASR mode waits for `task-finished` and only uses final sentence text as output. If the connection closes early or the final wait times out, VoxType fails the session instead of pasting interim text. In Doubao mode, the main workflow forces two-pass recognition, utterance output, and `full` cumulative result delivery. First-word acceleration is disabled by default to prioritize beginning-word accuracy, while DDC semantic smoothing is enabled by default for light ASR-side smoothing on short and medium text.
 
+While a session is waiting for its final result, pressing any enabled input trigger interrupts the old session and immediately starts a new recording. A late result from the interrupted session cannot continue to polishing, paste, or stats.
+
 Quality and latency factors:
 
 | Factor | Recommendation |

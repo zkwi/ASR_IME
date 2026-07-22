@@ -157,7 +157,7 @@ Common ASR test failures:
 | Language-related failure | Switch recognition language or language hint back to Auto/service default and test again |
 | Test passes but recording is empty | Windows microphone permission, input device, mic volume, and background noise |
 
-The production recording path also separates connection timeout, connection failure, final-result timeout, and early connection close. A failed session enters the failed state with a short error hint, and the next shortcut press starts a fresh recognition session instead of staying in "waiting for final result".
+The production recording path also separates connection timeout, connection failure, final-result timeout, and early connection close. A failed session enters the failed state with a short error hint, and the next shortcut press starts a fresh recognition session instead of staying in "waiting for final result". While a session is still waiting for its final result, pressing any enabled input trigger interrupts the old session and immediately starts a new recording; a late result from the interrupted session cannot continue to polishing, paste, or stats.
 
 Settings edited in the UI auto-save. The title bar briefly shows pending, saving, and saved states so you can tell when a change has taken effect.
 

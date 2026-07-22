@@ -44,6 +44,24 @@ pub enum SessionPhase {
     Failed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ToggleAction {
+    Ignore,
+    Stop,
+    InterruptAndStart,
+    Start,
+}
+
+fn toggle_action_for_phase(phase: SessionPhase) -> ToggleAction {
+    match phase {
+        SessionPhase::Starting | SessionPhase::Stopping => ToggleAction::Ignore,
+        SessionPhase::Recording => ToggleAction::Stop,
+        SessionPhase::WaitingFinalResult => ToggleAction::InterruptAndStart,
+        SessionPhase::PostEditing | SessionPhase::Pasting => ToggleAction::Ignore,
+        SessionPhase::Idle | SessionPhase::Succeeded | SessionPhase::Failed => ToggleAction::Start,
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AudioLevel {
     pub level: f32,
@@ -345,20 +363,39 @@ impl SessionController {
 
     pub fn toggle(&self, app: Option<AppHandle>) -> Result<SessionState, String> {
         let current = self.current_state();
-        match current.phase {
-            SessionPhase::Starting | SessionPhase::Stopping => {
+        match toggle_action_for_phase(current.phase) {
+            ToggleAction::Ignore => {
                 emit_state(app.as_ref(), &current);
                 Ok(current)
             }
-            SessionPhase::Recording => self.stop(app),
-            SessionPhase::WaitingFinalResult
-            | SessionPhase::PostEditing
-            | SessionPhase::Pasting => {
-                emit_state(app.as_ref(), &current);
-                Ok(current)
+            ToggleAction::Stop => self.stop(app),
+            ToggleAction::InterruptAndStart => {
+                if !self.prepare_waiting_final_restart() {
+                    let current = self.current_state();
+                    emit_state(app.as_ref(), &current);
+                    return Ok(current);
+                }
+                app_log::info("用户通过输入快捷键中断等待最终识别结果，开始新一轮录音");
+                self.start(app)
             }
-            _ => self.start(app),
+            ToggleAction::Start => self.start(app),
         }
+    }
+
+    fn prepare_waiting_final_restart(&self) -> bool {
+        let Ok(mut inner) = self.inner.lock() else {
+            app_log::warn("中断等待最终识别结果失败：session mutex poisoned");
+            return false;
+        };
+        if inner.phase != SessionPhase::WaitingFinalResult {
+            return false;
+        }
+        inner.recording = false;
+        inner.phase = SessionPhase::Idle;
+        inner.message = "Recognition interrupted by a new recording request.".to_string();
+        inner.error_code = None;
+        inner.generation = inner.generation.wrapping_add(1);
+        true
     }
 
     fn force_stop(
@@ -1052,6 +1089,37 @@ mod tests {
         assert!(state.recording);
         assert_eq!(state.phase, SessionPhase::Stopping);
         assert!(controller.is_current_generation(5));
+    }
+
+    #[test]
+    fn waiting_final_shortcut_routes_to_interrupt_and_restart() {
+        assert_eq!(
+            super::toggle_action_for_phase(SessionPhase::WaitingFinalResult),
+            super::ToggleAction::InterruptAndStart
+        );
+    }
+
+    #[test]
+    fn waiting_final_restart_invalidates_current_worker() {
+        let controller = SessionController::default();
+        {
+            let mut inner = controller.inner.lock().unwrap();
+            inner.recording = false;
+            inner.phase = SessionPhase::WaitingFinalResult;
+            inner.message = "Waiting for final ASR result.".to_string();
+            inner.generation = 6;
+        }
+
+        assert!(controller.prepare_waiting_final_restart());
+
+        let state = controller.current_state();
+        assert!(!state.recording);
+        assert_eq!(state.phase, SessionPhase::Idle);
+        assert_eq!(state.error_code, None);
+        assert!(!controller.is_current_generation(6));
+        assert!(controller
+            .set_phase_for_generation(6, None, SessionPhase::Pasting, "Stale output.", None)
+            .is_none());
     }
 
     #[test]
