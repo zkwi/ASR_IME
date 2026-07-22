@@ -59,7 +59,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), String> {
             }
             CHECK_UPDATE_ID => request_update_check(app),
             RESTART_ID => restart_app(app),
-            EXIT_ID => exit_app(app),
+            EXIT_ID => request_exit(app),
             _ => {}
         })
         .on_tray_icon_event(move |_tray, event| match event {
@@ -286,6 +286,14 @@ pub fn exit_app(app: &AppHandle) {
     let controller = app.state::<SessionController>().inner().clone();
     controller.abort_from_worker(app, "Application exiting.");
     app.exit(0);
+}
+
+fn request_exit(app: &AppHandle) {
+    if main_window::request_config_exit_guard(app, "exit") {
+        app_log::info("配置保存失败，已在退出前请求用户确认。");
+        return;
+    }
+    exit_app(app);
 }
 
 fn restart_app(app: &AppHandle) {

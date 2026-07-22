@@ -1,4 +1,5 @@
 import type { CopyKey } from "$lib/i18n";
+import { noticeAutoDismissMs } from "$lib/utils/notificationPolicy";
 
 export type ActionNoticeKind = "success" | "info" | "warning" | "error";
 
@@ -26,13 +27,12 @@ export function createNotificationController(options: NotificationControllerOpti
     kind = nextKind;
     action = nextAction ?? null;
     clearTimer();
-    const baseDuration = nextAction ? 12_000 : nextKind === "error" ? 6400 : nextKind === "warning" ? 5200 : 3200;
-    const extraDuration = nextMessage.length > 80 ? 1800 : 0;
-    timer = window.setTimeout(() => {
-      message = "";
-      action = null;
-      timer = undefined;
-    }, baseDuration + extraDuration);
+    const duration = noticeAutoDismissMs(nextKind, Boolean(nextAction), nextMessage.length);
+    if (duration !== null) {
+      timer = window.setTimeout(() => {
+        clear();
+      }, duration);
+    }
   }
 
   async function runAction() {
@@ -40,6 +40,7 @@ export function createNotificationController(options: NotificationControllerOpti
     if (!currentAction || currentAction.isBusy?.()) return;
     try {
       await currentAction.onClick();
+      if (action === currentAction) clear();
     } catch (error) {
       options.logError(`action notice handler failed: ${formatError(error)}`);
       const failureMessage = options.t("operationFailedGeneric");
@@ -51,6 +52,12 @@ export function createNotificationController(options: NotificationControllerOpti
   function clearTimer() {
     if (timer !== undefined) window.clearTimeout(timer);
     timer = undefined;
+  }
+
+  function clear() {
+    clearTimer();
+    message = "";
+    action = null;
   }
 
   function dispose() {
@@ -65,6 +72,7 @@ export function createNotificationController(options: NotificationControllerOpti
     get actionBusy() { return action?.isBusy?.() ?? false; },
     show,
     runAction,
+    clear,
     dispose,
   };
 }

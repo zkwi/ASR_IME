@@ -13,14 +13,12 @@ pub struct UpdateStatus {
     pub update_available: bool,
     pub asset_name: Option<String>,
     pub asset_size: Option<u64>,
-    pub message: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct InstallUpdateResult {
     pub version: String,
     pub asset_name: String,
-    pub message: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,16 +47,6 @@ pub async fn check_for_update(config: &UpdateConfig) -> Result<UpdateStatus, Str
     let latest_version = clean_version(&release.tag_name);
     let asset = choose_windows_installer(&release.assets);
     let update_available = compare_versions(&latest_version, &current_version) == Ordering::Greater;
-    let message = if update_available {
-        if asset.is_some() {
-            format!("发现新版本 v{}，可下载安装。", latest_version)
-        } else {
-            format!("发现新版本 v{}，但未找到 Windows 安装包。", latest_version)
-        }
-    } else {
-        "当前已是最新版本。".to_string()
-    };
-
     app_log::info(format!(
         "更新检查完成: current={} latest={} available={} asset={}",
         current_version,
@@ -76,7 +64,6 @@ pub async fn check_for_update(config: &UpdateConfig) -> Result<UpdateStatus, Str
         update_available,
         asset_name: asset.as_ref().map(|item| item.name.clone()),
         asset_size: asset.as_ref().map(|item| item.size),
-        message,
     })
 }
 
@@ -107,8 +94,6 @@ pub async fn download_and_install(config: &UpdateConfig) -> Result<InstallUpdate
     Ok(InstallUpdateResult {
         version: latest_version,
         asset_name: asset.name,
-        message: "已下载更新并开始自动安装。声写将退出以释放文件，安装完成后会自动打开新版本。"
-            .to_string(),
     })
 }
 

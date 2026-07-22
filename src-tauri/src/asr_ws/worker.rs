@@ -283,7 +283,7 @@ async fn polish_with_delayed_status(
                 )
                 .is_some()
             {
-                overlay::update_text(app, overlay::POST_EDITING_TEXT);
+                overlay::update_status(app, "post_editing", overlay::POST_EDITING_TEXT);
             }
             match polish_task.await {
                 Ok(outcome) => outcome,

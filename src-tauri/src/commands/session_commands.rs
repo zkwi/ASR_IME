@@ -4,9 +4,7 @@ use tauri::{AppHandle, State};
 
 #[tauri::command]
 pub(crate) fn get_overlay_text() -> overlay::OverlayText {
-    overlay::OverlayText {
-        text: overlay::current_text(),
-    }
+    overlay::current_payload()
 }
 
 #[tauri::command]

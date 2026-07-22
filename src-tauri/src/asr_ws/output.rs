@@ -94,7 +94,7 @@ pub(super) fn handle_empty_transcript(
         return;
     }
     if session.is_current_generation(generation) {
-        overlay::update_text(app, overlay::EMPTY_TRANSCRIPT_TEXT);
+        overlay::update_status(app, "empty", overlay::EMPTY_TRANSCRIPT_TEXT);
     }
     let _ = app.emit(
         "asr-final-text",
@@ -126,7 +126,11 @@ pub(super) fn emit_error(
         format!("识别失败: {}", error)
     };
     if session.is_current_generation(generation) {
-        overlay::update_text(app, message);
+        if error_code == "PASTE_FAILED" {
+            overlay::update_status(app, "paste_failed", &message);
+        } else {
+            overlay::update_text(app, message);
+        }
     }
     let _ = app.emit(
         "asr-final-text",

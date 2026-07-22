@@ -27,7 +27,7 @@ The Home page is for daily use:
 - Start or stop recording.
 - See main and backup trigger states.
 - See recent 24-hour, 7-day, speed, and saved time estimates.
-- After a successful input, temporarily view and copy the latest recognized text in the current window. It is not written into usage stats, logs, or diagnostic reports, and is cleared when the window closes or a new recording starts.
+- After a successful input, temporarily view, copy, or immediately clear the latest recognized text in the current window. It is not written into usage stats, logs, or diagnostic reports, and is cleared when the window is hidden, the app exits, or a new recording starts.
 
 ## 3. Global Triggers
 
@@ -190,6 +190,7 @@ Privacy and stability:
 
 - On by default, with the current display as the capture range. You can switch to current-window-only in Options.
 - OCR text is used only for the current request and is not written to logs, stats, config, or cache.
+- The Options-page OCR test preview can be cleared immediately and is cleared automatically when the window is hidden, the app exits, or a new recording starts.
 - When included in LLM polishing, OCR is trimmed, deduplicated, budget-capped, and appended as a separate reference-information block that is explicitly marked as not text to polish or user instructions.
 - Failure or timeout is skipped automatically and does not block recording, ASR, polishing, clipboard, or paste.
 - Switch to current-window-only or disable it in Options when the screen contains sensitive content; Privacy & local data can jump back to that setting through Manage settings.

@@ -156,7 +156,7 @@ impl SessionController {
             loaded.data.audio.mute_system_volume_while_recording
         ));
         if let Some(app) = app.as_ref() {
-            overlay::show_message(app, &loaded.data.ui, overlay::STARTING_TEXT);
+            overlay::show_status(app, &loaded.data.ui, "starting", overlay::STARTING_TEXT);
             let starting = SessionState {
                 recording: true,
                 phase: SessionPhase::Starting,
@@ -274,7 +274,7 @@ impl SessionController {
         };
         app_log::info("录音会话已开始");
         if let Some(app) = app.as_ref() {
-            overlay::update_text(app, overlay::RECORDING_TEXT);
+            overlay::update_status(app, "recording", overlay::RECORDING_TEXT);
         }
         emit_state(app.as_ref(), &state);
         if let Some(app) = app.clone() {

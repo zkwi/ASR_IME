@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 配置可靠性与可访问性发布审计：[2026-07-22 VoxType 0.9.0 配置可靠性与可访问性发布审计](audits/2026-07-22-release-0.9.0-reliability-accessibility-audit.md)
 - FunASR 累计字幕发布审计：[2026-07-18 VoxType 0.8.3 FunASR 累计字幕发布审计](audits/2026-07-18-release-0.8.3-funasr-cumulative-caption-audit.md)
 - 悬浮字幕预览空白压缩发布审计：[2026-07-18 VoxType 0.8.2 悬浮字幕预览空白压缩发布审计](audits/2026-07-18-release-0.8.2-overlay-preview-whitespace-audit.md)
 - 工程治理增强发布审计：[2026-07-13 VoxType 0.8.1 工程治理增强发布审计](audits/2026-07-13-release-0.8.1-engineering-governance-audit.md)

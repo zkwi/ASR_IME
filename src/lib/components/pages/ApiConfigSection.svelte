@@ -239,26 +239,26 @@
         {#if config.asr.provider === ASR_PROVIDER_ALIYUN_FUN}
           <label class:field-invalid={Boolean(fieldError("aliyun_asr.api_key"))}>
             <span>API Key</span>
-            <input type="password" autocomplete="off" bind:value={config.aliyun_asr.api_key} />
-            {#if fieldError("aliyun_asr.api_key")}<small class="field-error">{fieldError("aliyun_asr.api_key")}</small>{/if}
-            <small class="field-hint">{t("aliyunApiKeyHint")}</small>
+            <input id="setting-aliyun-api-key" data-config-field="aliyun_asr.api_key" aria-invalid={Boolean(fieldError("aliyun_asr.api_key"))} aria-describedby={fieldError("aliyun_asr.api_key") ? "setting-aliyun-api-key-error setting-aliyun-api-key-hint" : "setting-aliyun-api-key-hint"} type="password" autocomplete="off" bind:value={config.aliyun_asr.api_key} />
+            {#if fieldError("aliyun_asr.api_key")}<small id="setting-aliyun-api-key-error" class="field-error">{fieldError("aliyun_asr.api_key")}</small>{/if}
+            <small id="setting-aliyun-api-key-hint" class="field-hint">{t("aliyunApiKeyHint")}</small>
           </label>
           <label class:field-invalid={Boolean(fieldError("aliyun_asr.workspace_id"))}>
             <span>Workspace ID</span>
-            <input autocomplete="off" bind:value={config.aliyun_asr.workspace_id} />
-            {#if fieldError("aliyun_asr.workspace_id")}<small class="field-error">{fieldError("aliyun_asr.workspace_id")}</small>{/if}
-            <small class="field-hint">{t("aliyunWorkspaceHint")}</small>
+            <input id="setting-aliyun-workspace-id" data-config-field="aliyun_asr.workspace_id" aria-invalid={Boolean(fieldError("aliyun_asr.workspace_id"))} aria-describedby={fieldError("aliyun_asr.workspace_id") ? "setting-aliyun-workspace-id-error setting-aliyun-workspace-id-hint" : "setting-aliyun-workspace-id-hint"} autocomplete="off" bind:value={config.aliyun_asr.workspace_id} />
+            {#if fieldError("aliyun_asr.workspace_id")}<small id="setting-aliyun-workspace-id-error" class="field-error">{fieldError("aliyun_asr.workspace_id")}</small>{/if}
+            <small id="setting-aliyun-workspace-id-hint" class="field-hint">{t("aliyunWorkspaceHint")}</small>
           </label>
         {:else}
           <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
             <span>{t("appKey")}</span>
-            <input autocomplete="off" bind:value={config.auth.app_key} />
-            {#if fieldError("auth.app_key")}<small class="field-error">{fieldError("auth.app_key")}</small>{/if}
+            <input id="setting-doubao-app-key" data-config-field="auth.app_key" aria-invalid={Boolean(fieldError("auth.app_key"))} aria-describedby={fieldError("auth.app_key") ? "setting-doubao-app-key-error" : undefined} autocomplete="off" bind:value={config.auth.app_key} />
+            {#if fieldError("auth.app_key")}<small id="setting-doubao-app-key-error" class="field-error">{fieldError("auth.app_key")}</small>{/if}
           </label>
           <label class:field-invalid={Boolean(fieldError("auth.access_key"))}>
             <span>{t("accessKey")}</span>
-            <input type="password" autocomplete="off" bind:value={config.auth.access_key} />
-            {#if fieldError("auth.access_key")}<small class="field-error">{fieldError("auth.access_key")}</small>{/if}
+            <input id="setting-doubao-access-key" data-config-field="auth.access_key" aria-invalid={Boolean(fieldError("auth.access_key"))} aria-describedby={fieldError("auth.access_key") ? "setting-doubao-access-key-error" : undefined} type="password" autocomplete="off" bind:value={config.auth.access_key} />
+            {#if fieldError("auth.access_key")}<small id="setting-doubao-access-key-error" class="field-error">{fieldError("auth.access_key")}</small>{/if}
           </label>
         {/if}
       </div>
@@ -282,9 +282,9 @@
             </label>
             <label class:field-invalid={Boolean(fieldError("aliyun_asr.model"))}>
               <span>{t("model")}</span>
-              <input autocomplete="off" bind:value={config.aliyun_asr.model} />
-              {#if fieldError("aliyun_asr.model")}<small class="field-error">{fieldError("aliyun_asr.model")}</small>{/if}
-              <small class="field-hint">{t("aliyunModelHint")}</small>
+              <input id="setting-aliyun-model" data-config-field="aliyun_asr.model" aria-invalid={Boolean(fieldError("aliyun_asr.model"))} aria-describedby={fieldError("aliyun_asr.model") ? "setting-aliyun-model-error setting-aliyun-model-hint" : "setting-aliyun-model-hint"} autocomplete="off" bind:value={config.aliyun_asr.model} />
+              {#if fieldError("aliyun_asr.model")}<small id="setting-aliyun-model-error" class="field-error">{fieldError("aliyun_asr.model")}</small>{/if}
+              <small id="setting-aliyun-model-hint" class="field-hint">{t("aliyunModelHint")}</small>
             </label>
             <label class:field-invalid={Boolean(fieldError("aliyun_asr.websocket_url"))}>
               <span>{t("aliyunWebsocketUrl")}</span>
@@ -360,21 +360,21 @@
         <div class="form-grid">
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.base_url"))}>
             <span>Base URL</span>
-            <input bind:value={config.llm_post_edit.base_url} />
-            {#if fieldError("llm_post_edit.base_url")}<small class="field-error">{fieldError("llm_post_edit.base_url")}</small>{/if}
-            <small class="field-hint">{t("llmApiBaseUrlHint")}</small>
+            <input id="setting-llm-base-url" data-config-field="llm_post_edit.base_url" aria-invalid={Boolean(fieldError("llm_post_edit.base_url"))} aria-describedby={fieldError("llm_post_edit.base_url") ? "setting-llm-base-url-error setting-llm-base-url-hint" : "setting-llm-base-url-hint"} bind:value={config.llm_post_edit.base_url} />
+            {#if fieldError("llm_post_edit.base_url")}<small id="setting-llm-base-url-error" class="field-error">{fieldError("llm_post_edit.base_url")}</small>{/if}
+            <small id="setting-llm-base-url-hint" class="field-hint">{t("llmApiBaseUrlHint")}</small>
           </label>
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.api_key"))}>
             <span>API Key</span>
-            <input type="password" autocomplete="off" bind:value={config.llm_post_edit.api_key} />
-            {#if fieldError("llm_post_edit.api_key")}<small class="field-error">{fieldError("llm_post_edit.api_key")}</small>{/if}
-            <small class="field-hint">{t("llmApiKeyHint")}</small>
+            <input id="setting-llm-api-key" data-config-field="llm_post_edit.api_key" aria-invalid={Boolean(fieldError("llm_post_edit.api_key"))} aria-describedby={fieldError("llm_post_edit.api_key") ? "setting-llm-api-key-error setting-llm-api-key-hint" : "setting-llm-api-key-hint"} type="password" autocomplete="off" bind:value={config.llm_post_edit.api_key} />
+            {#if fieldError("llm_post_edit.api_key")}<small id="setting-llm-api-key-error" class="field-error">{fieldError("llm_post_edit.api_key")}</small>{/if}
+            <small id="setting-llm-api-key-hint" class="field-hint">{t("llmApiKeyHint")}</small>
           </label>
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.model"))}>
             <span>{t("model")}</span>
-            <input bind:value={config.llm_post_edit.model} />
-            {#if fieldError("llm_post_edit.model")}<small class="field-error">{fieldError("llm_post_edit.model")}</small>{/if}
-            <small class="field-hint">{t("llmApiModelHint")}</small>
+            <input id="setting-llm-model" data-config-field="llm_post_edit.model" aria-invalid={Boolean(fieldError("llm_post_edit.model"))} aria-describedby={fieldError("llm_post_edit.model") ? "setting-llm-model-error setting-llm-model-hint" : "setting-llm-model-hint"} bind:value={config.llm_post_edit.model} />
+            {#if fieldError("llm_post_edit.model")}<small id="setting-llm-model-error" class="field-error">{fieldError("llm_post_edit.model")}</small>{/if}
+            <small id="setting-llm-model-hint" class="field-hint">{t("llmApiModelHint")}</small>
           </label>
         </div>
         <AdvancedSettings

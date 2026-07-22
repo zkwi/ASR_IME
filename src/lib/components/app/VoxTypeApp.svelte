@@ -7,6 +7,7 @@
   import ActionNotice from "$lib/components/common/ActionNotice.svelte";
   import CloseToTrayDialog from "$lib/components/common/CloseToTrayDialog.svelte";
   import PromptPreviewDialog from "$lib/components/common/PromptPreviewDialog.svelte";
+  import SaveFailureDialog from "$lib/components/common/SaveFailureDialog.svelte";
   import OverlayWindow from "$lib/components/overlay/OverlayWindow.svelte";
   import StartupToast from "$lib/components/overlay/StartupToast.svelte";
 
@@ -47,11 +48,13 @@
   <StartupToast title={app.toastTitle} hint={app.toastHint} />
 {:else}
   <AppShell {...app.appShellProps()}>
-    <AppContent
-      bind:config={app.config}
-      bind:autoHotwordCandidates={app.autoHotwordCandidates}
-      {...app.appContentProps()}
-    />
+    <div class="config-editable-region" inert={!app.configEditable} aria-disabled={!app.configEditable}>
+      <AppContent
+        bind:config={app.config}
+        bind:autoHotwordCandidates={app.autoHotwordCandidates}
+        {...app.appContentProps()}
+      />
+    </div>
   </AppShell>
 
   <ActionNotice
@@ -61,6 +64,8 @@
     actionBusyLabel={app.actionNoticeActionBusyLabel}
     actionBusy={app.actionNoticeActionBusy}
     onAction={app.runActionNoticeAction}
+    closeLabel={app.actionNoticeCloseLabel}
+    onClose={app.closeActionNotice}
   />
   <CloseToTrayDialog
     visible={app.closePromptVisible}
@@ -73,6 +78,19 @@
     onDontShowAgain={app.closeWindowWithoutFuturePrompt}
     onExit={app.exitFromClosePrompt}
   />
+  <SaveFailureDialog
+    visible={app.saveFailurePromptVisible}
+    title={app.saveFailurePromptTitle}
+    body={app.saveFailurePromptBody}
+    error={app.saveFailurePromptError}
+    retryLabel={app.saveFailureRetryLabel}
+    discardLabel={app.saveFailureDiscardLabel}
+    cancelLabel={app.saveFailureCancelLabel}
+    saving={app.savingConfig}
+    onRetry={app.retrySaveAndContinue}
+    onDiscard={app.discardAndContinue}
+    onCancel={app.cancelSaveFailurePrompt}
+  />
   <PromptPreviewDialog
     visible={app.promptPreviewVisible}
     title={app.promptPreviewTitle}
@@ -83,3 +101,9 @@
     onClose={app.closePromptPreview}
   />
 {/if}
+
+<style>
+  .config-editable-region {
+    display: contents;
+  }
+</style>

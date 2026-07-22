@@ -10,7 +10,7 @@
   import ActionPanel from "$lib/components/common/ActionPanel.svelte";
   import AdvancedSettings from "$lib/components/common/AdvancedSettings.svelte";
   import type { CopyKey } from "$lib/i18n";
-  import { ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck } from "lucide-svelte";
+  import { ClipboardCopy, Download, FileText, Keyboard, ScanText, ShieldCheck, Trash2 } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type OverlayColorPreset = { label: CopyKey; background: string; text: string };
@@ -62,6 +62,7 @@
     onOpenLog: () => void;
     onCopyDiagnosticReport: () => void;
     onTestScreenContext: () => void;
+    onClearScreenContextPreview: () => void;
     onScrollToSettingsPanel: (id: string) => void;
   };
 
@@ -102,6 +103,7 @@
     onOpenLog,
     onCopyDiagnosticReport,
     onTestScreenContext,
+    onClearScreenContextPreview,
     onScrollToSettingsPanel,
   }: Props = $props();
 
@@ -135,6 +137,15 @@
   ));
   let backupTriggersExpanded = $derived(showBackupTriggers || backupTriggersActive);
   let recordingTroubleshootingExpanded = $derived(showRecordingTroubleshooting || recordingTroubleshootingActive);
+
+  function handleHotkeyRecorderKeydown(event: KeyboardEvent) {
+    if (hotkeyCaptureState === "idle" && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      onBeginHotkeyCapture();
+      return;
+    }
+    onHotkeyKeydown(event);
+  }
 </script>
 
 <section class="settings-stack">
@@ -157,17 +168,20 @@
       <div class="form-grid">
         <label class:field-invalid={Boolean(fieldError("hotkey") || hotkeyValidationMessage)}>
           <span>{t("hotkey")}</span>
-          <button
-            type="button"
-            class:recording={hotkeyCaptureState === "recording"}
-            class="hotkey-recorder"
-            onkeydown={onHotkeyKeydown}
-            onclick={onBeginHotkeyCapture}
-          >
+          <div class:recording={hotkeyCaptureState === "recording"} class="hotkey-recorder">
             <Keyboard size={16} />
-            <strong>{hotkeyCaptureState === "recording" ? t("hotkeyRecording") : formatHotkey(config.hotkey) || t("hotkeyUnset")}</strong>
-          </button>
-          <small class="field-hint">{hotkeyValidationMessage || fieldError("hotkey") || t("hotkeyRecordHint")}</small>
+            <input
+              id="setting-hotkey"
+              data-config-field="hotkey"
+              aria-invalid={Boolean(fieldError("hotkey") || hotkeyValidationMessage)}
+              aria-describedby="setting-hotkey-help"
+              readonly
+              value={hotkeyCaptureState === "recording" ? t("hotkeyRecording") : formatHotkey(config.hotkey) || t("hotkeyUnset")}
+              onkeydown={handleHotkeyRecorderKeydown}
+              onclick={onBeginHotkeyCapture}
+            />
+          </div>
+          <small id="setting-hotkey-help" class:field-error={Boolean(hotkeyValidationMessage || fieldError("hotkey"))} class="field-hint">{hotkeyValidationMessage || fieldError("hotkey") || t("hotkeyRecordHint")}</small>
         </label>
       </div>
       <AdvancedSettings
@@ -186,9 +200,9 @@
     <div id="settings-audio" class="form-panel">
       <div class="section-heading"><h3>{t("microphoneTitle")}</h3><p>{t("microphoneDescription")}</p></div>
       <div class="form-grid">
-        <label>
+        <label class:field-invalid={Boolean(fieldError("audio.input_device"))}>
           <span>{t("inputDevice")}</span>
-          <select value={selectedInputDeviceValue} onchange={(event) => onSetInputDevice(event.currentTarget.value)}>
+          <select id="setting-audio-input-device" data-config-field="audio.input_device" aria-invalid={Boolean(fieldError("audio.input_device"))} aria-describedby={fieldError("audio.input_device") ? "setting-audio-input-device-error" : undefined} value={selectedInputDeviceValue} onchange={(event) => onSetInputDevice(event.currentTarget.value)}>
             <option value="">{t("defaultInputDevice")}</option>
             {#if audioDevices.length === 0}
               <option value="" disabled>{t("noAudioDevices")}</option>
@@ -197,6 +211,7 @@
               <option value={String(device.index)}>{device.index}: {device.name}</option>
             {/each}
           </select>
+          {#if fieldError("audio.input_device")}<small id="setting-audio-input-device-error" class="field-error">{fieldError("audio.input_device")}</small>{/if}
         </label>
       </div>
       <AdvancedSettings
@@ -227,12 +242,12 @@
       <div class="form-grid">
         <label class:field-invalid={Boolean(fieldError("typing.paste_method"))}>
           <span>{t("pasteMethod")}</span>
-          <select bind:value={config.typing.paste_method}>
+          <select id="setting-paste-method" data-config-field="typing.paste_method" aria-invalid={Boolean(fieldError("typing.paste_method"))} aria-describedby={fieldError("typing.paste_method") ? "setting-paste-method-error" : undefined} bind:value={config.typing.paste_method}>
             <option value="ctrl_v">Ctrl + V</option>
             <option value="shift_insert">Shift + Insert</option>
             <option value="clipboard_only">{t("clipboardOnly")}</option>
           </select>
-          {#if fieldError("typing.paste_method")}<small class="field-error">{fieldError("typing.paste_method")}</small>{/if}
+          {#if fieldError("typing.paste_method")}<small id="setting-paste-method-error" class="field-error">{fieldError("typing.paste_method")}</small>{/if}
         </label>
       </div>
       <div class="toggle-grid">
@@ -284,7 +299,13 @@
       </ActionPanel>
       {#if screenContextTestResult}
         <div class="ocr-preview" class:empty={!screenContextTestResult.text.trim()}>
-          <strong>{screenContextTestResult.warning ?? t("screenContextRecognizedText")}</strong>
+          <div class="ocr-preview-head">
+            <strong>{screenContextTestResult.warning ?? t("screenContextRecognizedText")}</strong>
+            <button type="button" class="link-action compact" onclick={onClearScreenContextPreview}>
+              <Trash2 size={14} />{t("clearPreview")}
+            </button>
+          </div>
+          <p>{t("screenContextPreviewSensitive")}</p>
           <pre>{screenContextTestResult.text || t("screenContextNoText")}</pre>
         </div>
       {/if}
@@ -314,7 +335,7 @@
             </button>
           {/each}
         </div>
-        <div class="caption-opacity-row" class:field-invalid={Boolean(fieldError("ui.opacity"))}>
+        <div class="caption-opacity-row" class:field-invalid={Boolean(fieldError("ui.opacity"))} role="group" aria-describedby={fieldError("ui.opacity") ? "setting-caption-opacity-error" : undefined}>
           <div>
             <strong>{t("captionOpacity")}</strong>
             <span>{t("captionOpacityDescription")}</span>
@@ -323,6 +344,8 @@
             {#each overlayOpacityPresets as opacity}
               <button
                 type="button"
+                data-config-field="ui.opacity"
+                aria-describedby={fieldError("ui.opacity") ? "setting-caption-opacity-error" : undefined}
                 class:active={overlayOpacityPresetActive(opacity)}
                 aria-pressed={overlayOpacityPresetActive(opacity)}
                 onclick={() => onApplyOverlayOpacity(opacity)}
@@ -331,7 +354,7 @@
               </button>
             {/each}
           </div>
-          {#if fieldError("ui.opacity")}<small class="field-error">{fieldError("ui.opacity")}</small>{/if}
+          {#if fieldError("ui.opacity")}<small id="setting-caption-opacity-error" class="field-error">{fieldError("ui.opacity")}</small>{/if}
         </div>
       </div>
     </div>
@@ -496,14 +519,19 @@
     text-align: left;
   }
 
-  .hotkey-recorder strong {
+  .hotkey-recorder input {
     min-width: 0;
+    width: 100%;
     overflow: hidden;
     color: inherit;
+    background: transparent;
+    border: 0;
+    outline: 0;
     font-size: 14px;
     font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
   }
 
   .hotkey-recorder :global(svg) {
@@ -663,6 +691,24 @@
     color: var(--text-main);
     font-size: 13px;
     font-weight: 800;
+  }
+
+  .ocr-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .ocr-preview-head .link-action {
+    flex: 0 0 auto;
+  }
+
+  .ocr-preview p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .ocr-preview pre {

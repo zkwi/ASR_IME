@@ -38,13 +38,11 @@ export type UpdateStatus = {
   update_available: boolean;
   asset_name: string | null;
   asset_size: number | null;
-  message: string;
 };
 
 export type InstallUpdateResult = {
   version: string;
   asset_name: string;
-  message: string;
 };
 
 export type ConnectionTestResult = { message: string; elapsed_ms?: number; thinking_strategy?: string };
@@ -115,6 +113,10 @@ export type PersistConfigOptions = {
 export type CloseToTrayRequest = {
   first_time: boolean;
   behavior: string;
+};
+
+export type ConfigExitGuardRequest = {
+  action: "window_close" | "exit";
 };
 
 export type HotkeyCaptureState = "idle" | "recording";
@@ -310,7 +312,11 @@ export type AppConfig = {
   debug: { print_transcript_to_console: boolean };
 };
 
-export type OverlayText = { text: string };
+export type OverlayText = {
+  text: string;
+  status_code?: string | null;
+  fallback_text?: string | null;
+};
 export type OverlayConfig = { ui: AppConfig["ui"] };
 
 export type TriggerKey = keyof AppConfig["triggers"];

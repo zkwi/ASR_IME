@@ -47,6 +47,12 @@ import { actionsForUserError } from "$lib/utils/errorActions";
 import { isAliyunAsrProvider } from "$lib/utils/asrProvider";
 import { clonePlain, configFingerprint } from "$lib/utils/config";
 import {
+  canEditLoadedConfig,
+  configLoadStateForResult,
+  shouldProtectUnsavedChanges,
+  type ConfigLoadState,
+} from "$lib/utils/configPersistence";
+import {
   clampAudioLevel,
   micBarHeight as getMicBarHeight,
   micBarOpacity as getMicBarOpacity,
@@ -71,6 +77,7 @@ import {
   sessionPhaseMessageKey,
 } from "$lib/utils/sessionState";
 import { userFacingInvokeFailure } from "$lib/utils/userFacingErrors";
+import { invokeErrorCode } from "$lib/utils/statusCodes";
 import {
   formatHours,
   formatNumber as formatNumberForLanguage,
@@ -130,7 +137,8 @@ export function createVoxTypeController() {
   let statusMessage = $state(copy["zh-CN"].bridgeLoading);
   let promptPreviewText = $state("");
   let configExists = $state(true);
-  let configLoaded = $state(false);
+  let configLoadState = $state<ConfigLoadState>("not_loaded");
+  let configLoaded = $derived(canEditLoadedConfig(configLoadState));
   let audioLevel = $state(0);
   const initialParams = browser ? new URLSearchParams(window.location.search) : new URLSearchParams();
   let audioDevices = $state<AudioDeviceInfo[]>([]);
@@ -157,6 +165,7 @@ export function createVoxTypeController() {
     isRecording: () => recording,
     getAudioLevel: () => audioLevel,
     safeInvoke,
+    t,
   });
   let uiCompact = $state(false);
   let setupStatus = $state<SetupStatus | null>(readCachedSetupStatus(browser));
@@ -211,11 +220,6 @@ export function createVoxTypeController() {
     showActionNotice: notifications.show,
     logError: logFrontendError,
   });
-  const windows = createWindowController({
-    getConfig: () => config,
-    applyLoadedConfig,
-    safeInvoke,
-  });
   let succeededIdleTimer: number | undefined;
   let setupStatusLoading = $state(false);
   const hotkeyCapture = createHotkeyCaptureController({
@@ -242,9 +246,6 @@ export function createVoxTypeController() {
     },
     getSettingsDirty: () => settingsDirty,
     getConfigLoaded: () => configLoaded,
-    setConfigLoaded: (value) => {
-      configLoaded = value;
-    },
     setConfigExists: (value) => {
       configExists = value;
     },
@@ -274,6 +275,14 @@ export function createVoxTypeController() {
     onConfigSaved: (loaded) => {
       llmAutoAdapt.queueAfterSave(loaded.data);
     },
+  });
+  const windows = createWindowController({
+    getConfig: () => config,
+    applyLoadedConfig,
+    safeInvoke,
+    retryFailedSave: configController.retryFailedSave,
+    discardUnsavedChanges: configController.discardUnsavedChanges,
+    onHidden: clearSensitivePreviews,
   });
   const setup = createSetupController({
     t,
@@ -371,6 +380,7 @@ export function createVoxTypeController() {
     setStatusMessage: (value) => {
       statusMessage = value;
     },
+    clearSensitivePreviews,
   });
   onMount(() => {
     const onError = (event: ErrorEvent) => {
@@ -416,7 +426,7 @@ export function createVoxTypeController() {
         applySessionState,
         applyAsrFinalText: session.applyAsrFinalText,
         applyOverlayText: (payload) => {
-          overlay.applyText(payload.text);
+          overlay.applyPayload(payload);
         },
         applyOverlayConfig: (payload) => {
           overlay.applyConfig(payload.ui);
@@ -438,6 +448,8 @@ export function createVoxTypeController() {
           void refreshSetupStatus(false);
         },
         showClosePrompt: windows.showClosePrompt,
+        showConfigExitGuard: windows.showSaveFailurePrompt,
+        clearSensitivePreviews,
         checkForUpdate: () => {
           void updates.check(true);
         },
@@ -474,6 +486,12 @@ export function createVoxTypeController() {
     } else if (fingerprint === savedConfigFingerprint) {
       clearAutoSaveTimer();
     }
+  });
+
+  $effect(() => {
+    if (isOverlay || isToast || !hasTauriApi()) return;
+    const active = shouldProtectUnsavedChanges(settingsDirty, configController.lastSaveError);
+    void safeInvoke<void>("set_config_exit_guard", { active }, true);
   });
 
   function clearAutoSaveTimer() {
@@ -550,7 +568,12 @@ export function createVoxTypeController() {
     try {
       return await invoke<T>(command, args);
     } catch (error) {
-      if (!quiet) statusMessage = userFacingInvokeFailure(command, error, t("operationFailedGeneric"));
+      const errorCode = invokeErrorCode(command);
+      if (!quiet) {
+        statusMessage = errorCode
+          ? userErrorMessage(errorCode, "")
+          : userFacingInvokeFailure(command, error, t("operationFailedGeneric"));
+      }
       logFrontendError(`invoke failed command=${command}: ${formatFrontendError(error)}`);
       return null;
     }
@@ -650,7 +673,7 @@ export function createVoxTypeController() {
     if (!isOverlay && !isToast && !setupStatus) setupStatusLoading = true;
     const [snapshotResult, configResult, statsResult, devicesResult, setupResult, localDataResult] = await Promise.all([
       safeInvoke<AppSnapshot>("get_app_snapshot"),
-      safeInvoke<LoadedConfig>("load_app_config"),
+      loadAppConfig(),
       safeInvoke<StatsSnapshot>("get_usage_stats"),
       safeInvoke<AudioDeviceInfo[]>("list_audio_input_devices"),
       safeInvoke<SetupStatus>("get_setup_status"),
@@ -661,7 +684,6 @@ export function createVoxTypeController() {
     if (snapshotResult) snapshot = snapshotResult;
     if (configResult) {
       applyLoadedConfig(configResult);
-      configLoaded = true;
       const setupMessage = configSetupMessage(configResult);
       if (setupMessage) {
         statusMessage = setupMessage;
@@ -673,20 +695,54 @@ export function createVoxTypeController() {
     if (statsResult) stats.apply(statsResult);
     if (localDataResult) privacy.apply(localDataResult);
     if (devicesResult) audioDevices = devicesResult;
-    if (!configResult && hasTauriApi() && !isOverlay && !isToast) configLoaded = true;
     if (setupResult) {
       applySetupStatus(setupResult);
     } else if (!setupStatus && configResult) {
       setupStatus = localSetupStatusFromConfig(configResult.data, devicesResult ?? audioDevices);
     }
     if (!isOverlay && !isToast) setupStatusLoading = false;
-    if ((snapshotResult || configResult || statsResult) && !configSetupMessage(configResult)) {
+    if (
+      configLoadState !== "failed" &&
+      (snapshotResult || configResult || statsResult) &&
+      !configSetupMessage(configResult)
+    ) {
       statusMessage = t("bridgeConnected");
     }
     logFrontendEvent(
       `loadAll completed mode=${frontendMode()} snapshot=${Boolean(snapshotResult)} config_loaded=${Boolean(configResult)} config_exists=${configResult?.exists ?? false} stats_records=${statsResult?.history.length ?? 0} audio_devices=${devicesResult?.length ?? 0} setup_ready=${setupResult?.ready ?? false} auto_hotword_entries=${autoHotwords.status?.entry_count ?? 0}`,
     );
     return loadedAny;
+  }
+
+  async function loadAppConfig() {
+    if (!hasTauriApi()) {
+      configLoadState = "missing";
+      return null;
+    }
+    try {
+      const loaded = await invoke<LoadedConfig>("load_app_config");
+      configLoadState = configLoadStateForResult(loaded);
+      return loaded;
+    } catch (error) {
+      configLoadState = "failed";
+      statusMessage = t("configLoadFailed");
+      logFrontendError(`load config failed: ${formatFrontendError(error)}`);
+      if (!isOverlay && !isToast) {
+        notifications.show(statusMessage, "error", {
+          label: t("configLoadRetry"),
+          onClick: retryLoadConfig,
+        });
+      }
+      return null;
+    }
+  }
+
+  async function retryLoadConfig() {
+    const loaded = await loadAppConfig();
+    if (!loaded) return;
+    applyLoadedConfig(loaded);
+    statusMessage = t("configLoadSucceeded");
+    notifications.show(statusMessage, "success");
   }
   async function hydrateSession() {
     logFrontendEvent(`hydrateSession started mode=${frontendMode()}`);
@@ -783,6 +839,16 @@ export function createVoxTypeController() {
   }
   async function testScreenContext() {
     await setup.testScreenContext();
+  }
+  function clearSensitivePreviews() {
+    lastSessionOutcome = null;
+    screenContextTestResult = null;
+  }
+  function clearLastOutcome() {
+    lastSessionOutcome = null;
+  }
+  function clearScreenContextPreview() {
+    screenContextTestResult = null;
   }
   function optionEnabledNotice(key: SoftConfigNoticeKey, enabled: boolean) {
     if (!enabled) return "";
@@ -1117,6 +1183,7 @@ export function createVoxTypeController() {
       language,
       recording,
       configSaveState: configSaveState(),
+      configSaveError: configController.lastSaveError,
       inputStatus: inputStatus(),
       inputStatusLabel: inputStatusLabel(),
       inputStatusDesc: inputStatusDesc(),
@@ -1131,7 +1198,11 @@ export function createVoxTypeController() {
       micBarOpacity,
       onSelectSection: settingsNav.selectSection,
       onSetLanguage: setLanguage,
-      onClose: windows.close,
+      onHideToTray: windows.hideToTrayFromTitlebar,
+      onRequestClose: windows.requestClose,
+      onRetrySave: () => {
+        void configController.retryFailedSave();
+      },
       onMinimize: windows.minimize,
       onToggleMaximize: windows.toggleMaximize,
     };
@@ -1217,6 +1288,7 @@ export function createVoxTypeController() {
       onOpenRecordingTroubleshooting: openRecordingTroubleshooting,
       onUserErrorAction: handleUserErrorAction,
       onCopyLastOutcomeText: copyLastOutcomeText,
+      onClearLastOutcome: clearLastOutcome,
       onToggleRecording: toggleRecordingFromUi,
       onSelectSection: settingsNav.selectSection,
       onUpdateHotwords: updateHotwords,
@@ -1242,6 +1314,7 @@ export function createVoxTypeController() {
       onTestAsrConfig: testAsrConfig,
       onTestLlmConfig: testLlmConfig,
       onTestScreenContext: testScreenContext,
+      onClearScreenContextPreview: clearScreenContextPreview,
       onHotkeyKeydown: hotkeyCapture.handleKeydown,
       onBeginHotkeyCapture: hotkeyCapture.beginCapture,
       onApplyOverlayPreset: overlay.applyPreset,
@@ -1291,7 +1364,17 @@ export function createVoxTypeController() {
     get actionNoticeActionLabel() { return notifications.actionLabel; },
     get actionNoticeActionBusyLabel() { return notifications.actionBusyLabel; },
     get actionNoticeActionBusy() { return notifications.actionBusy; },
+    get actionNoticeCloseLabel() { return t("noticeClose"); },
     get closePromptVisible() { return windows.closePromptVisible; },
+    get saveFailurePromptVisible() { return windows.saveFailurePromptVisible; },
+    get saveFailurePromptTitle() { return t("saveFailurePromptTitle"); },
+    get saveFailurePromptBody() { return t("saveFailurePromptBody"); },
+    get saveFailurePromptError() { return configController.lastSaveError; },
+    get saveFailureRetryLabel() { return configController.saving ? t("settingsSaving") : t("saveFailureRetry"); },
+    get saveFailureDiscardLabel() { return t("saveFailureDiscard"); },
+    get saveFailureCancelLabel() { return t("saveFailureCancel"); },
+    get configEditable() { return canEditLoadedConfig(configLoadState); },
+    get savingConfig() { return configController.saving; },
     get closePromptTitle() { return t("closePromptTitle"); },
     get closePromptBody() { return t("closePromptBody"); },
     get closePromptGotItLabel() { return t("closePromptGotIt"); },
@@ -1309,11 +1392,15 @@ export function createVoxTypeController() {
     appShellProps,
     appContentProps,
     runActionNoticeAction: notifications.runAction,
+    closeActionNotice: notifications.clear,
     overlayMeterBarHeight: overlay.meterBarHeight,
     overlayMeterBarOpacity: overlay.meterBarOpacity,
     closeWindowWithoutFuturePrompt: windows.closeWithoutFuturePrompt,
     exitFromClosePrompt: windows.exitFromPrompt,
     confirmClosePrompt: windows.confirmClosePrompt,
+    retrySaveAndContinue: windows.retrySaveAndContinue,
+    discardAndContinue: windows.discardAndContinue,
+    cancelSaveFailurePrompt: windows.cancelSaveFailurePrompt,
     closePromptPreview,
     copyPromptPreview,
   };

@@ -87,6 +87,7 @@ pub fn run() {
             commands::diagnostic_commands::copy_recent_input_text_to_clipboard,
             commands::config_commands::set_tray_language,
             commands::diagnostic_commands::hide_main_window,
+            commands::diagnostic_commands::set_config_exit_guard,
             commands::diagnostic_commands::exit_application,
             commands::config_commands::update_close_preference,
             commands::diagnostic_commands::log_frontend_error,
@@ -159,6 +160,11 @@ pub fn run() {
                         app_log::warn(format!("读取关闭行为配置失败，默认隐藏到托盘: {}", err));
                         ("close_to_tray".to_string(), true)
                     });
+                if main_window::request_config_exit_guard(window.app_handle(), "window_close") {
+                    api.prevent_close();
+                    app_log::info("配置保存失败，已在关闭前请求用户确认。");
+                    return;
+                }
                 if close_config.0 == "direct_exit" {
                     app_log::info("关闭主窗口触发直接退出。");
                     tray::exit_app(window.app_handle());
@@ -184,6 +190,7 @@ pub fn run() {
                 } else if let Err(err) = window.hide() {
                     app_log::warn(format!("隐藏主窗口失败: {}", err));
                 } else {
+                    let _ = window.emit("main-window-hidden", ());
                     app_log::info("主窗口已隐藏到托盘。");
                 }
             }

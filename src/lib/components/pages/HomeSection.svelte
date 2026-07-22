@@ -20,6 +20,7 @@
     MousePointerClick,
     PenLine,
     Sparkles,
+    Trash2,
     Zap,
   } from "lucide-svelte";
 
@@ -57,6 +58,7 @@
     onOpenRecordingTroubleshooting: () => void;
     onUserErrorAction: (action: UserErrorAction) => void;
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
+    onClearLastOutcome: () => void;
     onToggleRecording: () => void;
     onSelectSection: (section: "Options") => void;
   };
@@ -92,6 +94,7 @@
     onOpenRecordingTroubleshooting,
     onUserErrorAction,
     onCopyLastOutcomeText,
+    onClearLastOutcome,
     onToggleRecording,
     onSelectSection,
   }: Props = $props();
@@ -267,6 +270,10 @@
         <button type="button" class="link-action compact copy-action" disabled={copyingLastOutcome} onclick={copyLastOutcome}>
           <Copy size={14} />
           {copyingLastOutcome ? t("lastOutcomeCopying") : lastOutcomeCopied ? t("lastOutcomeCopiedShort") : t("lastOutcomeCopyText")}
+        </button>
+        <button type="button" class="link-action compact" onclick={onClearLastOutcome}>
+          <Trash2 size={14} />
+          {t("clearPreview")}
         </button>
         <button type="button" class="link-action compact" onclick={() => (lastOutcomeExpanded = !lastOutcomeExpanded)}>
           {lastOutcomeExpanded ? t("lastOutcomeHideText") : t("lastOutcomeViewText")}

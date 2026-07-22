@@ -2,7 +2,7 @@ use super::{ConnectionTestResult, DiagnosticReport, LocalDataStatus};
 use crate::session::SessionController;
 use crate::{app_log, config, hotword_generator, hotword_history, stats, text_output, tray};
 use stats::StatsSnapshot;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[tauri::command]
 pub(crate) fn open_log_file(app: AppHandle) -> Result<(), String> {
@@ -112,12 +112,19 @@ pub(crate) fn hide_main_window(app: AppHandle) -> Result<(), String> {
     window
         .hide()
         .map_err(|err| format!("隐藏主窗口失败: {}", err))?;
+    let _ = window.emit("main-window-hidden", ());
     app_log::info("主窗口已隐藏到托盘。");
     Ok(())
 }
 
 #[tauri::command]
+pub(crate) fn set_config_exit_guard(active: bool) {
+    crate::main_window::set_config_exit_guard(active);
+}
+
+#[tauri::command]
 pub(crate) fn exit_application(app: AppHandle) {
+    crate::main_window::set_config_exit_guard(false);
     app_log::info("用户从主窗口退出程序。");
     tray::exit_app(&app);
 }

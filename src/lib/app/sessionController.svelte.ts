@@ -9,6 +9,7 @@ import {
   isBlockingSessionPhase,
   isQuietAsrWarningCode,
 } from "$lib/utils/sessionState";
+import { shouldClearSensitivePreviewsForPhase } from "$lib/utils/privacyLifecycle";
 
 type NoticeKind = "success" | "info" | "warning" | "error";
 
@@ -38,6 +39,7 @@ type SessionControllerOptions = {
   setLastAudioQualityDiagnostic: (value: null) => void;
   setAudioLevel: (value: number) => void;
   setStatusMessage: (value: string) => void;
+  clearSensitivePreviews: () => void;
 };
 
 export function createSessionController(options: SessionControllerOptions) {
@@ -49,7 +51,7 @@ export function createSessionController(options: SessionControllerOptions) {
     if (options.requireAsrAuthGate()) return;
     if (isBusy()) return;
     if (!recording) {
-      options.setLastOutcome(null);
+      options.clearSensitivePreviews();
       options.setLastAudioQualityDiagnostic(null);
     }
     const result = await options.safeInvoke<SessionState>("toggle_recording");
@@ -61,8 +63,8 @@ export function createSessionController(options: SessionControllerOptions) {
     options.setRecording(state.recording);
     options.setPhase(phase);
     options.setErrorCode(state.error_code);
-    if (phase === "starting" || phase === "recording") {
-      options.setLastOutcome(null);
+    if (shouldClearSensitivePreviewsForPhase(phase)) {
+      options.clearSensitivePreviews();
       options.setLastAudioQualityDiagnostic(null);
     }
     if (!state.recording) options.setAudioLevel(0);

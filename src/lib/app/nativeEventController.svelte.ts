@@ -5,6 +5,7 @@ import type {
   AudioLevel,
   AudioQualityDiagnostic,
   CloseToTrayRequest,
+  ConfigExitGuardRequest,
   OverlayConfig,
   OverlayText,
   SessionState,
@@ -23,6 +24,8 @@ type NativeEventControllerOptions = {
   applyAudioQuality: (payload: AudioQualityDiagnostic) => void;
   handleAudioDeviceFallback: (payload: AudioDeviceFallbackNotice) => void;
   showClosePrompt: (payload: CloseToTrayRequest) => void;
+  showConfigExitGuard: (payload: ConfigExitGuardRequest) => void;
+  clearSensitivePreviews: () => void;
   checkForUpdate: () => void;
 };
 
@@ -54,6 +57,12 @@ export function registerNativeEventController(options: NativeEventControllerOpti
     }),
     listen<CloseToTrayRequest>("close-to-tray-requested", (event) => {
       options.showClosePrompt(event.payload);
+    }),
+    listen<ConfigExitGuardRequest>("config-exit-guard-requested", (event) => {
+      options.showConfigExitGuard(event.payload);
+    }),
+    listen("main-window-hidden", () => {
+      options.clearSensitivePreviews();
     }),
     listen("check-update-requested", () => {
       options.checkForUpdate();

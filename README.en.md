@@ -30,7 +30,7 @@ This is a personal project. The priority is practicality, simplicity, and mainta
 
 ## Interface Preview
 
-The Home page centers the current input state, the primary shortcut, middle mouse, and right Alt in one compact voice card. After a successful input, VoxType shows that the text was copied and paste was attempted; the latest recognized text can be copied or viewed temporarily, then is cleared when the window closes or the next recording starts. Input performance cards show recent 24-hour input, recent 7-day input, average speed, and saved time. Saved time is estimated as manual typing time minus actual voice duration.
+The Home page centers the current input state, the primary shortcut, middle mouse, and right Alt in one compact voice card. After a successful input, VoxType shows that the text was copied and paste was attempted; the latest recognized text can be copied, viewed, or cleared immediately, then is cleared when the window is hidden, the app exits, or the next recording starts. Input performance cards show recent 24-hour input, recent 7-day input, average speed, and saved time. Saved time is estimated as manual typing time minus actual voice duration.
 
 <img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
 
@@ -48,7 +48,7 @@ API Config starts with a setup health check instead of a generic status header. 
 - No-feedback fallback: if ASR returns no effective text feedback for 30 seconds, VoxType stops through the normal grace flow; this no longer depends on local volume thresholds.
 - Floating captions: real-time transcription feedback near the bottom of the screen. Captions collapse formatting line breaks and repeated whitespace from interim ASR text; short text stays on one line, while long or width-wrapped text uses up to two visible lines with the largest font size that does not clip. The runtime window is at least `52px` high so legacy low-height settings cannot force long captions into one line. Captions show text, processing state, and errors only.
 - Automatic output: final text is copied to the clipboard and pasted with `Ctrl+V` or `Shift+Insert`; clipboard-only mode is also available. VoxType then tries to restore the previous clipboard.
-- Recent input card: after a successful input, the Home page can temporarily show and copy the latest recognized text. It is kept only in the current window memory and is cleared when the window closes or a new recording starts.
+- Recent input card: after a successful input, the Home page can temporarily show, copy, or clear the latest recognized text. It is kept only in the current window memory and is cleared when the window is hidden, the app exits, or a new recording starts.
 - Home layout: the top voice card shows the current state plus the primary hotkey, middle mouse, and right Alt in compact single-line chips. Recent input and input stats stay below it.
 - Optional LLM polishing: OpenAI-compatible API support for light text cleanup, style control, and an explicit "use recent context for polishing" switch.
 - Screen OCR context: on by default. When recording starts, VoxType captures the current display by default, with an option to switch to the current window only. It runs Windows OCR locally, lightly merges extra spaces between adjacent CJK characters, and sends the temporary text context to the selected ASR provider and the optional LLM to improve names, filenames, code identifiers, and UI terms. OCR is compacted by budget before AI polishing, and timeout or OCR failure is skipped automatically.
@@ -59,6 +59,8 @@ API Config starts with a setup health check instead of a generic status header. 
 - Diagnostics: logs and redacted diagnostic reports help troubleshoot ASR, paste, network, and update issues.
 - Privacy & local data: available from the sidebar. It shows storage and upload boundaries for config and keys, logs and diagnostic reports, recent context, automatic hotword history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots; it can clear recent context, automatic hotword history, and usage stats.
 - Settings layout: visible settings are shown directly by task page. Options is grouped into common settings, enhancements, and maintenance so daily controls come before maintenance entries. Low-level protocol, resource ID, timeout, clipboard snapshot, retry, caption size/position, and similar implementation parameters stay in `config.toml`.
+- Config reliability: a load failure keeps settings read-only and offers retry instead of overwriting the original file with defaults. Save failures stay visible, and closing or exiting offers retry, discard, or cancel.
+- Keyboard and display support: validation can focus the first invalid field; dialogs trap Tab, close with Escape, and restore focus. The main window minimum is `960×640`, with narrow-window, high-DPI, and reduced-motion support.
 - Languages: Simplified Chinese, Traditional Chinese, and English.
 
 ## Main Workflow Guarantees

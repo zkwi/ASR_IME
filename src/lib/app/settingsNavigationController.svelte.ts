@@ -54,6 +54,10 @@ export function createSettingsNavigationController(options: SettingsNavigationCo
     const field = firstValidationField(errors);
     if (!field) return;
     scrollToSettingsPanel(settingsPanelForField(field));
+    afterSectionRender(() => {
+      const control = document.querySelector<HTMLElement>(`[data-config-field="${CSS.escape(field)}"]`);
+      control?.focus();
+    });
   }
 
   function focusAsrAuthSettings() {

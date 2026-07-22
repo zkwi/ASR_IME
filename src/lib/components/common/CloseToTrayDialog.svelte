@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from "$lib/utils/focusTrap";
   type Props = {
     visible: boolean;
     title: string;
@@ -26,7 +27,7 @@
 
 {#if visible}
   <div class="modal-backdrop" role="presentation">
-    <div class="close-prompt" role="dialog" aria-modal="true" aria-labelledby="close-prompt-title">
+    <div class="close-prompt" role="dialog" aria-modal="true" aria-labelledby="close-prompt-title" tabindex="-1" use:focusTrap={{ initialFocus: ".primary", onEscape: onConfirm }}>
       <div>
         <h3 id="close-prompt-title">{title}</h3>
         <p>{body}</p>

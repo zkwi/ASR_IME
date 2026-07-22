@@ -10,6 +10,7 @@
     Maximize2,
     Minus,
     PanelBottomClose,
+    RotateCcw,
     Settings,
     Sparkles,
     X as XIcon,
@@ -17,7 +18,7 @@
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
   type MaybeAsync = void | Promise<void>;
-  type ConfigSaveState = "idle" | "pending" | "saving" | "saved";
+  type ConfigSaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
   type Props = {
     children?: Snippet;
@@ -26,6 +27,7 @@
     language: Language;
     recording: boolean;
     configSaveState: ConfigSaveState;
+    configSaveError: string;
     inputStatus: string;
     inputStatusLabel: string;
     inputStatusDesc: string;
@@ -40,7 +42,9 @@
     micBarOpacity: (index: number) => string;
     onSelectSection: (section: Section) => void;
     onSetLanguage: (language: string) => void;
-    onClose: () => MaybeAsync;
+    onHideToTray: () => MaybeAsync;
+    onRequestClose: () => MaybeAsync;
+    onRetrySave: () => MaybeAsync;
     onMinimize: () => MaybeAsync;
     onToggleMaximize: () => MaybeAsync;
   };
@@ -52,6 +56,7 @@
     language,
     recording,
     configSaveState,
+    configSaveError,
     inputStatus,
     inputStatusLabel,
     inputStatusDesc,
@@ -66,7 +71,9 @@
     micBarOpacity,
     onSelectSection,
     onSetLanguage,
-    onClose,
+    onHideToTray,
+    onRequestClose,
+    onRetrySave,
     onMinimize,
     onToggleMaximize,
   }: Props = $props();
@@ -90,6 +97,7 @@
   };
 
   function configSaveStatusText() {
+    if (configSaveState === "error") return t("settingsSaveFailed");
     if (configSaveState === "pending") return t("settingsSavePending");
     if (configSaveState === "saving") return t("settingsSaving");
     return t("settingsSaved");
@@ -105,27 +113,41 @@
       <strong data-tauri-drag-region>{t("appTitle")}</strong>
       <span class="window-product-name" data-tauri-drag-region>VoxType</span>
       {#if configSaveState !== "idle"}
-        <span
-          class:pending={configSaveState === "pending"}
-          class:saved={configSaveState === "saved"}
-          class:saving={configSaveState === "saving"}
-          class="save-status"
-          aria-live="polite"
-          data-tauri-drag-region
-        >
-          <span class="save-dot" data-tauri-drag-region></span>
-          <span class="save-text" data-tauri-drag-region>{configSaveStatusText()}</span>
-        </span>
+        {#if configSaveState === "error"}
+          <button
+            type="button"
+            class="save-status error"
+            aria-label={t("settingsSaveRetry")}
+            title={configSaveError || t("settingsSaveFailed")}
+            onclick={onRetrySave}
+          >
+            <span class="save-dot"></span>
+            <span class="save-text">{configSaveStatusText()}</span>
+            <RotateCcw size={12} aria-hidden="true" />
+          </button>
+        {:else}
+          <span
+            class:pending={configSaveState === "pending"}
+            class:saved={configSaveState === "saved"}
+            class:saving={configSaveState === "saving"}
+            class="save-status"
+            aria-live="polite"
+            data-tauri-drag-region
+          >
+            <span class="save-dot" data-tauri-drag-region></span>
+            <span class="save-text" data-tauri-drag-region>{configSaveStatusText()}</span>
+          </span>
+        {/if}
       {/if}
     </div>
     <div class="window-controls">
-      <button class="tray-action" aria-label={t("minimizeToTray")} title={t("minimizeToTray")} onclick={onClose}>
+      <button class="tray-action" aria-label={t("minimizeToTray")} title={t("minimizeToTray")} onclick={onHideToTray}>
         <PanelBottomClose size={15} />
         <span>{t("minimizeToTray")}</span>
       </button>
       <button aria-label={t("windowMinimize")} title={t("windowMinimize")} onclick={onMinimize}><Minus size={13} /></button>
       <button aria-label={t("windowMaximizeRestore")} title={t("windowMaximizeRestore")} onclick={onToggleMaximize}><Maximize2 size={12} /></button>
-      <button class="close" aria-label={t("windowClose")} title={t("windowClose")} onclick={onClose}><XIcon size={14} /></button>
+      <button class="close" aria-label={t("windowClose")} title={t("windowClose")} onclick={onRequestClose}><XIcon size={14} /></button>
     </div>
   </header>
 
@@ -312,6 +334,18 @@
     animation: save-pulse 900ms ease-in-out infinite;
   }
 
+  button.save-status.error {
+    color: #991b1b;
+    background: rgba(254, 242, 242, 0.98);
+    border-color: rgba(239, 68, 68, 0.3);
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+  }
+
+  button.save-status.error .save-dot {
+    background: var(--danger);
+  }
+
   .window-title-mark {
     display: grid;
     width: 34px;
@@ -354,7 +388,7 @@
     background: #ffffff;
     border: 1px solid transparent;
     border-radius: 10px;
-    transition: all 160ms ease;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
     -webkit-app-region: no-drag;
   }
 
@@ -789,6 +823,33 @@
 
     .content.overview-content {
       overflow: auto;
+    }
+  }
+
+  @media (max-width: 1040px) {
+    .shell,
+    .ui-compact .shell {
+      grid-template-columns: 184px minmax(0, 1fr);
+    }
+
+    .sidebar,
+    .ui-compact .sidebar {
+      padding-right: 12px;
+      padding-left: 12px;
+    }
+
+    .window-product-name {
+      display: none;
+    }
+
+    .window-controls .tray-action,
+    .ui-compact .window-controls .tray-action {
+      width: 32px;
+      padding: 0;
+    }
+
+    .window-controls .tray-action span {
+      display: none;
     }
   }
 

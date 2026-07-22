@@ -8,9 +8,8 @@ import type {
   PersistConfigOptions,
 } from "$lib/types/app";
 import { clonePlain, configFingerprint, validationErrorMap } from "$lib/utils/config";
+import { configSaveState as resolveConfigSaveState, type ConfigSaveState } from "$lib/utils/configPersistence";
 import { formatFrontendError } from "$lib/utils/frontendDiagnostics";
-
-type ConfigSaveState = "idle" | "pending" | "saving" | "saved";
 
 type ConfigControllerOptions = {
   autoSaveDelayMs: number;
@@ -20,7 +19,6 @@ type ConfigControllerOptions = {
   setSavedConfigFingerprint: (fingerprint: string) => void;
   getSettingsDirty: () => boolean;
   getConfigLoaded: () => boolean;
-  setConfigLoaded: (value: boolean) => void;
   setConfigExists: (value: boolean) => void;
   setSnapshotHotkey: (hotkey: string) => void;
   getValidationErrors: () => Record<string, string>;
@@ -40,6 +38,9 @@ type ConfigControllerOptions = {
 export function createConfigController(options: ConfigControllerOptions) {
   let saving = $state(false);
   let configSavedRecently = $state(false);
+  let lastSaveError = $state("");
+  let lastSaveErrorFingerprint = $state("");
+  let lastPersistedConfig = clonePlain(options.getConfig());
   let autoSaveTimer: number | undefined;
   let configSavedIndicatorTimer: number | undefined;
 
@@ -63,6 +64,8 @@ export function createConfigController(options: ConfigControllerOptions) {
   }
 
   function applyLoadedConfig(loaded: LoadedConfig) {
+    lastPersistedConfig = clonePlain(loaded.data);
+    clearSaveError();
     options.setConfig(loaded.data);
     options.setSavedConfigFingerprint(configFingerprint(loaded.data));
     options.setConfigExists(loaded.exists);
@@ -96,18 +99,24 @@ export function createConfigController(options: ConfigControllerOptions) {
       options.setValidationErrors({});
       const hotkeyError = options.validateHotkey(configToSave.hotkey);
       if (hotkeyError) {
+        markSaveError(hotkeyError, saveFingerprint);
         options.setValidationErrors({ hotkey: hotkeyError });
         options.setStatusMessage(hotkeyError);
         if (focusErrors) options.scrollToSettingsPanel("settings-output");
         return null;
       }
-      if (enforceAuth && !options.requireAuthFields(focusErrors, focusErrors)) return null;
+      if (enforceAuth && !options.requireAuthFields(focusErrors, focusErrors)) {
+        markSaveError(options.t("validationFailed"), saveFingerprint);
+        return null;
+      }
       if (!options.hasTauriApi()) {
         options.setStatusMessage(options.t("browserPreview"));
         return null;
       }
       const result = await invoke<LoadedConfig>("save_app_config", { config: configToSave });
       if (result) {
+        lastPersistedConfig = clonePlain(result.data);
+        clearSaveError();
         const resultFingerprint = configFingerprint(result.data);
         const currentFingerprint = configFingerprint(options.getConfig());
         options.setSavedConfigFingerprint(resultFingerprint);
@@ -115,7 +124,6 @@ export function createConfigController(options: ConfigControllerOptions) {
         options.setSnapshotHotkey(result.data.hotkey);
         options.syncSetupStatusFromConfig(result.data);
         options.setConfigExists(result.exists);
-        options.setConfigLoaded(true);
         options.setStatusMessage(options.t("configSaved"));
         markConfigSavedRecently();
         options.onConfigSaved?.(result);
@@ -123,6 +131,7 @@ export function createConfigController(options: ConfigControllerOptions) {
       return result;
     } catch (error) {
       const saveError = parseConfigSaveError(error);
+      markSaveError(saveError.message || options.t("validationFailed"), saveFingerprint);
       const errors = saveError.errors ?? [];
       options.setValidationErrors(validationErrorMap(errors));
       if (focusErrors) options.focusFirstValidationError(errors);
@@ -154,10 +163,42 @@ export function createConfigController(options: ConfigControllerOptions) {
 
   function configSaveState(isOverlay: boolean, isToast: boolean): ConfigSaveState {
     if (!options.getConfigLoaded() || !options.hasTauriApi() || isOverlay || isToast) return "idle";
-    if (saving) return "saving";
-    if (options.getSettingsDirty()) return "pending";
-    if (configSavedRecently) return "saved";
-    return "idle";
+    return resolveConfigSaveState({
+      loaded: true,
+      dirty: options.getSettingsDirty(),
+      saving,
+      savedRecently: configSavedRecently,
+      lastSaveError: activeSaveError(),
+    });
+  }
+
+  function markSaveError(message: string, fingerprint: string) {
+    lastSaveError = message;
+    lastSaveErrorFingerprint = fingerprint;
+    clearConfigSavedIndicatorTimer();
+    configSavedRecently = false;
+  }
+
+  function clearSaveError() {
+    lastSaveError = "";
+    lastSaveErrorFingerprint = "";
+  }
+
+  function activeSaveError() {
+    if (!options.getSettingsDirty()) return "";
+    return configFingerprint(options.getConfig()) === lastSaveErrorFingerprint ? lastSaveError : "";
+  }
+
+  async function retryFailedSave() {
+    return persistConfig({ enforceAuth: false, focusErrors: true });
+  }
+
+  function discardUnsavedChanges() {
+    clearAutoSaveTimer();
+    clearSaveError();
+    options.setValidationErrors({});
+    options.setConfig(clonePlain(lastPersistedConfig));
+    options.setSavedConfigFingerprint(configFingerprint(lastPersistedConfig));
   }
 
   function dispose() {
@@ -168,10 +209,13 @@ export function createConfigController(options: ConfigControllerOptions) {
   return {
     get saving() { return saving; },
     get configSavedRecently() { return configSavedRecently; },
+    get lastSaveError() { return activeSaveError(); },
     applyLoadedConfig,
     scheduleAutoSaveConfig,
     clearAutoSaveTimer,
     persistConfig,
+    retryFailedSave,
+    discardUnsavedChanges,
     fieldError,
     configSaveState,
     dispose,

@@ -16,12 +16,14 @@ pub const EMPTY_TRANSCRIPT_TEXT: &str = "没有识别到文字，请重试一次
 pub const PASTE_FAILED_TEXT: &str = "粘贴失败，文本已复制，可手动 Ctrl+V。";
 const DEFAULT_TEXT: &str = RECORDING_TEXT;
 const TRANSPARENT_BACKGROUND: Color = Color(0, 0, 0, 0);
-static OVERLAY_TEXT: OnceLock<Mutex<String>> = OnceLock::new();
+static OVERLAY_TEXT: OnceLock<Mutex<OverlayText>> = OnceLock::new();
 static OVERLAY_UI: OnceLock<Mutex<UiConfig>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize)]
 pub struct OverlayText {
     pub text: String,
+    pub status_code: Option<String>,
+    pub fallback_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -61,10 +63,14 @@ pub fn create_overlay_window(app: &AppHandle) -> Result<(), String> {
 }
 
 pub fn show_message(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {
-    show_with_text(app, ui, text.into());
+    show_with_payload(app, ui, plain_payload(text.into()));
 }
 
-fn show_with_text(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {
+pub fn show_status(app: &AppHandle, ui: &UiConfig, code: &str, fallback_text: &str) {
+    show_with_payload(app, ui, status_payload(code, fallback_text));
+}
+
+fn show_with_payload(app: &AppHandle, ui: &UiConfig, payload: OverlayText) {
     if let Err(err) = create_overlay_window(app) {
         crate::app_log::warn(err);
         return;
@@ -89,7 +95,7 @@ fn show_with_text(app: &AppHandle, ui: &UiConfig, text: impl Into<String>) {
         let _ = window.set_position(LogicalPosition::new(x, y));
     }
     update_config(app, ui);
-    update_text(app, text);
+    update_payload(app, payload);
     if let Err(err) = window.set_focusable(false) {
         crate::app_log::warn(format!("显示前设置悬浮字幕窗不可聚焦失败: {}", err));
     }
@@ -175,8 +181,15 @@ fn cursor_position() -> Option<POINT> {
 }
 
 pub fn update_text(app: &AppHandle, text: impl Into<String>) {
-    let payload = OverlayText { text: text.into() };
-    set_current_text(payload.text.clone());
+    update_payload(app, plain_payload(text.into()));
+}
+
+pub fn update_status(app: &AppHandle, code: &str, fallback_text: &str) {
+    update_payload(app, status_payload(code, fallback_text));
+}
+
+fn update_payload(app: &AppHandle, payload: OverlayText) {
+    set_current_text(payload.clone());
     let _ = app.emit_to(OVERLAY_LABEL, "overlay-text", payload);
 }
 
@@ -195,12 +208,12 @@ pub fn hide(app: &AppHandle) {
     }
 }
 
-pub fn current_text() -> String {
+pub fn current_payload() -> OverlayText {
     OVERLAY_TEXT
-        .get_or_init(|| Mutex::new(DEFAULT_TEXT.to_string()))
+        .get_or_init(|| Mutex::new(status_payload("recording", DEFAULT_TEXT)))
         .lock()
         .map(|text| text.clone())
-        .unwrap_or_else(|_| DEFAULT_TEXT.to_string())
+        .unwrap_or_else(|_| status_payload("recording", DEFAULT_TEXT))
 }
 
 pub fn current_config() -> UiConfig {
@@ -211,16 +224,32 @@ pub fn current_config() -> UiConfig {
         .unwrap_or_default()
 }
 
-fn set_current_text(text: String) {
+fn set_current_text(payload: OverlayText) {
     if let Ok(mut current) = OVERLAY_TEXT
-        .get_or_init(|| Mutex::new(DEFAULT_TEXT.to_string()))
+        .get_or_init(|| Mutex::new(status_payload("recording", DEFAULT_TEXT)))
         .lock()
     {
-        *current = if text.trim().is_empty() {
-            DEFAULT_TEXT.to_string()
+        *current = if payload.text.trim().is_empty() {
+            status_payload("recording", DEFAULT_TEXT)
         } else {
-            text
+            payload
         };
+    }
+}
+
+fn plain_payload(text: String) -> OverlayText {
+    OverlayText {
+        text,
+        status_code: None,
+        fallback_text: None,
+    }
+}
+
+fn status_payload(code: &str, fallback_text: &str) -> OverlayText {
+    OverlayText {
+        text: fallback_text.to_string(),
+        status_code: Some(code.to_string()),
+        fallback_text: Some(fallback_text.to_string()),
     }
 }
 
@@ -235,7 +264,7 @@ fn set_current_config(ui: &UiConfig) {
 
 #[cfg(test)]
 mod tests {
-    use super::effective_overlay_height;
+    use super::{effective_overlay_height, status_payload};
 
     #[test]
     fn clamps_legacy_low_height_for_two_lines() {
@@ -243,5 +272,14 @@ mod tests {
         assert_eq!(effective_overlay_height(51), 52);
         assert_eq!(effective_overlay_height(52), 52);
         assert_eq!(effective_overlay_height(88), 88);
+    }
+
+    #[test]
+    fn status_payload_keeps_a_stable_code_and_fallback_text() {
+        let payload = status_payload("starting", "正在启动麦克风...");
+
+        assert_eq!(payload.status_code.as_deref(), Some("starting"));
+        assert_eq!(payload.fallback_text.as_deref(), Some("正在启动麦克风..."));
+        assert_eq!(payload.text, "正在启动麦克风...");
     }
 }

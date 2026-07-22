@@ -109,6 +109,7 @@
     onOpenRecordingTroubleshooting: () => void;
     onUserErrorAction: (action: UserErrorAction) => void;
     onCopyLastOutcomeText: (text: string) => Promise<boolean>;
+    onClearLastOutcome: () => void;
     onToggleRecording: () => void;
     onSelectSection: (section: Section) => void;
     onUpdateHotwords: (value: string) => void;
@@ -134,6 +135,7 @@
     onTestAsrConfig: () => void;
     onTestLlmConfig: () => void;
     onTestScreenContext: () => void;
+    onClearScreenContextPreview: () => void;
     onHotkeyKeydown: (event: KeyboardEvent) => void;
     onBeginHotkeyCapture: () => void;
     onApplyOverlayPreset: (background: string, text: string) => void;
@@ -235,6 +237,7 @@
     onOpenRecordingTroubleshooting,
     onUserErrorAction,
     onCopyLastOutcomeText,
+    onClearLastOutcome,
     onToggleRecording,
     onSelectSection,
     onUpdateHotwords,
@@ -260,6 +263,7 @@
     onTestAsrConfig,
     onTestLlmConfig,
     onTestScreenContext,
+    onClearScreenContextPreview,
     onHotkeyKeydown,
     onBeginHotkeyCapture,
     onApplyOverlayPreset,
@@ -298,6 +302,7 @@
     {lastSessionOutcome}
     {lastAudioQualityDiagnostic}
     {onCopyLastOutcomeText}
+    {onClearLastOutcome}
     {sessionBusy}
     {snapshotHotkey}
     {chineseTypingCharsPerMinute}
@@ -393,6 +398,7 @@
     {copyingDiagnosticReport}
     {testingScreenContext}
     {screenContextTestResult}
+    {onClearScreenContextPreview}
     {fieldError}
     {formatHotkey}
     {overlayBackgroundRgb}

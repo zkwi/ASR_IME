@@ -74,7 +74,7 @@
   :global(textarea),
   :global(select) {
     font: inherit;
-    transition: all 160ms ease;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
   }
 
   :global(button) {
@@ -400,6 +400,28 @@
   @media (max-width: 620px) {
     :global(.form-panel) {
       padding: 14px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-behavior: auto !important;
+    }
+
+    :global(*),
+    :global(*::before),
+    :global(*::after) {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    :global(button:hover),
+    :global(.stat-card:hover),
+    :global(.history-card:hover),
+    :global(.mic-orb:hover) {
+      transform: none !important;
     }
   }
 </style>

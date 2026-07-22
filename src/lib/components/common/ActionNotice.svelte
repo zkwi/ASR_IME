@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { AlertCircle, Check, Download, Info } from "lucide-svelte";
+  import { AlertCircle, Check, Download, Info, X } from "lucide-svelte";
+  import { noticeRole } from "$lib/utils/notificationPolicy";
 
   export type ActionNoticeKind = "success" | "info" | "warning" | "error";
 
@@ -10,6 +11,8 @@
     actionBusyLabel?: string;
     actionBusy?: boolean;
     onAction?: () => void | Promise<void>;
+    closeLabel: string;
+    onClose: () => void;
   };
 
   let {
@@ -19,8 +22,16 @@
     actionBusyLabel = "",
     actionBusy = false,
     onAction,
+    closeLabel,
+    onClose,
   }: Props = $props();
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (message && event.key === "Escape" && !event.defaultPrevented) onClose();
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if message}
   <div
@@ -28,8 +39,8 @@
     class:info={kind === "info"}
     class:warning={kind === "warning"}
     class="action-notice"
-    role="status"
-    aria-live="polite"
+    role={noticeRole(kind)}
+    aria-live={kind === "error" ? "assertive" : "polite"}
   >
     <div class="notice-main">
       {#if kind === "success"}
@@ -42,11 +53,14 @@
       <span>{message}</span>
     </div>
     {#if actionLabel && onAction}
-      <button type="button" disabled={actionBusy} onclick={onAction}>
+      <button type="button" class="notice-action" disabled={actionBusy} onclick={onAction}>
         <Download size={14} />
         <span>{actionBusy ? actionBusyLabel || actionLabel : actionLabel}</span>
       </button>
     {/if}
+    <button type="button" class="notice-close" aria-label={closeLabel} title={closeLabel} onclick={onClose}>
+      <X size={14} />
+    </button>
   </div>
 {/if}
 
@@ -92,7 +106,7 @@
     white-space: normal;
   }
 
-  .action-notice button {
+  .action-notice .notice-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -110,14 +124,31 @@
     transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
   }
 
-  .action-notice button:hover:not(:disabled) {
+  .action-notice .notice-action:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(217, 119, 6, 0.24);
   }
 
-  .action-notice button:disabled {
+  .action-notice .notice-action:disabled {
     cursor: wait;
     opacity: 0.7;
+  }
+
+  .notice-close {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    place-items: center;
+    padding: 0;
+    color: currentColor;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+    border-radius: 999px;
+  }
+
+  .notice-close:hover {
+    background: color-mix(in srgb, currentColor 9%, transparent);
   }
 
   .action-notice.info {

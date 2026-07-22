@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusTrap } from "$lib/utils/focusTrap";
   type Props = {
     visible: boolean;
     title: string;
@@ -11,18 +12,11 @@
 
   let { visible, title, text, copyLabel, closeLabel, onCopy, onClose }: Props = $props();
 
-  function handleWindowKeydown(event: KeyboardEvent) {
-    if (visible && event.key === "Escape") {
-      onClose();
-    }
-  }
 </script>
-
-<svelte:window onkeydown={handleWindowKeydown} />
 
 {#if visible}
   <div class="prompt-preview-backdrop" role="presentation" onmousedown={(event) => event.target === event.currentTarget && onClose()}>
-    <div class="prompt-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="prompt-preview-title">
+    <div class="prompt-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="prompt-preview-title" tabindex="-1" use:focusTrap={{ initialFocus: "textarea", onEscape: onClose }}>
       <div class="prompt-preview-head">
         <h3 id="prompt-preview-title">{title}</h3>
         <button type="button" class="ghost-action" onclick={onClose}>{closeLabel}</button>

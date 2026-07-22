@@ -14,6 +14,8 @@ export const userErrorCodes = [
   "PASTE_FAILED",
   "HOTKEY_REGISTER_FAILED",
   "SYSTEM_AUDIO_RESTORE_FAILED",
+  "UPDATE_CHECK_FAILED",
+  "UPDATE_DOWNLOAD_FAILED",
 ] as const;
 
 export type UserErrorCode = (typeof userErrorCodes)[number];

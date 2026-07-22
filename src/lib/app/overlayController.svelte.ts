@@ -1,4 +1,3 @@
-import { defaultOverlayText } from "$lib/app/defaults";
 import type { AppConfig, OverlayConfig, OverlayMode, OverlayText } from "$lib/types/app";
 import {
   overlayBackgroundColor as getOverlayBackgroundColor,
@@ -13,6 +12,8 @@ import {
   overlayAvailableTextHeight as getOverlayAvailableTextHeight,
   resolveOverlayDisplayText,
 } from "$lib/utils/overlayLayout";
+import { overlayStatusText } from "$lib/utils/statusCodes";
+import type { CopyKey } from "$lib/i18n";
 
 type SafeInvoke = <T>(
   command: string,
@@ -27,14 +28,15 @@ type OverlayControllerOptions = {
   isRecording: () => boolean;
   getAudioLevel: () => number;
   safeInvoke: SafeInvoke;
+  t: (key: CopyKey) => string;
 };
 
 export function createOverlayController(options: OverlayControllerOptions) {
   let measureCanvas: HTMLCanvasElement | undefined;
-  let text = $state(defaultOverlayText);
+  let text = $state("");
   let mode = $state<OverlayMode>("single");
   let fontSize = $state(20);
-  let displayLines = $state<string[]>([defaultOverlayText]);
+  let displayLines = $state<string[]>([""]);
   let textElement = $state<HTMLDivElement | null>(null);
   let pollPending = false;
   let configPollPending = false;
@@ -47,7 +49,7 @@ export function createOverlayController(options: OverlayControllerOptions) {
     try {
       const result = await options.safeInvoke<OverlayText>("get_overlay_text");
       const nextText = result?.text ?? "";
-      if (nextText.trim()) applyText(nextText);
+      if (nextText.trim()) applyPayload(result!);
     } finally {
       pollPending = false;
     }
@@ -91,7 +93,7 @@ export function createOverlayController(options: OverlayControllerOptions) {
   }
 
   function applyText(rawText: string, force = false) {
-    const normalized = normalizeOverlayText(rawText) || defaultOverlayText;
+    const normalized = normalizeOverlayText(rawText) || options.t("overlayStatusRecording");
     if (!force && normalized === text) return;
     text = normalized;
 
@@ -104,6 +106,16 @@ export function createOverlayController(options: OverlayControllerOptions) {
     mode = layout.mode;
     fontSize = layout.fontSize;
     displayLines = layout.lines;
+  }
+
+  function applyPayload(payload: OverlayText) {
+    applyText(
+      overlayStatusText(
+        payload.status_code,
+        payload.fallback_text ?? payload.text,
+        options.t,
+      ),
+    );
   }
 
   function dispose() {}
@@ -207,6 +219,7 @@ export function createOverlayController(options: OverlayControllerOptions) {
     refreshLayout,
     applyConfig,
     applyText,
+    applyPayload,
     dispose,
     meterBarHeight,
     meterBarOpacity,
