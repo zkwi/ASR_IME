@@ -11,6 +11,7 @@ import type {
 import { clonePlain } from "$lib/utils/config";
 import type { SetupStatus } from "$lib/utils/setupStatus";
 import { llmAdapterConfigFingerprint } from "$lib/utils/llmConfig";
+import type { LlmTestRecord } from "$lib/utils/llmTestHistory";
 
 type NoticeKind = "success" | "info" | "warning" | "error";
 
@@ -44,6 +45,7 @@ type SetupControllerOptions = {
   getTestingLlm: () => boolean;
   setTestingLlm: (testing: boolean) => void;
   setLlmTestStatusMessage: (message: string) => void;
+  recordLlmTestResult: (record: Omit<LlmTestRecord, "testedAt">) => void;
   getTestingScreenContext: () => boolean;
   setTestingScreenContext: (testing: boolean) => void;
   setScreenContextTestResult: (result: ScreenContextTestResult | null) => void;
@@ -113,6 +115,10 @@ export function createSetupController(options: SetupControllerOptions) {
         config,
       });
       if (result) {
+        options.recordLlmTestResult({
+          succeeded: true,
+          elapsedMs: typeof result.elapsed_ms === "number" ? result.elapsed_ms : null,
+        });
         const currentConfig = options.getConfig();
         const currentMatchesTestedConfig =
           llmAdapterConfigFingerprint(currentConfig) === testedFingerprint;
@@ -139,10 +145,13 @@ export function createSetupController(options: SetupControllerOptions) {
         options.setStatusMessage(message);
         options.setLlmTestStatusMessage(message);
         options.notify(message, "success");
-      } else if (options.getStatusMessage()) {
-        const message = options.getStatusMessage();
-        options.setLlmTestStatusMessage(message);
-        options.notify(message, "error");
+      } else {
+        options.recordLlmTestResult({ succeeded: false, elapsedMs: null });
+        if (options.getStatusMessage()) {
+          const message = options.getStatusMessage();
+          options.setLlmTestStatusMessage(message);
+          options.notify(message, "error");
+        }
       }
     } finally {
       options.setTestingLlm(false);

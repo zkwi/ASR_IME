@@ -10,6 +10,7 @@
   import PrivacySection from "$lib/components/pages/PrivacySection.svelte";
   import type { SetupStatusItem, SetupStatusWarning } from "$lib/components/overview/SetupStatusCard.svelte";
   import type { CopyKey, UserErrorDetail } from "$lib/i18n";
+  import type { LlmTestSummary } from "$lib/utils/llmTestHistory";
   import type {
     AppConfig,
     AudioDeviceInfo,
@@ -79,6 +80,7 @@
     autoHotwordStatusText: string;
     llmApiStatusText: string;
     llmTestStatusText: string;
+    llmTestSummary: LlmTestSummary;
     fieldError: (field: string) => string;
     candidateConfidenceLabel: (confidence: number) => string;
     formatHotkey: (value: string) => string;
@@ -207,6 +209,7 @@
     autoHotwordStatusText,
     llmApiStatusText,
     llmTestStatusText,
+    llmTestSummary,
     fieldError,
     candidateConfidenceLabel,
     formatHotkey,
@@ -369,10 +372,12 @@
     {hasLlmApiConfig}
     {llmApiStatusText}
     {llmTestStatusText}
+    {llmTestSummary}
     {fieldError}
     {setupRequiredMessage}
     {setupActionText}
     {formatHotkey}
+    {formatNumber}
     onScrollToSettingsPanel={onScrollToSettingsPanel}
     onOpenSetupGuide={onOpenSetupGuide}
     onOpenDoubaoAsrDocs={onOpenDoubaoAsrDocs}

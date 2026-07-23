@@ -74,6 +74,13 @@ import {
 import { formatHotkey } from "$lib/utils/hotkeys";
 import { overlayOpacityLabel } from "$lib/utils/overlayAppearance";
 import {
+  appendLlmTestRecord,
+  readLlmTestHistory,
+  saveLlmTestHistory,
+  summarizeLlmTestHistory,
+  type LlmTestRecord,
+} from "$lib/utils/llmTestHistory";
+import {
   sessionPhaseMessageKey,
 } from "$lib/utils/sessionState";
 import { userFacingInvokeFailure } from "$lib/utils/userFacingErrors";
@@ -174,6 +181,7 @@ export function createVoxTypeController() {
   let asrTestedConfigFingerprint = $state("");
   let testingLlm = $state(false);
   let llmTestStatusMessage = $state("");
+  let llmTestHistory = $state<LlmTestRecord[]>(browser ? readLlmTestHistory(localStorage) : []);
   let llmAutoAdaptTestedFingerprint = $state("");
   let testingScreenContext = $state(false);
   let screenContextTestResult = $state<ScreenContextTestResult | null>(null);
@@ -323,6 +331,10 @@ export function createVoxTypeController() {
     },
     setLlmTestStatusMessage: (message) => {
       llmTestStatusMessage = message;
+    },
+    recordLlmTestResult: (record) => {
+      llmTestHistory = appendLlmTestRecord(llmTestHistory, { ...record, testedAt: Date.now() });
+      if (browser) saveLlmTestHistory(localStorage, llmTestHistory);
     },
     getTestingScreenContext: () => testingScreenContext,
     setTestingScreenContext: (testing) => {
@@ -1258,6 +1270,7 @@ export function createVoxTypeController() {
       autoHotwordStatusText: autoHotwords.statusText(),
       llmApiStatusText: llmApiStatusText(),
       llmTestStatusText: llmTestStatusText(),
+      llmTestSummary: summarizeLlmTestHistory(llmTestHistory),
       fieldError,
       candidateConfidenceLabel,
       formatHotkey,

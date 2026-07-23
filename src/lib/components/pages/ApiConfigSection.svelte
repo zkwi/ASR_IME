@@ -1,5 +1,6 @@
 <script lang="ts">
   import AdvancedSettings from "$lib/components/common/AdvancedSettings.svelte";
+  import SecretInput from "$lib/components/common/SecretInput.svelte";
   import SettingTags from "$lib/components/common/SettingTags.svelte";
   import SetupStatusCard, {
     type SetupStatusItem,
@@ -7,8 +8,9 @@
   } from "$lib/components/overview/SetupStatusCard.svelte";
   import type { CopyKey } from "$lib/i18n";
   import type { AppConfig } from "$lib/types/app";
+  import type { LlmTestSummary } from "$lib/utils/llmTestHistory";
   import { ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO } from "$lib/utils/asrProvider";
-  import { ExternalLink, ShieldCheck } from "lucide-svelte";
+  import { Activity, ExternalLink, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
 
@@ -79,10 +81,12 @@
     hasLlmApiConfig: boolean;
     llmApiStatusText: string;
     llmTestStatusText: string;
+    llmTestSummary: LlmTestSummary;
     fieldError: (field: string) => string;
     setupRequiredMessage: () => string;
     setupActionText: (action: string) => string;
     formatHotkey: (value: string) => string;
+    formatNumber: (value: number) => string;
     onScrollToSettingsPanel: (id: string) => void;
     onOpenSetupGuide: () => void;
     onOpenDoubaoAsrDocs: () => void;
@@ -109,10 +113,12 @@
     hasLlmApiConfig,
     llmApiStatusText,
     llmTestStatusText,
+    llmTestSummary,
     fieldError,
     setupRequiredMessage,
     setupActionText,
     formatHotkey,
+    formatNumber,
     onScrollToSettingsPanel,
     onOpenSetupGuide,
     onOpenDoubaoAsrDocs,
@@ -237,12 +243,19 @@
           <small class="field-hint">{t("asrProviderHint")}</small>
         </label>
         {#if config.asr.provider === ASR_PROVIDER_ALIYUN_FUN}
-          <label class:field-invalid={Boolean(fieldError("aliyun_asr.api_key"))}>
-            <span>API Key</span>
-            <input id="setting-aliyun-api-key" data-config-field="aliyun_asr.api_key" aria-invalid={Boolean(fieldError("aliyun_asr.api_key"))} aria-describedby={fieldError("aliyun_asr.api_key") ? "setting-aliyun-api-key-error setting-aliyun-api-key-hint" : "setting-aliyun-api-key-hint"} type="password" autocomplete="off" bind:value={config.aliyun_asr.api_key} />
-            {#if fieldError("aliyun_asr.api_key")}<small id="setting-aliyun-api-key-error" class="field-error">{fieldError("aliyun_asr.api_key")}</small>{/if}
-            <small id="setting-aliyun-api-key-hint" class="field-hint">{t("aliyunApiKeyHint")}</small>
-          </label>
+          <SecretInput
+            id="setting-aliyun-api-key"
+            configField="aliyun_asr.api_key"
+            bind:value={config.aliyun_asr.api_key}
+            label="API Key"
+            hint={t("aliyunApiKeyHint")}
+            error={fieldError("aliyun_asr.api_key")}
+            showLabel={t("showApiKey")}
+            hideLabel={t("hideApiKey")}
+            copyLabel={t("copyApiKey")}
+            copiedLabel={t("apiKeyCopied")}
+            copyFailedLabel={t("apiKeyCopyFailed")}
+          />
           <label class:field-invalid={Boolean(fieldError("aliyun_asr.workspace_id"))}>
             <span>Workspace ID</span>
             <input id="setting-aliyun-workspace-id" data-config-field="aliyun_asr.workspace_id" aria-invalid={Boolean(fieldError("aliyun_asr.workspace_id"))} aria-describedby={fieldError("aliyun_asr.workspace_id") ? "setting-aliyun-workspace-id-error setting-aliyun-workspace-id-hint" : "setting-aliyun-workspace-id-hint"} autocomplete="off" bind:value={config.aliyun_asr.workspace_id} />
@@ -255,11 +268,18 @@
             <input id="setting-doubao-app-key" data-config-field="auth.app_key" aria-invalid={Boolean(fieldError("auth.app_key"))} aria-describedby={fieldError("auth.app_key") ? "setting-doubao-app-key-error" : undefined} autocomplete="off" bind:value={config.auth.app_key} />
             {#if fieldError("auth.app_key")}<small id="setting-doubao-app-key-error" class="field-error">{fieldError("auth.app_key")}</small>{/if}
           </label>
-          <label class:field-invalid={Boolean(fieldError("auth.access_key"))}>
-            <span>{t("accessKey")}</span>
-            <input id="setting-doubao-access-key" data-config-field="auth.access_key" aria-invalid={Boolean(fieldError("auth.access_key"))} aria-describedby={fieldError("auth.access_key") ? "setting-doubao-access-key-error" : undefined} type="password" autocomplete="off" bind:value={config.auth.access_key} />
-            {#if fieldError("auth.access_key")}<small id="setting-doubao-access-key-error" class="field-error">{fieldError("auth.access_key")}</small>{/if}
-          </label>
+          <SecretInput
+            id="setting-doubao-access-key"
+            configField="auth.access_key"
+            bind:value={config.auth.access_key}
+            label={t("accessKey")}
+            error={fieldError("auth.access_key")}
+            showLabel={t("showApiKey")}
+            hideLabel={t("hideApiKey")}
+            copyLabel={t("copyApiKey")}
+            copiedLabel={t("apiKeyCopied")}
+            copyFailedLabel={t("apiKeyCopyFailed")}
+          />
         {/if}
       </div>
       <AdvancedSettings
@@ -357,25 +377,68 @@
       <p class="field-hint">{t("llmPolishingDataHint")}</p>
       <p class="field-hint">{t("llmAutoTestDataHint")}</p>
       <div id="llm-api-config-fields" class="llm-api-config-fields">
-        <div class="form-grid">
+        <div class="form-grid llm-config-grid">
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.base_url"))}>
             <span>Base URL</span>
             <input id="setting-llm-base-url" data-config-field="llm_post_edit.base_url" aria-invalid={Boolean(fieldError("llm_post_edit.base_url"))} aria-describedby={fieldError("llm_post_edit.base_url") ? "setting-llm-base-url-error setting-llm-base-url-hint" : "setting-llm-base-url-hint"} bind:value={config.llm_post_edit.base_url} />
             {#if fieldError("llm_post_edit.base_url")}<small id="setting-llm-base-url-error" class="field-error">{fieldError("llm_post_edit.base_url")}</small>{/if}
             <small id="setting-llm-base-url-hint" class="field-hint">{t("llmApiBaseUrlHint")}</small>
           </label>
-          <label class:field-invalid={Boolean(fieldError("llm_post_edit.api_key"))}>
-            <span>API Key</span>
-            <input id="setting-llm-api-key" data-config-field="llm_post_edit.api_key" aria-invalid={Boolean(fieldError("llm_post_edit.api_key"))} aria-describedby={fieldError("llm_post_edit.api_key") ? "setting-llm-api-key-error setting-llm-api-key-hint" : "setting-llm-api-key-hint"} type="password" autocomplete="off" bind:value={config.llm_post_edit.api_key} />
-            {#if fieldError("llm_post_edit.api_key")}<small id="setting-llm-api-key-error" class="field-error">{fieldError("llm_post_edit.api_key")}</small>{/if}
-            <small id="setting-llm-api-key-hint" class="field-hint">{t("llmApiKeyHint")}</small>
-          </label>
+          <SecretInput
+            id="setting-llm-api-key"
+            configField="llm_post_edit.api_key"
+            bind:value={config.llm_post_edit.api_key}
+            label="API Key"
+            hint={t("llmApiKeyHint")}
+            error={fieldError("llm_post_edit.api_key")}
+            showLabel={t("showApiKey")}
+            hideLabel={t("hideApiKey")}
+            copyLabel={t("copyApiKey")}
+            copiedLabel={t("apiKeyCopied")}
+            copyFailedLabel={t("apiKeyCopyFailed")}
+          />
           <label class:field-invalid={Boolean(fieldError("llm_post_edit.model"))}>
             <span>{t("model")}</span>
             <input id="setting-llm-model" data-config-field="llm_post_edit.model" aria-invalid={Boolean(fieldError("llm_post_edit.model"))} aria-describedby={fieldError("llm_post_edit.model") ? "setting-llm-model-error setting-llm-model-hint" : "setting-llm-model-hint"} bind:value={config.llm_post_edit.model} />
             {#if fieldError("llm_post_edit.model")}<small id="setting-llm-model-error" class="field-error">{fieldError("llm_post_edit.model")}</small>{/if}
             <small id="setting-llm-model-hint" class="field-hint">{t("llmApiModelHint")}</small>
           </label>
+          <section class="llm-test-summary" aria-live="polite">
+            <div class="llm-test-summary-heading">
+              <span class="llm-test-summary-icon"><Activity size={17} /></span>
+              <div>
+                <strong>{t("llmTestHistoryTitle")}</strong>
+                <small>
+                  {llmTestSummary.sampleCount > 0
+                    ? t("llmTestHistoryDescription", { count: String(llmTestSummary.sampleCount) })
+                    : t("llmTestHistoryEmpty")}
+                </small>
+              </div>
+            </div>
+            {#if llmTestSummary.sampleCount > 0}
+              <div class="llm-test-metrics">
+                <div>
+                  <span>{t("llmAverageLatency")}</span>
+                  <strong>{llmTestSummary.averageLatencyMs === null ? "—" : `${formatNumber(llmTestSummary.averageLatencyMs)} ms`}</strong>
+                </div>
+                <div>
+                  <span>{t("llmTestSuccessRate")}</span>
+                  <strong>{llmTestSummary.successRate}%</strong>
+                </div>
+                <div>
+                  <span>{t("llmLatestTest")}</span>
+                  <strong class:failed={!llmTestSummary.latestSucceeded}>
+                    {llmTestSummary.latestSucceeded && llmTestSummary.latestLatencyMs !== null
+                      ? `${formatNumber(llmTestSummary.latestLatencyMs)} ms`
+                      : llmTestSummary.latestSucceeded
+                        ? t("llmLatestTestSucceeded")
+                      : t("llmLatestTestFailed")}
+                  </strong>
+                </div>
+              </div>
+            {/if}
+            <small class="llm-test-privacy">{t("llmTestHistoryPrivacy")}</small>
+          </section>
         </div>
         <AdvancedSettings
           title={t("llmAdvancedSettings")}
@@ -461,6 +524,93 @@
   .llm-api-config-fields {
     display: grid;
     gap: 14px;
+  }
+
+  .llm-config-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .llm-test-summary {
+    display: grid;
+    align-self: stretch;
+    gap: 12px;
+    min-width: 0;
+    padding: 13px 14px;
+    background: linear-gradient(145deg, #f7fbff 0%, #f2f7ff 100%);
+    border: 1px solid #cfe0f7;
+    border-radius: 12px;
+  }
+
+  .llm-test-summary-heading {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+  }
+
+  .llm-test-summary-heading > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .llm-test-summary-heading strong {
+    color: var(--text-main);
+    font-size: 13px;
+  }
+
+  .llm-test-summary-heading small,
+  .llm-test-privacy {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .llm-test-summary-icon {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    color: var(--primary);
+    background: #e5f0ff;
+    border-radius: 10px;
+  }
+
+  .llm-test-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .llm-test-metrics > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 9px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(207, 224, 247, 0.82);
+    border-radius: 9px;
+  }
+
+  .llm-test-metrics span {
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .llm-test-metrics strong {
+    color: var(--text-main);
+    font-size: 13px;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .llm-test-metrics strong.failed {
+    color: #b54747;
+  }
+
+  .llm-test-privacy {
+    overflow-wrap: anywhere;
   }
 
   .setup-note {
@@ -585,6 +735,10 @@
 
     .setup-actions button {
       flex: 1 1 150px;
+    }
+
+    .llm-config-grid {
+      grid-template-columns: 1fr;
     }
   }
 

@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- API Key 与大模型测试摘要发布审计：[2026-07-23 VoxType 0.10.0 API Key 与大模型测试摘要发布审计](audits/2026-07-23-release-0.10.0-api-key-test-history-audit.md)
 - 等待最终结果快捷键中断热修发布审计：[2026-07-22 VoxType 0.9.1 等待最终结果快捷键中断热修发布审计](audits/2026-07-22-release-0.9.1-waiting-final-interrupt-audit.md)
 - 配置可靠性与可访问性发布审计：[2026-07-22 VoxType 0.9.0 配置可靠性与可访问性发布审计](audits/2026-07-22-release-0.9.0-reliability-accessibility-audit.md)
 - FunASR 累计字幕发布审计：[2026-07-18 VoxType 0.8.3 FunASR 累计字幕发布审计](audits/2026-07-18-release-0.8.3-funasr-cumulative-caption-audit.md)
