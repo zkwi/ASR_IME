@@ -140,13 +140,13 @@ VoxType 当前按豆包流式语音识别文档发送 `X-Api-App-Key`、`X-Api-A
 | Base URL | OpenAI 兼容接口地址，可填服务根地址、`/v1` 地址或完整 `/chat/completions` 地址 |
 | API Key | 对应大模型服务商的 Key，必须和 Base URL 来自同一平台/地域 |
 | 模型 | 例如 `qwen3.5-plus`，必须是当前账号可调用的模型名 |
-| 高级兼容性设置 | 思考适配默认自动；测试连接会尝试候选策略并保存最快的成功结果 |
+| 高级兼容性设置 | 思考适配默认自动；OpenRouter 优先使用 `reasoning.effort=none` 关闭推理，测试连接会保存最快的可用策略 |
 
 密钥输入默认隐藏，可用输入框右侧按钮临时显示或复制。建议配置后点击 **测试**，也可以等待自动保存后自动测试。测试会使用一段示例文本和正式大模型提示词发起调用，成功时会显示本次延迟，并在自动模式下保存最快的思考/推理适配策略，但不会读取剪贴板、实时屏幕 OCR 或本地最近上下文正文。页面会在本机保留最近 5 次测试的成功率、成功请求平均延迟和最近一次结果；只保存测试时间、结果和延迟，不保存密钥、模型名或测试文本。修改 Base URL、API Key、模型名或 thinking 开关并自动保存后，VoxType 会自动从 `auto` 候选重新测速并保存最快成功策略。如果只是语音识别，不需要开启大模型润色。开启润色后，达到最小字数的最终识别文本会发送到你配置的大模型服务；用户词典、场景与产品偏好、按预算压缩后的屏幕 OCR 和可选最近上下文会作为参考信息追加。最近上下文进入大模型默认关闭，只有最近上下文和“润色时参考最近上下文”同时开启时才会发送，默认只发送最近几段中的约 200 字；屏幕 OCR 默认按行去空、去重后最多发送 12 行 / 400 字，热词默认最多 50 条。LLM 参考预算属于低频参数，保留在 `config.toml`，普通界面不再日常展示。
 
 默认示例使用阿里云百炼/DashScope 的 OpenAI 兼容接口。北京地域 Base URL 是 `https://dashscope.aliyuncs.com/compatible-mode/v1`；如果使用新加坡、美国或其他地域，需要同步更换 Base URL、API Key 和模型权限，不要只改其中一个字段。DeepSeek 等标准 OpenAI 兼容服务可填写服务根地址、`/v1` 地址或完整 `/chat/completions` 地址，例如 `https://api.deepseek.com`、`https://api.deepseek.com/v1/`、`https://api.deepseek.com/v1/chat/completions` 会作为等价地址处理。
 
-DashScope 关闭 thinking 时必须显式发送 `enable_thinking=false`，省略字段不代表关闭。`qwen3.7-max-preview` 和 `qwen3.7-max-2026-05-17` 属于仅思考模型，无法关闭思考；VoxType 会阻止这类慢请求并提示改用 `qwen3.7-max`、`qwen3.7-max-2026-05-20` 或 `qwen3.7-max-2026-06-08`。
+DashScope 关闭 thinking 时必须显式发送 `enable_thinking=false`，省略字段不代表关闭。OpenRouter 模型在支持时会发送 `reasoning.effort=none`；如果模型强制思考，测试会继续尝试低档 reasoning。仅返回思考内容、没有最终正文的响应不会被判定为润色可用。`qwen3.7-max-preview` 和 `qwen3.7-max-2026-05-17` 属于仅思考模型，无法关闭思考；VoxType 会阻止这类慢请求并提示改用 `qwen3.7-max`、`qwen3.7-max-2026-05-20` 或 `qwen3.7-max-2026-06-08`。
 
 DashScope 模型选择可参考 [2026-05-28 LLM 润色模型测试记录](../audits/2026-05-28-llm-polishing-model-test.md)。其中 2026-05-30 复测修正了旧结论：日常仍优先考虑 `qwen3.7-max`；低延迟优先可考虑 `qwen3.6-flash-2026-04-16`，但它对提示词样式文本和技术路径更容易改偏；不要仅因技术文本切换到 `deepseek-v4-pro`，当前简化 prompt 下它也会改写代码路径。实际能否调用取决于当前账号和地域权限。
 

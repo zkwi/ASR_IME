@@ -5,6 +5,7 @@ pub const STRATEGY_DASHSCOPE_ENABLE_THINKING: &str = "dashscope_enable_thinking"
 pub const STRATEGY_THINKING_DISABLED: &str = "thinking_disabled";
 pub const STRATEGY_OPENROUTER_REASONING_LOW: &str = "openrouter_reasoning_low";
 pub const STRATEGY_OPENROUTER_REASONING_MINIMAL: &str = "openrouter_reasoning_minimal";
+pub const STRATEGY_OPENROUTER_REASONING_NONE: &str = "openrouter_reasoning_none";
 pub const STRATEGY_OMIT: &str = "omit";
 
 const ALLOWED_STRATEGIES: &[&str] = &[
@@ -13,6 +14,7 @@ const ALLOWED_STRATEGIES: &[&str] = &[
     STRATEGY_THINKING_DISABLED,
     STRATEGY_OPENROUTER_REASONING_LOW,
     STRATEGY_OPENROUTER_REASONING_MINIMAL,
+    STRATEGY_OPENROUTER_REASONING_NONE,
     STRATEGY_OMIT,
 ];
 
@@ -70,13 +72,13 @@ pub fn thinking_strategy_candidates(
             return vec![
                 STRATEGY_OPENROUTER_REASONING_LOW,
                 STRATEGY_OPENROUTER_REASONING_MINIMAL,
-                STRATEGY_DASHSCOPE_ENABLE_THINKING,
+                STRATEGY_OPENROUTER_REASONING_NONE,
             ];
         }
         return vec![
+            STRATEGY_OPENROUTER_REASONING_NONE,
             STRATEGY_OPENROUTER_REASONING_MINIMAL,
             STRATEGY_OPENROUTER_REASONING_LOW,
-            STRATEGY_DASHSCOPE_ENABLE_THINKING,
         ];
     }
 
@@ -112,6 +114,9 @@ pub fn apply_thinking_strategy(
         }
         STRATEGY_OPENROUTER_REASONING_MINIMAL => {
             body["reasoning"] = json!({ "effort": "minimal", "exclude": true });
+        }
+        STRATEGY_OPENROUTER_REASONING_NONE => {
+            body["reasoning"] = json!({ "effort": "none", "exclude": true });
         }
         STRATEGY_OMIT | STRATEGY_AUTO => {}
         _ => {}
@@ -199,7 +204,7 @@ fn preferred_auto_strategy(base_url: &str, model: &str) -> &'static str {
         return STRATEGY_OPENROUTER_REASONING_LOW;
     }
     if base_url.contains("openrouter.ai") {
-        return STRATEGY_OPENROUTER_REASONING_MINIMAL;
+        return STRATEGY_OPENROUTER_REASONING_NONE;
     }
     STRATEGY_DASHSCOPE_ENABLE_THINKING
 }
@@ -216,6 +221,7 @@ fn normalize_thinking_strategy(strategy: &str) -> &'static str {
         STRATEGY_THINKING_DISABLED => STRATEGY_THINKING_DISABLED,
         STRATEGY_OPENROUTER_REASONING_LOW => STRATEGY_OPENROUTER_REASONING_LOW,
         STRATEGY_OPENROUTER_REASONING_MINIMAL => STRATEGY_OPENROUTER_REASONING_MINIMAL,
+        STRATEGY_OPENROUTER_REASONING_NONE => STRATEGY_OPENROUTER_REASONING_NONE,
         STRATEGY_OMIT => STRATEGY_OMIT,
         _ => STRATEGY_AUTO,
     }
@@ -228,7 +234,7 @@ mod tests {
         is_thinking_only_model, is_valid_thinking_strategy,
         should_retry_without_unsupported_thinking, thinking_strategy_candidates, STRATEGY_AUTO,
         STRATEGY_DASHSCOPE_ENABLE_THINKING, STRATEGY_OMIT, STRATEGY_OPENROUTER_REASONING_LOW,
-        STRATEGY_OPENROUTER_REASONING_MINIMAL, STRATEGY_THINKING_DISABLED,
+        STRATEGY_OPENROUTER_REASONING_NONE, STRATEGY_THINKING_DISABLED,
     };
     use serde_json::json;
 
@@ -291,7 +297,31 @@ mod tests {
                 "x-ai/grok-build-0.1",
                 STRATEGY_AUTO,
             ),
-            STRATEGY_OPENROUTER_REASONING_MINIMAL
+            STRATEGY_OPENROUTER_REASONING_NONE
+        );
+    }
+
+    #[test]
+    fn disables_reasoning_for_openrouter_models_that_allow_it() {
+        let base_url = "https://openrouter.ai/api/v1";
+        let model = "tencent/hy3";
+
+        assert_eq!(
+            effective_thinking_strategy(base_url, model, STRATEGY_AUTO),
+            "openrouter_reasoning_none"
+        );
+        assert_eq!(
+            thinking_strategy_candidates(base_url, model, STRATEGY_AUTO)[0],
+            "openrouter_reasoning_none"
+        );
+
+        let mut body = json!({});
+        let used = apply_thinking_strategy(&mut body, base_url, model, false, STRATEGY_AUTO);
+
+        assert_eq!(used, "openrouter_reasoning_none");
+        assert_eq!(
+            body["reasoning"],
+            json!({ "effort": "none", "exclude": true })
         );
     }
 

@@ -60,7 +60,12 @@ pub fn extract_message_content(value: &Value) -> String {
 }
 
 pub fn extract_reasoning_content(value: &Value) -> String {
-    extract_message_string_field(value, "reasoning_content")
+    let legacy = extract_message_string_field(value, "reasoning_content");
+    if legacy.is_empty() {
+        extract_message_string_field(value, "reasoning")
+    } else {
+        legacy
+    }
 }
 
 pub fn response_was_truncated(value: &Value) -> bool {
@@ -139,6 +144,20 @@ mod tests {
 
         assert_eq!(extract_message_content(&value), "final text");
         assert_eq!(extract_reasoning_content(&value), "private reasoning");
+    }
+
+    #[test]
+    fn extracts_openrouter_reasoning_field() {
+        let value = json!({
+            "choices": [{
+                "message": {
+                    "content": "",
+                    "reasoning": "gateway reasoning"
+                }
+            }]
+        });
+
+        assert_eq!(extract_reasoning_content(&value), "gateway reasoning");
     }
 
     #[test]

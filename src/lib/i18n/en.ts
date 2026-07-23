@@ -450,6 +450,7 @@ export const en = {
   "llmThinkingStrategyAuto": "Auto",
   "llmThinkingStrategyDashscope": "enable_thinking=false",
   "llmThinkingStrategyDisabledObject": "thinking.type=disabled",
+  "llmThinkingStrategyOpenRouterNone": "OpenRouter reasoning none (off)",
   "llmThinkingStrategyOpenRouterLow": "OpenRouter reasoning low",
   "llmThinkingStrategyOpenRouterMinimal": "OpenRouter reasoning minimal",
   "llmThinkingStrategyOmit": "Omit thinking fields",

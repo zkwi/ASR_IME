@@ -316,7 +316,7 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         push_validation_error(
             &mut errors,
             "llm_post_edit.thinking_strategy",
-            "思考模式适配策略只能选择 auto、dashscope_enable_thinking、thinking_disabled、openrouter_reasoning_low、openrouter_reasoning_minimal 或 omit。",
+            "思考模式适配策略只能选择 auto、dashscope_enable_thinking、thinking_disabled、openrouter_reasoning_none、openrouter_reasoning_low、openrouter_reasoning_minimal 或 omit。",
         );
     }
     if config.llm_post_edit.enabled {

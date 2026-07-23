@@ -450,6 +450,7 @@ export const zhTW = {
   "llmThinkingStrategyAuto": "自動選擇",
   "llmThinkingStrategyDashscope": "enable_thinking=false",
   "llmThinkingStrategyDisabledObject": "thinking.type=disabled",
+  "llmThinkingStrategyOpenRouterNone": "OpenRouter reasoning none（關閉）",
   "llmThinkingStrategyOpenRouterLow": "OpenRouter reasoning low",
   "llmThinkingStrategyOpenRouterMinimal": "OpenRouter reasoning minimal",
   "llmThinkingStrategyOmit": "不傳送思考欄位",

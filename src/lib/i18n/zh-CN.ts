@@ -449,6 +449,7 @@ export const zhCN = {
   "llmThinkingStrategyAuto": "自动选择",
   "llmThinkingStrategyDashscope": "enable_thinking=false",
   "llmThinkingStrategyDisabledObject": "thinking.type=disabled",
+  "llmThinkingStrategyOpenRouterNone": "OpenRouter reasoning none（关闭）",
   "llmThinkingStrategyOpenRouterLow": "OpenRouter reasoning low",
   "llmThinkingStrategyOpenRouterMinimal": "OpenRouter reasoning minimal",
   "llmThinkingStrategyOmit": "不发送思考字段",

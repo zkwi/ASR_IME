@@ -3,7 +3,7 @@ use crate::{
     config::{effective_hotwords, AppConfig},
     llm_client::{
         base_chat_body, build_client, extract_message_content, extract_reasoning_content,
-        send_chat_with_thinking_fallback,
+        response_was_truncated, send_chat_with_thinking_fallback,
     },
     llm_request_adapter::{
         apply_thinking_strategy, is_thinking_only_model, thinking_strategy_candidates,
@@ -352,11 +352,8 @@ pub async fn test_connection(config: &AppConfig) -> Result<LlmConnectionTestResu
                     best_result = Some(next);
                 }
             }
-            Ok(_) => {
-                last_error = Some(
-                    "大模型已响应，但测试返回空内容；请检查模型名称，或关闭思考模式后再测试。"
-                        .to_string(),
-                );
+            Ok(result) => {
+                last_error = Some(connection_test_empty_output_error(&result.value));
             }
             Err(err) => {
                 last_error = Some(friendly_llm_test_error(&err));
@@ -490,7 +487,23 @@ fn elapsed_millis(started_at: Instant) -> u64 {
 
 fn has_connection_test_output(value: &Value) -> bool {
     !extract_message_content(value).trim().is_empty()
-        || !extract_reasoning_content(value).trim().is_empty()
+}
+
+fn connection_test_empty_output_error(value: &Value) -> String {
+    let has_reasoning = !extract_reasoning_content(value).trim().is_empty();
+    if response_was_truncated(value) {
+        if has_reasoning {
+            return "大模型已响应，但思考内容耗尽了测试输出额度，未返回最终文本；请关闭思考模式或改用兼容的思考适配策略。"
+                .to_string();
+        }
+        return "大模型已响应，但测试输出额度耗尽且未返回最终文本；请关闭思考模式或改用兼容的思考适配策略。"
+            .to_string();
+    }
+    if has_reasoning {
+        return "大模型已响应，但只返回了思考内容，没有可用于润色的最终文本；请关闭思考模式或改用兼容的思考适配策略。"
+            .to_string();
+    }
+    "大模型已响应，但测试返回空内容；请检查模型名称，或关闭思考模式后再测试。".to_string()
 }
 
 fn friendly_llm_error(error: &str) -> String {
@@ -559,11 +572,12 @@ fn thinking_disabled_model_warning(
 mod tests {
     use super::{
         build_polish_user_prompt, build_recent_context_reference, chat_body,
-        compact_screen_context_for_llm, connection_test_chat_body, extract_message_content,
-        friendly_llm_error, friendly_llm_test_error, has_connection_test_output,
-        polish_max_tokens_for_input, polish_max_tokens_for_request, polish_trigger_units,
-        should_polish, system_prompt_for_request, thinking_disabled_model_warning,
-        LLM_CONNECTION_TEST_MAX_TOKENS, LLM_CONNECTION_TEST_TEXT,
+        compact_screen_context_for_llm, connection_test_chat_body,
+        connection_test_empty_output_error, extract_message_content, friendly_llm_error,
+        friendly_llm_test_error, has_connection_test_output, polish_max_tokens_for_input,
+        polish_max_tokens_for_request, polish_trigger_units, should_polish,
+        system_prompt_for_request, thinking_disabled_model_warning, LLM_CONNECTION_TEST_MAX_TOKENS,
+        LLM_CONNECTION_TEST_TEXT,
     };
     use crate::config::{AppConfig, TextContext};
     use crate::llm_request_adapter::{
@@ -649,18 +663,20 @@ mod tests {
     }
 
     #[test]
-    fn connection_test_allows_reasoning_only_response() {
+    fn connection_test_rejects_truncated_reasoning_only_response() {
         let value = json!({
             "choices": [{
                 "message": {
                     "reasoning_content": "先确认请求已经到达服务。",
                     "content": ""
-                }
+                },
+                "finish_reason": "length"
             }]
         });
 
-        assert!(has_connection_test_output(&value));
+        assert!(!has_connection_test_output(&value));
         assert_eq!(extract_message_content(&value), "");
+        assert!(connection_test_empty_output_error(&value).contains("思考内容耗尽"));
     }
 
     #[test]

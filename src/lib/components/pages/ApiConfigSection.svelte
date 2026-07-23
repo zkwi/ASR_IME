@@ -46,6 +46,7 @@
     { value: "auto", labelKey: "llmThinkingStrategyAuto" },
     { value: "dashscope_enable_thinking", labelKey: "llmThinkingStrategyDashscope" },
     { value: "thinking_disabled", labelKey: "llmThinkingStrategyDisabledObject" },
+    { value: "openrouter_reasoning_none", labelKey: "llmThinkingStrategyOpenRouterNone" },
     { value: "openrouter_reasoning_low", labelKey: "llmThinkingStrategyOpenRouterLow" },
     { value: "openrouter_reasoning_minimal", labelKey: "llmThinkingStrategyOpenRouterMinimal" },
     { value: "omit", labelKey: "llmThinkingStrategyOmit" },
