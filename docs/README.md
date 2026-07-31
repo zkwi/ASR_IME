@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- 悬浮字幕行宽利用率与性能修复发布审计：[2026-07-31 VoxType 0.10.3 悬浮字幕行宽利用率与性能修复发布审计](audits/2026-07-31-release-0.10.3-overlay-fill-performance-audit.md)
 - 悬浮字幕宽度平衡修复发布审计：[2026-07-31 VoxType 0.10.2 悬浮字幕宽度平衡修复发布审计](audits/2026-07-31-release-0.10.2-overlay-width-balance-audit.md)
 - OpenRouter Hy3 兼容修复发布审计：[2026-07-23 VoxType 0.10.1 OpenRouter Hy3 兼容修复发布审计](audits/2026-07-23-release-0.10.1-openrouter-hy3-audit.md)
 - API Key 与大模型测试摘要发布审计：[2026-07-23 VoxType 0.10.0 API Key 与大模型测试摘要发布审计](audits/2026-07-23-release-0.10.0-api-key-test-history-audit.md)

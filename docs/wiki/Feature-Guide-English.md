@@ -216,7 +216,7 @@ Captions are designed for recording feedback:
 - Real-time text.
 - Elapsed or processing state.
 - Errors.
-- Captions collapse formatting line breaks and repeated whitespace from interim ASR text. Short text that does not crowd the text area stays on one line; longer text is balanced into up to two measured-width lines, and overflowing captions keep the longest fully visible recent suffix without orphan characters, leading punctuation on line two, or horizontal clipping. The runtime window is at least `52px` high, including for legacy low-height settings.
+- Captions collapse formatting line breaks and repeated whitespace from interim ASR text. Measured text that fits stays on one line, with only a one-pixel font reduction near the boundary; text switches to two measured-width lines only after it truly overflows. When geometry allows, the first line uses at least 90% of the width while the second keeps at least three characters. Overflowing captions keep the longest fully visible recent suffix without orphan characters, leading punctuation on line two, or horizontal clipping. The runtime window is at least `52px` high, including for legacy low-height settings.
 - An anomalous one-to-four-character interim drop in the same recording session does not replace an already complete caption; substantial revisions still update normally.
 
 Captions do not show paste-state noise, internal paths, or debug stacks.
