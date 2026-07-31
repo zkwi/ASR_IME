@@ -6,12 +6,37 @@ const DOUBLE_LINE_FONT_SIZE = 18;
 const SINGLE_LINE_FONT_SIZE = 20;
 const SINGLE_LINE_MIN_FONT_SIZE = 18;
 const SINGLE_LINE_MAX_CHARS = 18;
+// 单行最多占可用宽度的比例。字数上限跟不上窗口宽度，只按字数判断会让塞满整行的字幕仍然只显示一行
+const SINGLE_LINE_MAX_FILL = 0.75;
 const STRONG_BREAK_CHARS = new Set(["，", "。", "！", "？", "；", "：", ",", ".", "!", "?", ";", ":"]);
+const FORBIDDEN_LINE_START_CHARS = new Set([
+  ...STRONG_BREAK_CHARS,
+  "、",
+  "…",
+  "—",
+  ")",
+  "]",
+  "}",
+  "）",
+  "】",
+  "》",
+  "」",
+  "』",
+  "”",
+  "’",
+]);
 
 export type OverlayDisplayLayout = {
   mode: OverlayMode;
   fontSize: number;
   lineLimit: number;
+  lines: string[];
+};
+
+type OverlayLineCandidate = {
+  start: number;
+  split: number;
+  diff: number;
   lines: string[];
 };
 
@@ -31,7 +56,7 @@ export function resolveOverlayDisplayText(
   const canUseSingleLine =
     !text.includes("\n") &&
     compactLength <= SINGLE_LINE_MAX_CHARS &&
-    overlayLinesFitWidth([text], singleFont, maxWidth, measureText);
+    overlayLinesFitWidth([text], singleFont, maxWidth * SINGLE_LINE_MAX_FILL, measureText);
 
   if (canUseSingleLine || !canFitOverlayLines(2, availableHeight)) {
     const lines = limitOverlayLines(wrapOverlayText(text, singleFont, maxWidth, measureText), 1);
@@ -63,12 +88,6 @@ export function canFitOverlayLines(lines: number, availableHeight: number, minFo
   return fitted >= minFontSize;
 }
 
-export function rebalanceOverlayDisplayLines(lines: string[], lineLimit: number) {
-  if (lineLimit < 2) return lines;
-  if (lines.length === 1) return splitOverlayLine(lines[0]);
-  return lines;
-}
-
 export function fitOverlayDisplayText(
   text: string,
   lineLimit: number,
@@ -81,42 +100,140 @@ export function fitOverlayDisplayText(
   const visibleLines = overlayVisibleLineCount(lineLimit);
   const maxFontSize = fontForVisibleLines(visibleLines, preferredFontSize, minFontSize, availableHeight);
   for (let size = maxFontSize; size >= minFontSize; size -= 1) {
-    const lines = limitOverlayLines(
-      rebalanceOverlayDisplayLines(
-        wrapOverlayText(text, size, maxWidth, measureText),
-        lineLimit,
-      ),
-      visibleLines,
-    );
-    if (overlayLinesFitWidth(lines, size, maxWidth, measureText)) {
+    const lines = layoutOverlayLines(text, visibleLines, size, maxWidth, measureText);
+    if (
+      overlayLinesFitWidth(lines, size, maxWidth, measureText) &&
+      overlayLineStartsAreValid(lines)
+    ) {
       return { fontSize: size, lines };
     }
   }
 
-  const lines = limitOverlayLines(
-    rebalanceOverlayDisplayLines(
-      wrapOverlayText(text, minFontSize, maxWidth, measureText),
-      lineLimit,
-    ),
-    visibleLines,
-  );
-  return { fontSize: minFontSize, lines };
+  return {
+    fontSize: minFontSize,
+    lines: layoutOverlayLines(text, visibleLines, minFontSize, maxWidth, measureText, true),
+  };
 }
 
-export function splitOverlayLine(line: string) {
-  const trimmed = String(line || "").trim();
+function layoutOverlayLines(
+  text: string,
+  visibleLines: number,
+  fontSize: number,
+  maxWidth: number,
+  measureText: (text: string, fontSize: number) => number,
+  forceTail = false,
+) {
+  const wrapped = wrapOverlayText(text, fontSize, maxWidth, measureText);
+  // 显式换行按原样保留段落结构
+  if (visibleLines < 2 || text.includes("\n")) {
+    return limitOverlayLines(wrapped, visibleLines);
+  }
+
+  const fullTextCandidates = findOverlayLineCandidates(text, fontSize, maxWidth, measureText, false);
+  if (fullTextCandidates.best) {
+    return fullTextCandidates.best.lines;
+  }
+  // 完整文本只有以标点开头的切法时，先让字号继续缩小；最小字号仍不行才保留安全尾部
+  if (fullTextCandidates.fallback && !forceTail) {
+    return fullTextCandidates.fallback.lines;
+  }
+
+  // 超长文本直接比较两段真实宽度，保留能完整显示的最长尾部
+  const tailCandidates = findOverlayLineCandidates(text, fontSize, maxWidth, measureText, true);
+  if (tailCandidates.best) {
+    return tailCandidates.best.lines;
+  }
+  return (tailCandidates.fallback ?? fullTextCandidates.fallback)?.lines ??
+    limitOverlayLines(wrapped, visibleLines);
+}
+
+/** 把能放进两行的文本按宽度尽量对半拆开，避免贪心换行留下「满行 + 一两个字」的孤字尾行。 */
+export function balanceOverlayLines(
+  text: string,
+  fontSize: number,
+  maxWidth: number,
+  measureText: (text: string, fontSize: number) => number,
+) {
+  const trimmed = String(text || "").trim();
+  const candidate = findOverlayLineCandidates(trimmed, fontSize, maxWidth, measureText, false).best;
+  return candidate?.lines ?? [trimmed];
+}
+
+function findOverlayLineCandidates(
+  text: string,
+  fontSize: number,
+  maxWidth: number,
+  measureText: (text: string, fontSize: number) => number,
+  allowTail: boolean,
+) {
+  const trimmed = String(text || "").trim();
   const chars = Array.from(trimmed);
-  const compactLength = Array.from(trimmed.replace(/\s/g, "")).length;
-  if (compactLength <= SINGLE_LINE_MAX_CHARS) return [line];
-  return splitAtCharIndex(trimmed, Math.ceil(chars.length / 2));
+  let best: OverlayLineCandidate | null = null;
+  let fallback: OverlayLineCandidate | null = null;
+
+  for (let split = 1; split < chars.length; split += 1) {
+    const second = chars.slice(split).join("").trimStart();
+    const secondWidth = measureText(second, fontSize);
+    if (!second || (maxWidth && secondWidth > maxWidth + 0.5)) continue;
+
+    let start = 0;
+    let first = chars.slice(0, split).join("").trimEnd();
+    let firstWidth = measureText(first, fontSize);
+    if (allowTail && maxWidth && firstWidth > maxWidth + 0.5) {
+      let earliestFit: { start: number; text: string; width: number } | null = null;
+      for (let candidateStart = split - 1; candidateStart >= 0; candidateStart -= 1) {
+        const candidateText = chars.slice(candidateStart, split).join("").trim();
+        if (!candidateText) continue;
+        const candidateWidth = measureText(candidateText, fontSize);
+        if (candidateWidth <= maxWidth + 0.5) {
+          earliestFit = { start: candidateStart, text: candidateText, width: candidateWidth };
+          continue;
+        }
+        if (earliestFit) break;
+      }
+      if (!earliestFit) continue;
+      ({ start, text: first, width: firstWidth } = earliestFit);
+      // 截取尾部时不要人为制造新的标点行首
+      while (start > 0 && start < split && FORBIDDEN_LINE_START_CHARS.has(first[0])) {
+        start += 1;
+        first = chars.slice(start, split).join("").trim();
+        firstWidth = measureText(first, fontSize);
+      }
+    }
+
+    if (!first || !second) continue;
+    if (maxWidth && (firstWidth > maxWidth + 0.5 || secondWidth > maxWidth + 0.5)) continue;
+
+    const candidate: OverlayLineCandidate = {
+      start,
+      split,
+      diff: Math.abs(firstWidth - secondWidth),
+      lines: [first, second],
+    };
+    if (FORBIDDEN_LINE_START_CHARS.has(second[0])) {
+      fallback = chooseBetterOverlayCandidate(fallback, candidate);
+    } else {
+      best = chooseBetterOverlayCandidate(best, candidate);
+    }
+  }
+
+  return { best, fallback };
 }
 
-function splitAtCharIndex(text: string, splitIndex: number) {
-  const chars = Array.from(text);
-  const first = chars.slice(0, splitIndex).join("").trimEnd();
-  const second = chars.slice(splitIndex).join("").trimStart();
-  if (!first || !second) return [text];
-  return [first, second];
+function chooseBetterOverlayCandidate(
+  current: OverlayLineCandidate | null,
+  candidate: OverlayLineCandidate,
+) {
+  if (!current || candidate.start < current.start) return candidate;
+  if (candidate.start > current.start) return current;
+  if (candidate.diff < current.diff) return candidate;
+  if (candidate.diff > current.diff) return current;
+  // 宽度相同时取靠后的切点，让第一行更长，符合字幕习惯
+  return candidate.split >= current.split ? candidate : current;
+}
+
+function overlayLineStartsAreValid(lines: string[]) {
+  return lines.slice(1).every((line) => !FORBIDDEN_LINE_START_CHARS.has(line[0]));
 }
 
 function normalizeOverlayInlineSpacing(line: string) {
