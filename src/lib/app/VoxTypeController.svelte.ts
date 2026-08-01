@@ -82,6 +82,7 @@ import {
 } from "$lib/utils/llmTestHistory";
 import {
   sessionPhaseMessageKey,
+  startsNewRecordingSession,
 } from "$lib/utils/sessionState";
 import { userFacingInvokeFailure } from "$lib/utils/userFacingErrors";
 import { invokeErrorCode } from "$lib/utils/statusCodes";
@@ -375,6 +376,9 @@ export function createVoxTypeController() {
       recording = value;
     },
     setPhase: (value) => {
+      if (startsNewRecordingSession(sessionPhase, value)) {
+        notifications.advanceSessionRound();
+      }
       sessionPhase = value;
     },
     setErrorCode: (value) => {

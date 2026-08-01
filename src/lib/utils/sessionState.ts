@@ -8,9 +8,15 @@ const blockingSessionPhases = new Set<SessionPhase>([
   "post_editing",
   "pasting",
 ]);
+const sessionStartSourcePhases = new Set<SessionPhase>(["idle", "succeeded", "failed"]);
+const sessionEntryPhases = new Set<SessionPhase>(["starting", "recording"]);
 
 export function isBlockingSessionPhase(phase: SessionPhase) {
   return blockingSessionPhases.has(phase);
+}
+
+export function startsNewRecordingSession(previousPhase: SessionPhase, nextPhase: SessionPhase) {
+  return sessionStartSourcePhases.has(previousPhase) && sessionEntryPhases.has(nextPhase);
 }
 
 export function sessionPhaseMessageKey(phase: SessionPhase): CopyKey {

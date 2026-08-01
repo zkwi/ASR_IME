@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isBlockingSessionPhase, isQuietAsrWarningCode, sessionPhaseMessageKey } from "./sessionState";
+import {
+  isBlockingSessionPhase,
+  isQuietAsrWarningCode,
+  sessionPhaseMessageKey,
+  startsNewRecordingSession,
+} from "./sessionState";
 
 describe("session state utilities", () => {
   it("blocks only transition and output phases", () => {
@@ -20,5 +25,16 @@ describe("session state utilities", () => {
     expect(isQuietAsrWarningCode("CLIPBOARD_PARTIAL_RESTORE")).toBe(true);
     expect(isQuietAsrWarningCode("CLIPBOARD_WRITE_FAILED")).toBe(false);
     expect(isQuietAsrWarningCode(null)).toBe(false);
+  });
+
+  it("counts only terminal-to-recording transitions as a new session", () => {
+    expect(startsNewRecordingSession("idle", "starting")).toBe(true);
+    expect(startsNewRecordingSession("failed", "recording")).toBe(true);
+    expect(startsNewRecordingSession("succeeded", "starting")).toBe(true);
+
+    expect(startsNewRecordingSession("starting", "recording")).toBe(false);
+    expect(startsNewRecordingSession("recording", "starting")).toBe(false);
+    expect(startsNewRecordingSession("stopping", "recording")).toBe(false);
+    expect(startsNewRecordingSession("idle", "idle")).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
 export type NoticeKind = "success" | "info" | "warning" | "error";
 
+export const ERROR_NOTICE_RETENTION_ROUNDS = 5;
+
 export function noticeAutoDismissMs(kind: NoticeKind, hasAction: boolean, messageLength: number) {
   if (kind === "error" || hasAction) return null;
   const baseDuration = kind === "warning" ? 8000 : 3200;

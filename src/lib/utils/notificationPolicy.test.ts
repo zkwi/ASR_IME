@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { noticeAutoDismissMs, noticeRole } from "$lib/utils/notificationPolicy";
 
 describe("notification policy", () => {
-  it("keeps errors visible until the user closes them", () => {
+  it("does not hide errors on a wall-clock timer", () => {
     expect(noticeAutoDismissMs("error", false, 12)).toBeNull();
   });
 

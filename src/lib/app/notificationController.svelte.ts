@@ -1,5 +1,8 @@
 import type { CopyKey } from "$lib/i18n";
-import { noticeAutoDismissMs } from "$lib/utils/notificationPolicy";
+import {
+  ERROR_NOTICE_RETENTION_ROUNDS,
+  noticeAutoDismissMs,
+} from "$lib/utils/notificationPolicy";
 
 export type ActionNoticeKind = "success" | "info" | "warning" | "error";
 
@@ -20,12 +23,14 @@ export function createNotificationController(options: NotificationControllerOpti
   let message = $state("");
   let kind = $state<ActionNoticeKind>("success");
   let action = $state<ActionNoticeAction | null>(null);
+  let remainingErrorRounds = 0;
   let timer: number | undefined;
 
   function show(nextMessage: string, nextKind: ActionNoticeKind, nextAction: ActionNoticeAction | undefined = undefined) {
     message = nextMessage;
     kind = nextKind;
     action = nextAction ?? null;
+    remainingErrorRounds = nextKind === "error" ? ERROR_NOTICE_RETENTION_ROUNDS : 0;
     clearTimer();
     const duration = noticeAutoDismissMs(nextKind, Boolean(nextAction), nextMessage.length);
     if (duration !== null) {
@@ -58,6 +63,13 @@ export function createNotificationController(options: NotificationControllerOpti
     clearTimer();
     message = "";
     action = null;
+    remainingErrorRounds = 0;
+  }
+
+  function advanceSessionRound() {
+    if (!message || kind !== "error") return;
+    remainingErrorRounds = Math.max(0, remainingErrorRounds - 1);
+    if (remainingErrorRounds === 0) clear();
   }
 
   function dispose() {
@@ -72,6 +84,7 @@ export function createNotificationController(options: NotificationControllerOpti
     get actionBusy() { return action?.isBusy?.() ?? false; },
     show,
     runAction,
+    advanceSessionRound,
     clear,
     dispose,
   };
