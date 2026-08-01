@@ -28,6 +28,7 @@ The Home page is for daily use:
 - See main and backup trigger states.
 - See recent 24-hour, 7-day, speed, and saved time estimates.
 - After a successful input, temporarily view, copy, or immediately clear the latest recognized text in the current window. It is not written into usage stats, logs, or diagnostic reports, and is cleared when the window is hidden, the app exits, or a new recording starts.
+- The main window shows only the latest error notice. Its originating recording counts toward a five-session window, a newer error restarts the count, and the notice clears when the sixth session starts or when closed manually.
 
 ## 3. Global Triggers
 

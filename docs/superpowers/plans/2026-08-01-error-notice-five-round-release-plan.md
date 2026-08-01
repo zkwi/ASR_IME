@@ -181,8 +181,8 @@ Expected: FAIL，`startsNewRecordingSession` 尚未导出。
 在 `sessionState.ts` 增加：
 
 ```ts
-const sessionStartSourcePhases = new Set<SessionPhase>(["idle", "succeeded", "failed"]);
-const sessionEntryPhases = new Set<SessionPhase>(["starting", "recording"]);
+const sessionStartSourcePhases = new Set(["idle", "succeeded", "failed"] as SessionPhase[]);
+const sessionEntryPhases = new Set(["starting", "recording"] as SessionPhase[]);
 
 export function startsNewRecordingSession(previousPhase: SessionPhase, nextPhase: SessionPhase) {
   return sessionStartSourcePhases.has(previousPhase) && sessionEntryPhases.has(nextPhase);
