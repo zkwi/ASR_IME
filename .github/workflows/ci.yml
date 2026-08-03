@@ -39,7 +39,7 @@ jobs:
         run: npm ci
 
       - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.5
         with:
           tool: cargo-audit@0.22.1
 
