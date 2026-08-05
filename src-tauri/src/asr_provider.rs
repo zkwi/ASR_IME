@@ -64,8 +64,13 @@ pub(crate) fn start_configuration_error(
             match active_provider(config) {
                 AsrProviderKind::Doubao => AsrConfigurationError {
                     code: "ASR_AUTH_MISSING",
-                    message: "ASR 未配置 app_key/access_key，请先在配置页填写豆包认证信息并保存。"
-                        .to_string(),
+                    message: if config.auth.uses_agent_plan() {
+                        "ASR 未配置 Agent Plan API Key，请先在配置页填写专属密钥并保存。"
+                            .to_string()
+                    } else {
+                        "ASR 未配置 app_key/access_key，请先在配置页填写豆包认证信息并保存。"
+                            .to_string()
+                    },
                 },
                 AsrProviderKind::AliyunFun => AsrConfigurationError {
                     code: "ASR_AUTH_MISSING",
@@ -88,7 +93,11 @@ pub(crate) fn worker_configuration_error(config: &AppConfig) -> Option<AsrConfig
     configuration_error(config).map(|_| match active_provider(config) {
         AsrProviderKind::Doubao => AsrConfigurationError {
             code: "ASR_AUTH_MISSING",
-            message: "ASR skipped: app_key/access_key is not configured.".to_string(),
+            message: if config.auth.uses_agent_plan() {
+                "ASR skipped: Agent Plan API Key is not configured.".to_string()
+            } else {
+                "ASR skipped: app_key/access_key is not configured.".to_string()
+            },
         },
         AsrProviderKind::AliyunFun => AsrConfigurationError {
             code: "ASR_AUTH_MISSING",
@@ -136,7 +145,15 @@ pub(crate) async fn recognize_stream(input: RecognitionInput) -> Result<String, 
 }
 
 fn doubao_configuration_error(config: &AppConfig) -> Option<AsrConfigurationError> {
-    if config.auth.app_key.trim().is_empty() || config.auth.access_key.trim().is_empty() {
+    if config.auth.uses_agent_plan() && config.auth.api_key.trim().is_empty() {
+        return Some(AsrConfigurationError {
+            code: "ASR_AUTH_MISSING",
+            message: "请先填写火山方舟 Agent Plan 专属 API Key。".to_string(),
+        });
+    }
+    if !config.auth.uses_agent_plan()
+        && (config.auth.app_key.trim().is_empty() || config.auth.access_key.trim().is_empty())
+    {
         return Some(AsrConfigurationError {
             code: "ASR_AUTH_MISSING",
             message: "请先填写豆包 App Key 和 Access Key。".to_string(),
@@ -205,6 +222,21 @@ mod tests {
             configuration_error(&config).unwrap().message,
             "请先填写豆包 Resource ID。"
         );
+    }
+
+    #[test]
+    fn doubao_agent_plan_configuration_uses_only_api_key() {
+        let config: AppConfig = toml::from_str(
+            r#"
+[auth]
+mode = "agent_plan"
+api_key = "example-agent-plan-key"
+resource_id = "volc.seedasr.sauc.duration"
+"#,
+        )
+        .unwrap();
+
+        assert!(configuration_error(&config).is_none());
     }
 
     #[test]

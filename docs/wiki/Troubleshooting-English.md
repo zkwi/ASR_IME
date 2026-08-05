@@ -94,11 +94,11 @@ Notes:
 
 ## ASR Test Fails
 
-First confirm that API Config's selected ASR provider matches the credential fields. Doubao mode requires App Key, Access Key, and Resource ID from the same Doubao speech recognition service. Alibaba Cloud FunASR mode requires API Key, Workspace ID, region, and model permission from the same Bailian workspace. Do not paste an LLM API key, GitHub token, Volcano Engine IAM secret, or another platform's key into the wrong ASR provider.
+First confirm that API Config's selected ASR provider and Doubao access mode match the credential fields. Standard Doubao access requires App Key, Access Key, and Resource ID from the same speech service. Agent Plan requires the dedicated Ark API Key plus Doubao Streaming ASR 2.0 and overage post-pay configured in the Ark console. Alibaba Cloud FunASR requires API Key, Workspace ID, region, and model permission from the same Bailian workspace. Do not paste an LLM API key, GitHub token, Volcano Engine IAM secret, or another platform's key into the wrong ASR provider.
 
 Common fixes:
 
-1. Doubao authentication or permission failure: copy App Key and Access Key again, confirm Doubao streaming ASR is enabled, and confirm Resource ID matches the billing resource.
+1. Doubao authentication or permission failure: confirm the selected access mode first. For standard access, copy App Key and Access Key again and check Resource ID. For Agent Plan, copy the dedicated API Key again and check model setup and overage post-pay.
 2. Alibaba Cloud authentication or permission failure: copy API Key again, confirm Workspace ID, region, and `fun-asr-realtime` model permission match.
 3. Connection failure or timeout: check proxy, firewall, and network access to the selected ASR service domain.
 4. Failure after changing recognition language: switch back to Auto/service default and test again.

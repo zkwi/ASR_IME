@@ -111,7 +111,7 @@ Quick configuration map:
 
 | Scenario | Required | Optional for later | Test entry |
 | --- | --- | --- | --- |
-| Speech-to-text only | Selected ASR credentials: Doubao App Key/Access Key, or Alibaba Cloud API Key + Workspace ID | LLM API, hotwords, screen OCR | ASR test in API Config |
+| Speech-to-text only | Selected ASR credentials: Doubao App Key/Access Key, Ark Agent Plan API Key, or Alibaba Cloud API Key + Workspace ID | LLM API, hotwords, screen OCR | ASR test in API Config |
 | Polished output | Selected ASR provider plus LLM Base URL, API Key, model, and polishing enabled | Automatic hotword candidates | LLM test in API Config |
 | Test fails | Read the red message, check keys, check network/proxy | Avoid changing advanced parameters first | Copy a redacted diagnostic report |
 
@@ -120,12 +120,28 @@ Quick configuration map:
 provider = "doubao"
 
 [auth]
+mode = "app_access"
 app_key = ""
 access_key = ""
+api_key = ""
 resource_id = "volc.seedasr.sauc.duration"
 ```
 
-VoxType currently follows the Doubao streaming ASR WebSocket header shape with `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`. The default `resource_id` is `volc.seedasr.sauc.duration`, the hourly billing resource for the speech recognition big model 2.0. Change it only if your Volcano Engine account uses a concurrent resource or an older model resource. Do not paste an LLM API key, GitHub token, or unrelated cloud secret into the ASR fields. The Doubao credentials panel includes a docs link so first-time setup can be checked against the official field descriptions.
+Doubao has two selectable access modes. `app_access` preserves the existing `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id` flow and allows the Resource ID to match an account's enabled resource. `agent_plan` sends only the dedicated Ark `X-Api-Key` plus the fixed `X-Api-Resource-Id: volc.seedasr.sauc.duration`, and automatically connects to `wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_async`. Both credential sets are stored locally and only the selected set is used. Selecting Agent Plan resets the Resource ID to Doubao Streaming ASR 2.0. Model setup and overage post-pay must be enabled in the Volcengine Ark console; VoxType does not change billing settings. This release adds ASR access only, not TTS.
+
+Agent Plan example:
+
+```toml
+[asr]
+provider = "doubao"
+
+[auth]
+mode = "agent_plan"
+api_key = ""
+resource_id = "volc.seedasr.sauc.duration"
+```
+
+Never commit real keys or paste an unrelated LLM key, GitHub token, or IAM secret into ASR fields. API Config opens the matching [standard Doubao ASR docs](https://www.volcengine.com/docs/6561/1354869?lang=zh) or [Volcengine Ark Agent Plan docs](https://www.volcengine.com/docs/82379/2516286?lang=zh) for the selected mode.
 
 API Config shows only the provider and credential fields for normal setup. Doubao ASR input language is under Advanced connection and language settings. The default is Auto/service default, which omits the `language` parameter. The main workflow uses `bigmodel_async + enable_nonstream` two-pass recognition, and Doubao documents `language` as unsupported by two-pass recognition, so leaving it blank is better for Chinese, English, dialect, and mixed input. Chinese Mandarin needs no setting, and existing `zh-CN` configs migrate to blank; only set a code such as `en-US`, `ja-JP`, or `yue-CN` when explicitly troubleshooting a non-default language.
 

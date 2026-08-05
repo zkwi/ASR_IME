@@ -59,7 +59,13 @@ export function emptyUsage(): UsageStats {
 export const fallbackConfig: AppConfig = {
   hotkey: "ctrl+q",
   asr: { provider: "doubao", no_feedback_auto_stop_seconds: 30 },
-  auth: { app_key: "", access_key: "", resource_id: "volc.seedasr.sauc.duration" },
+  auth: {
+    mode: "app_access",
+    app_key: "",
+    access_key: "",
+    api_key: "",
+    resource_id: "volc.seedasr.sauc.duration",
+  },
   aliyun_asr: {
     api_key: "",
     workspace_id: "",

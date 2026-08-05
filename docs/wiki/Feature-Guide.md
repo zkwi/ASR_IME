@@ -75,7 +75,7 @@ VoxType 会把麦克风实际输入统一转换为 `16000Hz`、单声道、16-bi
 
 ## 5. ASR 服务
 
-VoxType 默认使用豆包 `bigmodel_async` WebSocket，也可以在 API配置页切换到阿里云 FunASR。两个服务共用同一条录音、字幕、最终文本、LLM、剪贴板和统计主链路。
+VoxType 默认使用豆包 `bigmodel_async` WebSocket，也可以在 API配置页切换到阿里云 FunASR。豆包可进一步选择原有 App Key + Access Key 方式，或火山方舟 Agent Plan 专属 API Key 方式；两套凭据独立保存在本地，Agent Plan 自动使用固定 Plan 地址和豆包流式语音识别模型 2.0 Resource ID。两个 ASR 服务共用同一条录音、字幕、最终文本、LLM、剪贴板和统计主链路。
 
 特点：
 

@@ -11,10 +11,15 @@ provider = "doubao"
 no_feedback_auto_stop_seconds = 30
 
 [auth]
-# 豆包 ASR 的认证信息，仅在 [asr].provider = "doubao" 时必填；Resource ID 默认适配豆包语音识别大模型 2.0 小时版
-# 不要把大模型 API Key、GitHub Token 或火山引擎 IAM Secret 填到这里
+# 豆包接入方式：app_access / agent_plan。两套凭据独立保存，运行时只使用当前方式
+mode = "app_access"
+# 标准接入凭据，仅在 mode = "app_access" 时使用
 app_key = ""
 access_key = ""
+# 火山方舟 Agent Plan 专属 API Key，仅在 mode = "agent_plan" 时使用
+# 不要把大模型 API Key、GitHub Token 或火山引擎 IAM Secret 填到这里
+api_key = ""
+# Agent Plan 必须保持为豆包流式语音识别模型 2.0 的固定 Resource ID
 resource_id = "volc.seedasr.sauc.duration"
 
 [audio]
@@ -38,7 +43,7 @@ mute_system_volume_while_recording = false
 # input_device = 1
 
 [request]
-# 豆包流式 ASR WebSocket 地址和模型名，仅在 [asr].provider = "doubao" 时生效，通常保持默认；应用设置页不再展示
+# 豆包标准接入的流式 ASR WebSocket 地址和模型名，通常保持默认；Agent Plan 会自动改用固定 Plan 地址
 ws_url = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
 model_name = "bigmodel"
 # 识别语言默认留空：当前使用 bigmodel_async + enable_nonstream 二遍识别，豆包文档说明二遍不支持 language

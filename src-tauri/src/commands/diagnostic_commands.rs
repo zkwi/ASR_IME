@@ -1,6 +1,8 @@
 use super::{ConnectionTestResult, DiagnosticReport, LocalDataStatus};
 use crate::session::SessionController;
-use crate::{app_log, config, hotword_generator, hotword_history, stats, text_output, tray};
+use crate::{
+    app_log, asr_provider, config, hotword_generator, hotword_history, stats, text_output, tray,
+};
 use stats::StatsSnapshot;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -47,8 +49,7 @@ fn build_diagnostic_report(
 ) -> Result<DiagnosticReport, String> {
     let loaded = config::load_config()?;
     let state = session.current_state();
-    let asr_ready = !loaded.data.auth.app_key.trim().is_empty()
-        && !loaded.data.auth.access_key.trim().is_empty();
+    let asr_ready = asr_provider::configuration_error(&loaded.data).is_none();
     let trigger_summary = enabled_trigger_summary(&loaded.data);
     let recent_error = state.error_code.as_deref().unwrap_or("无");
     let recent_context_summary = if loaded.data.context.enable_recent_context {

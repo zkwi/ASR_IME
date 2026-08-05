@@ -60,18 +60,18 @@ VoxType 的主链路依赖一个可用的流式 ASR 服务。默认仍使用豆�
 
 先记住最小配置原则：只要当前 ASR 服务测试通过，就可以回首页开始语音输入；大模型、热词、屏幕 OCR 都是后续提升质量的可选项。
 
-### 豆包 ASR 默认配置
+### 豆包 ASR 配置
 
-进入 **API配置 → 语音识别服务** 选择“豆包 ASR”，再填写：
+进入 **API配置 → 语音识别服务** 选择“豆包 ASR”，再选择接入方式：
 
-| 字段 | 是否必填 | 说明 |
+| 接入方式 | 必填字段 | 说明 |
 | --- | --- | --- |
-| App Key | 是 | 火山引擎控制台中豆包语音服务对应的 App Key/App ID |
-| Access Key | 是 | 火山引擎控制台中同一服务对应的 Access Key |
+| App Key + Access Key | App Key、Access Key | 保持原有豆包语音服务接入方式，Resource ID 可按账号已开通资源配置 |
+| 火山方舟 Agent Plan | Agent Plan API Key | 使用方舟专属 `X-Api-Key`；模型和超额后付费需先在方舟控制台配置 |
 
-Resource ID 默认使用 `volc.seedasr.sauc.duration`，普通用户不需要在界面中修改；特殊场景可编辑 `config.toml`。
+两套凭据会独立保存在本地配置文件，切换后只使用当前接入方式，不需要反复覆盖另一套 Key。Agent Plan 固定使用豆包流式语音识别模型 2.0 的 Resource ID `volc.seedasr.sauc.duration`，并自动连接 `wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_async`；该模式不使用 `[request].ws_url`。切换到 Agent Plan 时，设置页会自动校正 Resource ID。本版本只接入 ASR，不包含 Agent Plan TTS。
 
-VoxType 当前按豆包流式语音识别文档发送 `X-Api-App-Key`、`X-Api-Access-Key` 和 `X-Api-Resource-Id`。如果控制台里看到多个 Key，优先确认它们属于同一个豆包语音识别服务和同一个计费资源；不要把百炼大模型 Key、GitHub Token 或火山引擎 IAM Secret 填到 ASR 认证里。豆包认证区域提供官方帮助文档入口，首次配置时可直接对照字段说明。
+标准方式发送 `X-Api-App-Key`、`X-Api-Access-Key` 和 `X-Api-Resource-Id`；Agent Plan 发送 `X-Api-Key` 和固定 Resource ID。不要把百炼大模型 Key、GitHub Token 或火山引擎 IAM Secret 填到 ASR 认证里。豆包认证区域会根据当前接入方式打开对应官方文档。
 
 填写后点击 **测试**。该连接测试会使用当前真实凭据向所选 ASR 服务发送程序生成的短静音包，用来验证认证、TLS 和服务权限；它不会开启麦克风，也不能替代真实录音、最终包和粘贴回归。测试通过后即可返回首页使用语音输入。
 
@@ -95,7 +95,7 @@ VoxType 当前按豆包流式语音识别文档发送 `X-Api-App-Key`、`X-Api-A
 
 | 现象 | 优先检查 |
 | --- | --- |
-| 豆包认证或权限失败 | App Key、Access Key、Resource ID 是否属于同一个豆包语音识别服务和同一账号 |
+| 豆包认证或权限失败 | 接入方式是否选对；标准方式检查 App Key/Access Key/资源，Agent Plan 检查专属 API Key、模型配置与超额后付费 |
 | 阿里云认证或权限失败 | API Key、Workspace ID、地域和模型权限是否属于同一个百炼工作空间 |
 | 提示连接失败或超时 | 网络、代理、防火墙是否允许访问当前 ASR 服务域名 |
 | 改语言后失败 | 把识别语言改回“自动 / 服务默认”，再重新测试 |
@@ -105,9 +105,13 @@ VoxType 当前按豆包流式语音识别文档发送 `X-Api-App-Key`、`X-Api-A
 
 仍无法定位时，到 **选项 → 软件更新与诊断 → 复制诊断报告**，把脱敏后的错误码和状态发到 Issue。不要贴真实 Key、完整日志或识别正文。
 
-豆包官方接入说明：
+豆包标准接入说明：
 
 <https://www.volcengine.com/docs/6561/1354869?lang=zh>
+
+火山方舟 Agent Plan 接入说明：
+
+<https://www.volcengine.com/docs/82379/2516286?lang=zh>
 
 阿里云 FunASR 官方接入说明：
 

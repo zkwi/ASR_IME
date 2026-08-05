@@ -26,6 +26,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- Agent Plan ASR 发布审计：[2026-08-05 VoxType 0.11.0 火山方舟 Agent Plan ASR 发布审计](audits/2026-08-05-release-0.11.0-agent-plan-asr-audit.md)
 - 错误通知最近五轮保留发布审计：[2026-08-01 VoxType 0.10.4 错误通知最近五轮保留发布审计](audits/2026-08-01-release-0.10.4-error-notice-retention-audit.md)
 - 悬浮字幕行宽利用率与性能修复发布审计：[2026-07-31 VoxType 0.10.3 悬浮字幕行宽利用率与性能修复发布审计](audits/2026-07-31-release-0.10.3-overlay-fill-performance-audit.md)
 - 悬浮字幕宽度平衡修复发布审计：[2026-07-31 VoxType 0.10.2 悬浮字幕宽度平衡修复发布审计](audits/2026-07-31-release-0.10.2-overlay-width-balance-audit.md)

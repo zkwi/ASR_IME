@@ -365,9 +365,10 @@ pub(crate) fn open_setup_guide(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub(crate) fn open_doubao_asr_docs(app: AppHandle) -> Result<(), String> {
+pub(crate) fn open_doubao_asr_docs(app: AppHandle, mode: String) -> Result<(), String> {
     app_log::info("用户打开豆包 ASR 帮助文档。");
-    setup_guide::open_doubao_asr_docs(&app).map_err(|err| {
+    let uses_agent_plan = mode.trim() == config::DOUBAO_AUTH_MODE_AGENT_PLAN;
+    setup_guide::open_doubao_asr_docs(&app, uses_agent_plan).map_err(|err| {
         app_log::warn(format!("打开豆包 ASR 帮助文档失败: {}", err));
         err
     })

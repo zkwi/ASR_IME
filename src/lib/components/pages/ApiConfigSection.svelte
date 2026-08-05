@@ -9,7 +9,13 @@
   import type { CopyKey } from "$lib/i18n";
   import type { AppConfig } from "$lib/types/app";
   import type { LlmTestSummary } from "$lib/utils/llmTestHistory";
-  import { ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO } from "$lib/utils/asrProvider";
+  import {
+    ASR_PROVIDER_ALIYUN_FUN,
+    ASR_PROVIDER_DOUBAO,
+    DOUBAO_AUTH_MODE_AGENT_PLAN,
+    DOUBAO_AUTH_MODE_APP_ACCESS,
+    DOUBAO_SEED_ASR_2_RESOURCE_ID,
+  } from "$lib/utils/asrProvider";
   import { Activity, ExternalLink, ShieldCheck } from "lucide-svelte";
 
   type Translate = (key: CopyKey, values?: Record<string, string>) => string;
@@ -142,6 +148,14 @@
   let llmAdvancedHasError = $derived(Boolean(fieldError("llm_post_edit.thinking_strategy")));
   let asrAdvancedExpanded = $derived(showAsrAdvanced || asrAdvancedHasError);
   let llmAdvancedExpanded = $derived(showLlmAdvanced || llmAdvancedHasError);
+
+  function updateDoubaoAuthMode(event: Event) {
+    const mode = (event.currentTarget as HTMLSelectElement).value;
+    config.auth.mode = mode;
+    if (mode === DOUBAO_AUTH_MODE_AGENT_PLAN) {
+      config.auth.resource_id = DOUBAO_SEED_ASR_2_RESOURCE_ID;
+    }
+  }
 </script>
 
 <section class="settings-stack">
@@ -264,23 +278,48 @@
             <small id="setting-aliyun-workspace-id-hint" class="field-hint">{t("aliyunWorkspaceHint")}</small>
           </label>
         {:else}
-          <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
-            <span>{t("appKey")}</span>
-            <input id="setting-doubao-app-key" data-config-field="auth.app_key" aria-invalid={Boolean(fieldError("auth.app_key"))} aria-describedby={fieldError("auth.app_key") ? "setting-doubao-app-key-error" : undefined} autocomplete="off" bind:value={config.auth.app_key} />
-            {#if fieldError("auth.app_key")}<small id="setting-doubao-app-key-error" class="field-error">{fieldError("auth.app_key")}</small>{/if}
+          <label class:field-invalid={Boolean(fieldError("auth.mode"))}>
+            <span>{t("doubaoAuthMode")}</span>
+            <select value={config.auth.mode} onchange={updateDoubaoAuthMode}>
+              <option value={DOUBAO_AUTH_MODE_APP_ACCESS}>{t("doubaoAuthModeAppAccess")}</option>
+              <option value={DOUBAO_AUTH_MODE_AGENT_PLAN}>{t("doubaoAuthModeAgentPlan")}</option>
+            </select>
+            {#if fieldError("auth.mode")}<small class="field-error">{fieldError("auth.mode")}</small>{/if}
+            <small class="field-hint">{t("doubaoAuthModeHint")}</small>
           </label>
-          <SecretInput
-            id="setting-doubao-access-key"
-            configField="auth.access_key"
-            bind:value={config.auth.access_key}
-            label={t("accessKey")}
-            error={fieldError("auth.access_key")}
-            showLabel={t("showApiKey")}
-            hideLabel={t("hideApiKey")}
-            copyLabel={t("copyApiKey")}
-            copiedLabel={t("apiKeyCopied")}
-            copyFailedLabel={t("apiKeyCopyFailed")}
-          />
+          {#if config.auth.mode === DOUBAO_AUTH_MODE_AGENT_PLAN}
+            <SecretInput
+              id="setting-doubao-agent-plan-api-key"
+              configField="auth.api_key"
+              bind:value={config.auth.api_key}
+              label={t("agentPlanApiKey")}
+              hint={t("agentPlanApiKeyHint")}
+              error={fieldError("auth.api_key")}
+              showLabel={t("showApiKey")}
+              hideLabel={t("hideApiKey")}
+              copyLabel={t("copyApiKey")}
+              copiedLabel={t("apiKeyCopied")}
+              copyFailedLabel={t("apiKeyCopyFailed")}
+            />
+          {:else}
+            <label class:field-invalid={Boolean(fieldError("auth.app_key"))}>
+              <span>{t("appKey")}</span>
+              <input id="setting-doubao-app-key" data-config-field="auth.app_key" aria-invalid={Boolean(fieldError("auth.app_key"))} aria-describedby={fieldError("auth.app_key") ? "setting-doubao-app-key-error" : undefined} autocomplete="off" bind:value={config.auth.app_key} />
+              {#if fieldError("auth.app_key")}<small id="setting-doubao-app-key-error" class="field-error">{fieldError("auth.app_key")}</small>{/if}
+            </label>
+            <SecretInput
+              id="setting-doubao-access-key"
+              configField="auth.access_key"
+              bind:value={config.auth.access_key}
+              label={t("accessKey")}
+              error={fieldError("auth.access_key")}
+              showLabel={t("showApiKey")}
+              hideLabel={t("hideApiKey")}
+              copyLabel={t("copyApiKey")}
+              copiedLabel={t("apiKeyCopied")}
+              copyFailedLabel={t("apiKeyCopyFailed")}
+            />
+          {/if}
         {/if}
       </div>
       <AdvancedSettings

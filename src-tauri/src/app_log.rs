@@ -152,6 +152,7 @@ fn sanitize_message(message: &str) -> String {
         redacted = redact_key_values(&redacted, key);
     }
     redacted = redact_openai_style_keys(&redacted);
+    redacted = redact_prefixed_token(&redacted, "ark-");
     redacted = redact_current_user_profile_path(&redacted);
 
     let mut limited = redacted.chars().take(MAX_MESSAGE_CHARS).collect::<String>();
@@ -318,6 +319,14 @@ mod tests {
         assert!(!message.contains("abc123456789"));
         assert!(!message.contains(&openai_like_key),);
         assert!(!message.contains("tokenvalue"));
+    }
+
+    #[test]
+    fn redacts_unlabelled_agent_plan_keys() {
+        let agent_plan_key = ["ark", "testagentplancredential"].join("-");
+        let message = sanitize_message(&format!("request failed near {}", agent_plan_key));
+
+        assert!(!message.contains(&agent_plan_key));
     }
 
     #[test]

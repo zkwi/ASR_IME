@@ -46,8 +46,17 @@ pub(crate) async fn run_doubao_websocket_session(
         request.headers_mut().insert(name, value);
     }
 
-    let (mut websocket, _) = await_asr_connect(connect_async(request), ASR_CONNECT_TIMEOUT).await?;
-    app_log::info("ASR WebSocket 已连接");
+    let (mut websocket, handshake) =
+        await_asr_connect(connect_async(request), ASR_CONNECT_TIMEOUT).await?;
+    if let Some(log_id) = handshake
+        .headers()
+        .get("x-tt-logid")
+        .and_then(|value| value.to_str().ok())
+    {
+        app_log::info(format!("ASR WebSocket 已连接: logid={}", log_id));
+    } else {
+        app_log::info("ASR WebSocket 已连接");
+    }
     websocket
         .send(Message::Binary(
             protocol::build_full_request(&preview.payload, 1)?.into(),

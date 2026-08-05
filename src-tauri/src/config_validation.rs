@@ -1,5 +1,7 @@
 use crate::config::{
-    AppConfig, ConfigValidationError, ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO, MIN_UI_HEIGHT,
+    AppConfig, ConfigValidationError, ASR_PROVIDER_ALIYUN_FUN, ASR_PROVIDER_DOUBAO,
+    DOUBAO_AUTH_MODE_AGENT_PLAN, DOUBAO_AUTH_MODE_APP_ACCESS, DOUBAO_SEED_ASR_2_RESOURCE_ID,
+    MIN_UI_HEIGHT,
 };
 use crate::llm_request_adapter::is_valid_thinking_strategy;
 
@@ -18,6 +20,22 @@ pub fn validate_config(config: &AppConfig) -> Result<(), Vec<ConfigValidationErr
         &[ASR_PROVIDER_DOUBAO, ASR_PROVIDER_ALIYUN_FUN],
         "语音识别服务只能是 doubao 或 aliyun_fun。",
     );
+    validate_allowed_value(
+        &mut errors,
+        "auth.mode",
+        &config.auth.mode,
+        &[DOUBAO_AUTH_MODE_APP_ACCESS, DOUBAO_AUTH_MODE_AGENT_PLAN],
+        "豆包认证方式只能是 app_access 或 agent_plan。",
+    );
+    if config.auth.uses_agent_plan()
+        && config.auth.resource_id.trim() != DOUBAO_SEED_ASR_2_RESOURCE_ID
+    {
+        push_validation_error(
+            &mut errors,
+            "auth.resource_id",
+            "Agent Plan 必须使用豆包流式语音识别模型 2.0 的 Resource ID：volc.seedasr.sauc.duration。",
+        );
+    }
     validate_u64_range(
         &mut errors,
         "asr.no_feedback_auto_stop_seconds",

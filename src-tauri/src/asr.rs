@@ -1,6 +1,7 @@
 use crate::audio::{ASR_OUTPUT_CHANNELS, ASR_OUTPUT_SAMPLE_RATE};
 use crate::config::{
     effective_hotwords, AppConfig, DEFAULT_ACCELERATE_SCORE, DEFAULT_ENABLE_ACCELERATE_TEXT,
+    DOUBAO_SEED_ASR_2_RESOURCE_ID,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -8,6 +9,8 @@ use std::collections::BTreeMap;
 use uuid::Uuid;
 
 const ASR_DIRECT_HOTWORD_LIMIT: usize = 100;
+const AGENT_PLAN_ASR_WS_URL: &str =
+    "wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_async";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AsrRequestPreview {
@@ -30,14 +33,35 @@ pub fn build_request_preview(
 ) -> AsrRequestPreview {
     let context = build_context_payload(config, screen_context);
     AsrRequestPreview {
-        ws_url: config.request.ws_url.clone(),
+        ws_url: effective_ws_url(config),
         headers: build_headers(config),
         payload: build_request_payload(config, context.clone()),
         context,
     }
 }
 
+fn effective_ws_url(config: &AppConfig) -> String {
+    if config.auth.uses_agent_plan() {
+        AGENT_PLAN_ASR_WS_URL.to_string()
+    } else {
+        config.request.ws_url.clone()
+    }
+}
+
 pub fn build_headers(config: &AppConfig) -> BTreeMap<String, String> {
+    if config.auth.uses_agent_plan() {
+        let request_id = Uuid::new_v4().to_string();
+        return BTreeMap::from([
+            ("X-Api-Key".to_string(), config.auth.api_key.clone()),
+            (
+                "X-Api-Resource-Id".to_string(),
+                DOUBAO_SEED_ASR_2_RESOURCE_ID.to_string(),
+            ),
+            ("X-Api-Request-Id".to_string(), request_id.clone()),
+            ("X-Api-Connect-Id".to_string(), request_id),
+            ("X-Api-Sequence".to_string(), "-1".to_string()),
+        ]);
+    }
     BTreeMap::from([
         ("X-Api-App-Key".to_string(), config.auth.app_key.clone()),
         (
@@ -275,6 +299,45 @@ pub fn normalize_final_text(text: &str, remove_trailing_period: bool) -> String 
 mod tests {
     use super::*;
     use crate::config::{AppConfig, TextContext};
+
+    #[test]
+    fn agent_plan_preview_uses_plan_endpoint_and_api_key_headers() {
+        let config: AppConfig = toml::from_str(
+            r#"
+[auth]
+mode = "agent_plan"
+api_key = "example-agent-plan-key"
+resource_id = "volc.seedasr.sauc.concurrent"
+
+[request]
+ws_url = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
+"#,
+        )
+        .unwrap();
+
+        let preview = build_request_preview(&config, None);
+
+        assert_eq!(
+            preview.ws_url,
+            "wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_async"
+        );
+        assert_eq!(
+            preview.headers.get("X-Api-Key").map(String::as_str),
+            Some("example-agent-plan-key")
+        );
+        assert!(!preview.headers.contains_key("X-Api-App-Key"));
+        assert!(!preview.headers.contains_key("X-Api-Access-Key"));
+        assert_eq!(
+            preview.headers.get("X-Api-Resource-Id").map(String::as_str),
+            Some("volc.seedasr.sauc.duration")
+        );
+        assert_eq!(
+            preview.headers.get("X-Api-Sequence").map(String::as_str),
+            Some("-1")
+        );
+        assert!(preview.headers.contains_key("X-Api-Request-Id"));
+        assert!(preview.headers.contains_key("X-Api-Connect-Id"));
+    }
 
     #[test]
     fn builds_context_payload_in_expected_order() {

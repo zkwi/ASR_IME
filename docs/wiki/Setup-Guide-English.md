@@ -55,18 +55,18 @@ The core workflow depends on one working streaming ASR service. Doubao ASR remai
 
 Minimum setup rule: once the selected ASR test passes, you can return Home and start dictating. LLM polishing, hotwords, and screen OCR are optional quality improvements.
 
-### Doubao ASR Default Setup
+### Doubao ASR Setup
 
-Open **API Config -> Speech recognition provider**, choose "Doubao ASR", and fill in:
+Open **API Config -> Speech recognition provider**, choose "Doubao ASR", then select an access mode:
 
-| Field | Required | Notes |
+| Access mode | Required fields | Notes |
 | --- | --- | --- |
-| App Key | Yes | App Key/App ID for the Doubao speech service in the Volcano Engine console |
-| Access Key | Yes | Access Key for the same Doubao speech service |
+| App Key + Access Key | App Key and Access Key | Preserves the existing Doubao speech-service flow; Resource ID can match the account's enabled resource |
+| Volcengine Ark Agent Plan | Agent Plan API Key | Uses the dedicated Ark `X-Api-Key`; configure the model and overage post-pay in the Ark console first |
 
-The default Resource ID is `volc.seedasr.sauc.duration`. Most users do not need to edit it in the UI; special cases can edit `config.toml`.
+Both credential sets are stored separately in the local config, and only the selected access mode is used. Agent Plan is fixed to Doubao Streaming ASR 2.0 resource `volc.seedasr.sauc.duration` and automatically connects to `wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_async`; it does not use `[request].ws_url`. API Config resets the Resource ID when Agent Plan is selected. This release adds Agent Plan ASR only, not TTS.
 
-VoxType currently sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id` as documented by Doubao streaming ASR. If the console shows multiple keys, confirm that they belong to the same Doubao speech recognition service and billing resource. Do not paste a Bailian/DashScope LLM key, GitHub token, or unrelated cloud secret into ASR credentials. The Doubao credentials panel includes an official docs link for checking the field descriptions during first-time setup.
+Standard access sends `X-Api-App-Key`, `X-Api-Access-Key`, and `X-Api-Resource-Id`; Agent Plan sends `X-Api-Key` and the fixed Resource ID. Do not paste a Bailian/DashScope LLM key, GitHub token, or unrelated cloud secret into ASR credentials. The Doubao panel opens the official docs for the selected access mode.
 
 Click **Test** after filling credentials. This connection test uses the current real credentials and sends a short program-generated silence packet to the selected ASR provider to verify authentication, TLS, and service access. It does not open the microphone and does not replace a real recording, final-event, and paste regression. When it passes, return to Home and start voice input.
 
@@ -90,7 +90,7 @@ Alibaba Cloud mode uses FunASR `language_hints`. Leave it empty for auto detecti
 
 | Symptom | Check first |
 | --- | --- |
-| Doubao authentication or permission failure | App Key, Access Key, and Resource ID belong to the same Doubao speech service and account |
+| Doubao authentication or permission failure | Confirm the selected access mode; for standard access check App Key/Access Key/resource, and for Agent Plan check the dedicated API Key, model setup, and overage post-pay |
 | Alibaba Cloud authentication or permission failure | API Key, Workspace ID, region, and model permission belong to the same Bailian workspace |
 | Connection failure or timeout | Network, proxy, or firewall access to the selected ASR service domain |
 | Failure after changing language | Switch Recognition language back to Auto/service default and test again |
@@ -100,9 +100,13 @@ The production recording path also separates connection timeout, connection fail
 
 If it still fails, open **Options -> Updates and diagnostics -> Copy diagnostic report** and include the redacted error code/status in an Issue. Do not paste real keys, full logs, or transcript text.
 
-Doubao official docs:
+Standard Doubao docs:
 
 <https://www.volcengine.com/docs/6561/1354869?lang=en>
+
+Volcengine Ark Agent Plan docs:
+
+<https://www.volcengine.com/docs/82379/2516286?lang=zh>
 
 Alibaba Cloud FunASR official docs:
 

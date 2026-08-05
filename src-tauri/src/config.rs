@@ -6,6 +6,9 @@ const DEFAULT_AUTO_HOTWORD_MAX_HISTORY_CHARS: usize = 5_000;
 const LEGACY_RESULT_TYPE_DEFAULT: &str = "single";
 pub(crate) const ASR_PROVIDER_DOUBAO: &str = "doubao";
 pub(crate) const ASR_PROVIDER_ALIYUN_FUN: &str = "aliyun_fun";
+pub(crate) const DOUBAO_AUTH_MODE_APP_ACCESS: &str = "app_access";
+pub(crate) const DOUBAO_AUTH_MODE_AGENT_PLAN: &str = "agent_plan";
+pub(crate) const DOUBAO_SEED_ASR_2_RESOURCE_ID: &str = "volc.seedasr.sauc.duration";
 pub(crate) const DEFAULT_ENABLE_ACCELERATE_TEXT: bool = false;
 pub(crate) const DEFAULT_ACCELERATE_SCORE: i64 = 0;
 const APP_DATA_DIR_NAME: &str = "VoxType";
@@ -64,12 +67,22 @@ pub struct AsrConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthConfig {
+    #[serde(default = "default_doubao_auth_mode")]
+    pub mode: String,
     #[serde(default)]
     pub app_key: String,
     #[serde(default)]
     pub access_key: String,
+    #[serde(default)]
+    pub api_key: String,
     #[serde(default = "default_resource_id")]
     pub resource_id: String,
+}
+
+impl AuthConfig {
+    pub(crate) fn uses_agent_plan(&self) -> bool {
+        self.mode.trim() == DOUBAO_AUTH_MODE_AGENT_PLAN
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -363,8 +376,10 @@ impl Default for AsrConfig {
 impl Default for AuthConfig {
     fn default() -> Self {
         Self {
+            mode: default_doubao_auth_mode(),
             app_key: String::new(),
             access_key: String::new(),
+            api_key: String::new(),
             resource_id: default_resource_id(),
         }
     }
@@ -952,8 +967,11 @@ fn default_asr_provider() -> String {
 fn default_asr_no_feedback_auto_stop_seconds() -> u64 {
     30
 }
+fn default_doubao_auth_mode() -> String {
+    DOUBAO_AUTH_MODE_APP_ACCESS.to_string()
+}
 fn default_resource_id() -> String {
-    "volc.seedasr.sauc.duration".to_string()
+    DOUBAO_SEED_ASR_2_RESOURCE_ID.to_string()
 }
 fn default_aliyun_region() -> String {
     "cn-beijing".to_string()
@@ -1408,6 +1426,56 @@ mod tests {
             .llm_post_edit
             .user_prompt_template
             .contains("只输出最终文本"));
+    }
+
+    #[test]
+    fn agent_plan_auth_fields_survive_config_round_trip() {
+        let config: AppConfig = toml::from_str(
+            r#"
+[auth]
+mode = "agent_plan"
+api_key = "example-agent-plan-key"
+resource_id = "volc.seedasr.sauc.duration"
+"#,
+        )
+        .unwrap();
+
+        let saved = toml::to_string_pretty(&config).unwrap();
+
+        assert!(saved.contains("mode = \"agent_plan\""));
+        assert!(saved.contains("api_key = \"example-agent-plan-key\""));
+    }
+
+    #[test]
+    fn rejects_unknown_doubao_auth_mode() {
+        let config: AppConfig = toml::from_str(
+            r#"
+[auth]
+mode = "unexpected"
+"#,
+        )
+        .unwrap();
+
+        let errors = validate_config(&config).expect_err("unknown auth mode should fail");
+
+        assert!(errors.iter().any(|error| error.field == "auth.mode"));
+    }
+
+    #[test]
+    fn agent_plan_requires_seed_asr_2_resource_id() {
+        let config: AppConfig = toml::from_str(
+            r#"
+[auth]
+mode = "agent_plan"
+api_key = "example-agent-plan-key"
+resource_id = "volc.seedasr.sauc.concurrent"
+"#,
+        )
+        .unwrap();
+
+        let errors = validate_config(&config).expect_err("Agent Plan resource ID should be fixed");
+
+        assert!(errors.iter().any(|error| error.field == "auth.resource_id"));
     }
 
     #[test]

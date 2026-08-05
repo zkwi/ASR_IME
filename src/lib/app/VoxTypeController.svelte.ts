@@ -44,7 +44,7 @@ import {
   userErrorMessage as getUserErrorMessage,
 } from "$lib/utils/appRouting";
 import { actionsForUserError } from "$lib/utils/errorActions";
-import { isAliyunAsrProvider } from "$lib/utils/asrProvider";
+import { DOUBAO_AUTH_MODE_AGENT_PLAN, isAliyunAsrProvider } from "$lib/utils/asrProvider";
 import { clonePlain, configFingerprint } from "$lib/utils/config";
 import {
   canEditLoadedConfig,
@@ -815,8 +815,12 @@ export function createVoxTypeController() {
         errors["aliyun_asr.workspace_id"] = t("aliyunWorkspaceOrUrlRequired");
       }
     } else {
-      if (!config.auth.app_key.trim()) errors["auth.app_key"] = t("requiredField");
-      if (!config.auth.access_key.trim()) errors["auth.access_key"] = t("requiredField");
+      if (config.auth.mode === DOUBAO_AUTH_MODE_AGENT_PLAN) {
+        if (!config.auth.api_key.trim()) errors["auth.api_key"] = t("requiredField");
+      } else {
+        if (!config.auth.app_key.trim()) errors["auth.app_key"] = t("requiredField");
+        if (!config.auth.access_key.trim()) errors["auth.access_key"] = t("requiredField");
+      }
     }
     return errors;
   }
@@ -824,6 +828,8 @@ export function createVoxTypeController() {
     const next = { ...validationErrors };
     delete next["auth.app_key"];
     delete next["auth.access_key"];
+    delete next["auth.api_key"];
+    delete next["auth.mode"];
     delete next["auth.resource_id"];
     delete next["asr.provider"];
     delete next["aliyun_asr.api_key"];
@@ -1358,7 +1364,7 @@ export function createVoxTypeController() {
     await safeInvoke<void>("open_setup_guide");
   }
   async function openDoubaoAsrDocs() {
-    await safeInvoke<void>("open_doubao_asr_docs");
+    await safeInvoke<void>("open_doubao_asr_docs", { mode: config.auth.mode });
   }
   async function openAliyunAsrDocs() {
     await safeInvoke<void>("open_aliyun_asr_docs");

@@ -94,11 +94,11 @@ Start-Process -Wait -Verb RunAs "C:\Temp\MicrosoftEdgeWebView2RuntimeInstallerX6
 
 ## ASR 测试失败
 
-先确认 API配置页选择的 ASR 服务与认证字段匹配。豆包模式需要 App Key、Access Key 和 Resource ID 属于同一个豆包语音识别服务；阿里云 FunASR 模式需要 API Key、Workspace ID、地域和模型权限属于同一个百炼工作空间。不要把大模型 API Key、GitHub Token、火山引擎 IAM Secret 或其他平台密钥填到错误的 ASR 服务里。
+先确认 API配置页选择的 ASR 服务和豆包接入方式与认证字段匹配。豆包标准方式需要 App Key、Access Key 和 Resource ID 属于同一个语音识别服务；Agent Plan 需要方舟专属 API Key，并在方舟控制台配置豆包流式语音识别模型 2.0 和超额后付费。阿里云 FunASR 模式需要 API Key、Workspace ID、地域和模型权限属于同一个百炼工作空间。不要把大模型 API Key、GitHub Token、火山引擎 IAM Secret 或其他平台密钥填到错误的 ASR 服务里。
 
 常见处理：
 
-1. 豆包认证或权限失败：重新复制 App Key、Access Key，确认账号已开通豆包流式语音识别，Resource ID 和计费资源匹配。
+1. 豆包认证或权限失败：先确认接入方式；标准方式重新复制 App Key、Access Key 并检查 Resource ID，Agent Plan 重新复制专属 API Key 并检查模型配置和超额后付费。
 2. 阿里云认证或权限失败：重新复制 API Key，确认 Workspace ID、地域和 `fun-asr-realtime` 模型权限匹配。
 3. 连接失败或超时：检查代理、防火墙和网络是否能访问当前 ASR 服务域名。
 4. 修改识别语言后失败：先改回“自动 / 服务默认”再测试。

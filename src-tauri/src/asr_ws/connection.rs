@@ -15,7 +15,12 @@ use tokio_tungstenite::tungstenite::Message;
 const ASR_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 
 pub(crate) async fn test_doubao_connection(config: &AppConfig) -> Result<(), String> {
-    if config.auth.app_key.trim().is_empty() || config.auth.access_key.trim().is_empty() {
+    if config.auth.uses_agent_plan() && config.auth.api_key.trim().is_empty() {
+        return Err("请先填写火山方舟 Agent Plan 专属 API Key。".to_string());
+    }
+    if !config.auth.uses_agent_plan()
+        && (config.auth.app_key.trim().is_empty() || config.auth.access_key.trim().is_empty())
+    {
         return Err("请先填写豆包 App Key 和 Access Key。".to_string());
     }
     if config.auth.resource_id.trim().is_empty() {
@@ -40,10 +45,20 @@ pub(crate) async fn test_doubao_connection(config: &AppConfig) -> Result<(), Str
         request.headers_mut().insert(name, value);
     }
 
-    let (mut websocket, _) = tokio::time::timeout(ASR_CONNECT_TIMEOUT, connect_async(request))
-        .await
-        .map_err(|_| "连接豆包 ASR 测试超时，请检查网络或代理设置。".to_string())?
-        .map_err(|err| friendly_asr_connection_error(&err.to_string()))?;
+    let (mut websocket, handshake) =
+        tokio::time::timeout(ASR_CONNECT_TIMEOUT, connect_async(request))
+            .await
+            .map_err(|_| "连接豆包 ASR 测试超时，请检查网络或代理设置。".to_string())?
+            .map_err(|err| friendly_asr_connection_error(&err.to_string()))?;
+    if let Some(log_id) = handshake
+        .headers()
+        .get("x-tt-logid")
+        .and_then(|value| value.to_str().ok())
+    {
+        app_log::info(format!("豆包 ASR 测试已连接: logid={}", log_id));
+    } else {
+        app_log::info("豆包 ASR 测试已连接");
+    }
     websocket
         .send(Message::Binary(
             protocol::build_full_request(&preview.payload, 1)?.into(),
