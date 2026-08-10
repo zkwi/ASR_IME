@@ -6,6 +6,17 @@
 
 ## [未发布]
 
+## [0.12.1] - 2026-08-10
+
+### 安全
+
+- 将 Tauri 间接依赖 `serde_with` 从 `3.18.0` 升到已修复的 `3.21.0`，处理 `GHSA-7gcf-g7xr-8hxj` 中 `KeyValueMap` 对空序列/映射项序列化可能触发 panic 的问题。
+- 该告警由 `0.12.0` 发布后的 GitHub Dependabot 仓库级复核发现；本地 `cargo-audit` 当时未包含该 GitHub Advisory。补丁只更新 Cargo 锁文件及其新增的 `bs58` 间接依赖，不修改运行时代码。
+
+### 工程治理
+
+- 将“发布后复核 CodeQL、Dependabot、Secret Scanning 告警”加入本次实际发布闭环；Linux/GTK 专用 `glib` 告警按 Windows 目标依赖树证据单独处置，不用无关跨平台升级掩盖风险。
+
 ## [0.12.0] - 2026-08-10
 
 ### 改进

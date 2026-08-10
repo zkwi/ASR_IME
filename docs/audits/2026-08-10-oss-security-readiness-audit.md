@@ -4,7 +4,7 @@
 
 ## 结论
 
-本轮未发现可直接复现的真实密钥、识别正文或本机用户名路径泄漏，也未发现前端不安全 HTML 注入、shell 字符串拼接执行或绕过最终 ASR 包门禁的新问题。已修复两个有明确上游修复版本的依赖风险，补齐公开 CI、CodeQL、私有漏洞报告和 Dependabot 安全更新，并将更新安装包缺少独立可信校验列为公开安全后续工作。
+本轮未发现可直接复现的真实密钥、识别正文或本机用户名路径泄漏，也未发现前端不安全 HTML 注入、shell 字符串拼接执行或绕过最终 ASR 包门禁的新问题。已修复三个有明确上游修复版本的依赖风险，补齐公开 CI、CodeQL、私有漏洞报告和 Dependabot 安全更新，并将更新安装包缺少独立可信校验列为公开安全后续工作。
 
 本轮定位为 OSS 治理与发布整理，不修改录音、ASR、LLM、剪贴板、热键、托盘、配置字段或默认值。唯一 Rust 代码变更是移除一个依赖 Windows runner 调度速度的测试上界，生产逻辑未变。
 
@@ -35,6 +35,12 @@
 - 远端 `v0.11.0` CI 的 248 项 Rust 测试中仅 `screen_context::tests::wait_for_context_times_out_without_result` 失败。函数已在 1ms 超时后正确返回 `None`，失败来自测试额外要求整个调用必须在 100ms 内结束。
 - 处理：保留真实 1ms 超时断言，删除无法由进程保证的 wall-clock 上界；未修改生产实现。
 - 结果：定向测试连续运行 20 次全部通过，全量 248 项 Rust 测试通过。
+
+### 4. 发布后 Dependabot 补充告警
+
+- `0.12.0` 发布后，GitHub Dependabot 报告 `serde_with 3.18.0` 命中 `GHSA-7gcf-g7xr-8hxj`；受影响版本为 `<3.21.0`，可能在 `KeyValueMap` 序列化攻击者可控空项时触发 panic。
+- 该 crate 经 `tauri-utils 2.9.3` 进入 Windows 依赖树，但 VoxType 不直接使用 `KeyValueMap`。为避免用“当前未发现可达路径”代替修复，`0.12.1` 将锁文件升级到 `serde_with 3.21.0`。
+- 本地 `cargo-audit` 当时未包含该 GitHub Advisory，说明发布闭环必须同时复核 RustSec 与 GitHub Dependabot，不能只看单一数据库。
 
 ## 隐私与本地数据结论
 
