@@ -21,7 +21,7 @@
 
 **English overview:** Focus any text field and press `Ctrl + Q` to speak. VoxType shows live captions through the selected cloud ASR provider, waits for the final result, optionally applies light editing through an OpenAI-compatible LLM, then copies and pastes the text while restoring the previous clipboard when possible.
 
-**Quick links / 快速入口：** [English README / 英文版](README.en.md) · [Download / 下载](https://github.com/zkwi/VoxType/releases/latest) · [Quick Start / 快速开始](https://github.com/zkwi/VoxType/wiki/Setup-Guide) · [Roadmap / 路线图](ROADMAP.md) · [Architecture / 架构](ARCHITECTURE.md) · [Contributing / 参与贡献](CONTRIBUTING.md)
+**Quick links / 快速入口：** [English README / 英文版](README.en.md) · [Download / 下载](https://github.com/zkwi/VoxType/releases/latest) · [Quick Start (English)](https://github.com/zkwi/VoxType/wiki/Setup-Guide-English) · [快速开始（中文）](https://github.com/zkwi/VoxType/wiki/Setup-Guide) · [Roadmap / 路线图](ROADMAP.md) · [Architecture / 架构](ARCHITECTURE.md) · [Contributing / 参与贡献](CONTRIBUTING.md)
 
 <img src="screenshots/ScreenShot_2026-05-09_130744_793.png" alt="VoxType 中文首页：语音输入状态、启动方式和输入表现" width="820">
 
