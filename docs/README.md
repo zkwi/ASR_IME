@@ -28,6 +28,7 @@
 
 - 更新日志：[CHANGELOG.md](../CHANGELOG.md)
 - 发布审计记录：[docs/audits/](audits/)
+- OSS 就绪发布审计：[2026-08-10 VoxType 0.12.0 OSS 就绪发布审计](audits/2026-08-10-release-0.12.0-oss-readiness-audit.md)
 - OSS 与安全就绪审计：[2026-08-10 VoxType OSS 与安全就绪审计](audits/2026-08-10-oss-security-readiness-audit.md)
 - Agent Plan ASR 发布审计：[2026-08-05 VoxType 0.11.0 火山方舟 Agent Plan ASR 发布审计](audits/2026-08-05-release-0.11.0-agent-plan-asr-audit.md)
 - 错误通知最近五轮保留发布审计：[2026-08-01 VoxType 0.10.4 错误通知最近五轮保留发布审计](audits/2026-08-01-release-0.10.4-error-notice-retention-audit.md)

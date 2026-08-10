@@ -6,6 +6,27 @@
 
 ## [未发布]
 
+## [0.12.0] - 2026-08-10
+
+### 改进
+
+- GitHub 首页改为英文优先的一句话定位、截图、核心价值、下载、Quick Start 和项目状态结构，并保留中文完整说明与英文 README 对等入口。
+- 新增公开 `ROADMAP.md`、贡献者 `ARCHITECTURE.md` 和 `CODEOWNERS`，重写双语贡献与安全入口，明确维护者、贡献边界、隐私规则和适合 Codex 参与的工作。
+- 新增三个带验收标准的真实贡献 Issue，覆盖英文维护文档、干净 Windows 安装烟雾测试和更新安装包可信校验。
+
+### 安全
+
+- 新增 JavaScript/TypeScript、Rust 和 GitHub Actions 的 CodeQL 扫描；第三方 Actions 固定到完整 commit SHA。
+- 启用 GitHub Private Vulnerability Reporting 与 Dependabot security updates，并保留 Secret Scanning 和 Push Protection。
+- 修复 `nanoid 3.3.16` 的 `GHSA-2v37-7h3g-55p8` 和 `event-listener 5.4.1` 的 `RUSTSEC-2026-0221`，不增加直接依赖。
+- 完成日志、诊断、统计、本地正文历史、Tauri 权限和更新器信任边界审计；将安装包独立签名/provenance 校验记录为公开安全后续工作。
+
+### 工程治理
+
+- 将 Windows CI 拆为质量回归、npm/Cargo 依赖审计、clippy 与 Tauri 构建三个独立检查，便于贡献者定位失败原因。
+- 完善 PR 与 Issue 模板、Dependabot 分组和贡献标签；依赖更新继续按 npm、Cargo 和 Actions 分流。
+- 修复 OCR 超时测试对 Windows runner 100ms 调度上界的依赖，保留真实超时断言；生产 OCR、ASR、LLM、剪贴板和统计逻辑不变。
+
 ## [0.11.0] - 2026-08-05
 
 ### 新增
