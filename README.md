@@ -1,8 +1,15 @@
 # VoxType — Privacy-conscious AI voice typing for Windows
 
-**声写 VoxType：面向 Windows 日常使用的隐私敏感型开源 AI 语音输入工具。**
+**中文定位：** 声写 VoxType 是面向 Windows 日常使用的隐私敏感型开源 AI 语音输入工具。
 
-[English](README.en.md) | 简体中文
+**English:** Open-source Windows dictation built for real daily use, native desktop integration, and explicit privacy boundaries.
+
+> [!TIP]
+> **Language / 语言：[English — full documentation →](README.en.md) · 简体中文（当前）**
+>
+> The English README includes download, setup, privacy, troubleshooting, architecture, and contribution guides.
+>
+> 英文版已完整覆盖下载、配置、隐私、排障、架构与贡献说明。
 
 [![Latest release](https://img.shields.io/github/v/release/zkwi/VoxType?display_name=tag&sort=semver)](https://github.com/zkwi/VoxType/releases/latest)
 [![CI](https://github.com/zkwi/VoxType/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zkwi/VoxType/actions/workflows/ci.yml)
@@ -10,9 +17,11 @@
 [![License: MIT](https://img.shields.io/github/license/zkwi/VoxType)](LICENSE)
 [![Platform: Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://github.com/zkwi/VoxType/releases/latest)
 
-把光标放到任意输入框，按下 `Ctrl + Q` 开始说话。VoxType 通过所选云端 ASR（默认豆包流式 ASR，也支持阿里云 FunASR Realtime）显示实时字幕，等待最终结果后可选调用 OpenAI 兼容大模型轻度润色，再写入剪贴板、自动粘贴，并尽可能恢复原剪贴板。
+**中文简介：** 把光标放到任意输入框，按下 `Ctrl + Q` 开始说话。VoxType 通过所选云端 ASR（默认豆包流式 ASR，也支持阿里云 FunASR Realtime）显示实时字幕，等待最终结果后可选调用 OpenAI 兼容大模型轻度润色，再写入剪贴板、自动粘贴，并尽可能恢复原剪贴板。
 
-[下载最新版](https://github.com/zkwi/VoxType/releases/latest) · [3 分钟快速开始](https://github.com/zkwi/VoxType/wiki/Setup-Guide) · [路线图](ROADMAP.md) · [架构](ARCHITECTURE.md) · [参与贡献](CONTRIBUTING.md)
+**English overview:** Focus any text field and press `Ctrl + Q` to speak. VoxType shows live captions through the selected cloud ASR provider, waits for the final result, optionally applies light editing through an OpenAI-compatible LLM, then copies and pastes the text while restoring the previous clipboard when possible.
+
+**Quick links / 快速入口：** [English README / 英文版](README.en.md) · [Download / 下载](https://github.com/zkwi/VoxType/releases/latest) · [Quick Start (English)](https://github.com/zkwi/VoxType/wiki/Setup-Guide-English) · [快速开始（中文）](https://github.com/zkwi/VoxType/wiki/Setup-Guide) · [Roadmap / 路线图](ROADMAP.md) · [Architecture / 架构](ARCHITECTURE.md) · [Contributing / 参与贡献](CONTRIBUTING.md)
 
 <img src="screenshots/ScreenShot_2026-05-09_130744_793.png" alt="VoxType 中文首页：语音输入状态、启动方式和输入表现" width="820">
 
