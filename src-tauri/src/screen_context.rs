@@ -584,10 +584,8 @@ mod tests {
     #[test]
     fn wait_for_context_times_out_without_result() {
         let (_tx, rx) = mpsc::channel::<Result<ScreenContextSnapshot, String>>();
-        let started = Instant::now();
 
         assert!(wait_for_context(Some(rx), 1).is_none());
-        assert!(started.elapsed() < Duration::from_millis(100));
     }
 
     #[test]

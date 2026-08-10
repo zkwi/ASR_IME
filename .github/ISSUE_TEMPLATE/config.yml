@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
+  - name: Roadmap and contribution lanes
+    url: https://github.com/zkwi/VoxType/blob/main/ROADMAP.md
+    about: Check current priorities, contribution labels, and explicit non-goals.
   - name: Setup guide
     url: https://github.com/zkwi/VoxType/wiki/Setup-Guide
     about: Read the Chinese setup guide before filing configuration issues.
@@ -10,5 +13,5 @@ contact_links:
     url: https://github.com/zkwi/VoxType/blob/main/SUPPORT.md
     about: Read what information helps maintainers reproduce and triage issues.
   - name: Security policy
-    url: https://github.com/zkwi/VoxType/blob/main/SECURITY.md
-    about: Report security and privacy issues without exposing secrets or transcripts publicly.
+    url: https://github.com/zkwi/VoxType/security/advisories/new
+    about: Privately report exploitable security or privacy issues without exposing sensitive details.

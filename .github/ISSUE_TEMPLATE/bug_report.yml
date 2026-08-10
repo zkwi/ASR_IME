@@ -21,7 +21,7 @@ body:
     attributes:
       label: Version
       description: VoxType version or commit hash.
-      placeholder: "0.1.50"
+      placeholder: "v0.x.y or commit hash"
     validations:
       required: true
   - type: dropdown
@@ -31,6 +31,7 @@ body:
       options:
         - Recording / microphone
         - Doubao ASR
+        - Alibaba Cloud ASR
         - LLM polishing
         - Clipboard / paste
         - Hotkey / mouse trigger
@@ -81,6 +82,13 @@ body:
     attributes:
       label: Redacted diagnostics
       description: Optional. Paste only short, redacted errors or diagnostics that do not expose keys, transcripts, hotwords, prompts, local context, raw logs, or username paths.
+    validations:
+      required: false
+  - type: textarea
+    id: regression
+    attributes:
+      label: Possible regression
+      description: If this worked before, provide the last known working VoxType version.
     validations:
       required: false
   - type: checkboxes

@@ -7,7 +7,11 @@ updates:
       day: monday
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    target-branch: main
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - javascript
     groups:
       frontend-dependencies:
         patterns:
@@ -20,7 +24,11 @@ updates:
       day: monday
       time: "09:30"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    target-branch: main
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - rust
     groups:
       rust-dependencies:
         patterns:
@@ -33,4 +41,12 @@ updates:
       day: monday
       time: "10:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    target-branch: main
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - github_actions
+    groups:
+      workflow-actions:
+        patterns:
+          - "*"

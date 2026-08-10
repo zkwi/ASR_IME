@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please search existing Issues and the Wiki first. Do not include real API keys, transcripts, personal hotwords, prompts, local context, raw logs, or Windows username paths.
+        Please search existing Issues, the Wiki, and ROADMAP.md first. VoxType prioritizes focused Windows reliability work over speculative frameworks. Do not include real API keys, transcripts, personal hotwords, prompts, local context, raw logs, or Windows username paths.
   - type: textarea
     id: problem
     attributes:
@@ -21,6 +21,13 @@ body:
       description: Keep it practical and lightweight for a personal desktop app.
     validations:
       required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What observable result would make this request complete?
+    validations:
+      required: true
   - type: dropdown
     id: area
     attributes:
@@ -28,6 +35,7 @@ body:
       options:
         - Recording / microphone
         - Doubao ASR
+        - Alibaba Cloud ASR
         - LLM polishing
         - Clipboard / paste
         - Hotkey / mouse trigger
@@ -48,5 +56,5 @@ body:
           required: true
         - label: I understand this project prefers small, dependency-light changes.
           required: true
-        - label: This may affect privacy, logs, clipboard, hotkeys, tray, updates, or config defaults.
-          required: false
+        - label: I described any privacy, logs, clipboard, hotkeys, tray, updates, or config-default impact above.
+          required: true

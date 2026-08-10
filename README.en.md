@@ -377,6 +377,8 @@ Do not use `cargo build --release` as the desktop release artifact. It does not 
 
 ## Checks
 
+GitHub Actions exposes separate quality/regression, npm/Cargo dependency-audit, and clippy/Tauri debug-build checks. CodeQL analyzes JavaScript/TypeScript, Rust, and Actions workflows. Third-party Actions are pinned to full commit SHAs, while Dependabot tracks npm, Cargo, and Actions updates.
+
 Common local checks:
 
 ```powershell

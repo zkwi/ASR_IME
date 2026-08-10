@@ -2,28 +2,33 @@
 
 -
 
-## Scope
+## User Problem and Scope
 
-- [ ] I read `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, and `CODE_OF_CONDUCT.md`
-- [ ] Does not affect the ASR -> LLM -> clipboard -> paste main workflow
-- [ ] Does not change config structure or defaults
-- [ ] Does not change privacy, logging, clipboard, hotkey, tray, or update behavior
-- [ ] User-facing docs/i18n updated where needed
-- [ ] No real keys, transcripts, hotwords, prompts, local context, raw logs, or Windows username paths are included
+- User problem:
+- Files/modules changed:
+- Explicitly out of scope:
+
+## Impact Check
+
+- [ ] I read `CONTRIBUTING.md`, `ARCHITECTURE.md`, `SECURITY.md`, and the relevant guardrails.
+- [ ] I described any impact on ASR, final-result gating, optional LLM editing, clipboard/paste, or successful statistics.
+- [ ] I described any config/default, privacy, logging, local-history, hotkey, tray, updater, installer, or screenshot impact.
+- [ ] User-visible behavior is synchronized across both README files, Wiki drafts, and all three UI languages where applicable.
+- [ ] No real keys, transcripts, hotwords, prompts, OCR/context bodies, raw logs, statistics files, or Windows username paths are included.
 
 ## Checks
 
 - [ ] `npm run scan:secrets:staged`
-- [ ] `npm run check:governance`
-- [ ] `npm run test:governance`
-- [ ] `npm run test:stats`
 - [ ] `npm run ai:check`
+- [ ] `npm run audit:npm`
+- [ ] `npm run audit:rust`
+- [ ] `npm run ai:release-check` when release-facing
 - [ ] Manual UI verification, if UI changed
 
 ## Risk Areas
 
 Mention any affected areas: ASR, LLM polishing, clipboard/paste, hotkeys, tray, updates, config, logs, stats, privacy, installer, or UI.
 
-## Notes
+## Evidence and Notes
 
-Mention any skipped checks, known risks, or follow-up work here.
+Include regression evidence, skipped checks with reasons, known risks, and follow-up work.
