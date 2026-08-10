@@ -1,38 +1,59 @@
-# VoxType - Rust/Tauri Windows AI Voice Typing App
+# VoxType — Privacy-conscious AI voice typing for Windows
+
+**Open-source Windows dictation built for real daily use, native desktop integration, and explicit privacy boundaries.**
 
 [简体中文](README.md) | English
 
-VoxType is a lightweight Rust/Tauri Windows 10/11 desktop AI voice typing, dictation, and speech-to-text app. Put the cursor in any input box, press the global shortcut, speak, and VoxType will record microphone audio, transcribe it with the selected ASR provider (Doubao by default, with Alibaba Cloud FunASR Realtime available), optionally polish the result with an OpenAI-compatible LLM, copy it to the clipboard, paste it into the active input field, and restore the previous clipboard when possible.
+[![Latest release](https://img.shields.io/github/v/release/zkwi/VoxType?display_name=tag&sort=semver)](https://github.com/zkwi/VoxType/releases/latest)
+[![CI](https://github.com/zkwi/VoxType/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zkwi/VoxType/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/zkwi/VoxType/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/zkwi/VoxType/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/github/license/zkwi/VoxType)](LICENSE)
+[![Platform: Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://github.com/zkwi/VoxType/releases/latest)
 
-The current project is a root-level Tauri app. Rust handles global shortcuts, input hooks, audio capture, ASR sessions, clipboard output, tray behavior, floating captions, updates, and system audio. Svelte handles the main window UI.
+Put the cursor in any text field and press `Ctrl + Q` to speak. VoxType shows live captions through your selected cloud ASR provider (Doubao by default, with Alibaba Cloud FunASR Realtime available), waits for the provider's final result, optionally applies light editing through an OpenAI-compatible LLM, writes the result to the clipboard, pastes it, and restores the previous clipboard when possible.
 
-This is a personal project. The priority is practicality, simplicity, and maintainability. Do not commit real API keys, personal hotwords, local context files, logs, or stats files.
+[Download the latest release](https://github.com/zkwi/VoxType/releases/latest) · [3-minute setup](https://github.com/zkwi/VoxType/wiki/Setup-Guide-English) · [Roadmap](ROADMAP.md) · [Architecture](ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)
 
-## Use Cases
+<img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
 
-- Voice typing in any Windows text field, including Chinese dictation, English dictation, and multilingual speech-to-text.
-- Real-time captions and final transcripts powered by Doubao streaming ASR or Alibaba Cloud FunASR, then automatic paste into chat apps, browsers, editors, forms, or office tools.
-- Optional LLM polishing for long spoken text, reducing filler words, recognition noise, and formatting issues.
-- A local, open-source Windows dictation workflow that keeps usage stats free of transcript text by default.
+## Why VoxType
+
+- **Built for daily input:** global shortcuts, floating captions, final-result gating, automatic paste, tray operation, and startup integration form one complete Windows workflow.
+- **Native Windows integration:** Rust/Tauri owns microphone capture, global input, clipboard output, windows, tray, and system APIs; Svelte provides understandable setup and diagnostics.
+- **Explicit privacy boundaries:** transcript text is excluded from logs and usage statistics by default, diagnostic reports redact secrets and user-profile paths, and recent-context plus automatic-hotword history are off by default.
+- **Auditable and maintained:** source, release audits, regression tests, dependency checks, Secret Scanning, CodeQL, contribution rules, and private security reporting are public or directly discoverable.
+
+## Quick Start
+
+1. Download and install the latest `VoxType_*_x64-setup.exe` from [GitHub Releases](https://github.com/zkwi/VoxType/releases/latest).
+2. Choose Doubao or Alibaba Cloud ASR in API Config, enter your own provider credentials, and run the connection test. LLM polishing is optional.
+3. Focus any text field, press `Ctrl + Q`, speak, and press it again to stop. VoxType does not enter polishing or output until the ASR provider returns its final result.
+
+> The desktop control flow runs locally, but microphone audio is sent to the cloud ASR provider you select. If LLM polishing is enabled, the final text and any explicitly enabled reference context are sent to that model provider. Review the [privacy and local-data notes](#config-and-log-locations), [SECURITY.md](SECURITY.md), and each provider's billing and data policy.
+
+## Project Status
+
+| Item | Status |
+| --- | --- |
+| Maintenance | Active; `main` and the latest GitHub Release are supported |
+| Maintainer | [@zkwi](https://github.com/zkwi) |
+| Platform | Windows 10 / 11; current releases provide an x64 installer |
+| License | [MIT](LICENSE) |
+| Contributions | Focused bugs, tests, docs, and small UX improvements are welcome; open an Issue before changing the main workflow or privacy boundaries |
+
+Project links: [Roadmap](ROADMAP.md) · [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Support](SUPPORT.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)
 
 ## Documentation
 
-- Repository docs index: [docs/README.md](docs/README.md)
 - Wiki home: <https://github.com/zkwi/VoxType/wiki>
-- User configuration guide: <https://github.com/zkwi/VoxType/wiki/Setup-Guide-English>
-- Features and usage optimization: <https://github.com/zkwi/VoxType/wiki/Feature-Guide-English>
+- Setup guide: <https://github.com/zkwi/VoxType/wiki/Setup-Guide-English>
+- Features and usage: <https://github.com/zkwi/VoxType/wiki/Feature-Guide-English>
 - Troubleshooting: <https://github.com/zkwi/VoxType/wiki/Troubleshooting-English>
-- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security policy: [SECURITY.md](SECURITY.md)
-- Support policy: [SUPPORT.md](SUPPORT.md)
-- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- License: [MIT](LICENSE)
+- Engineering docs index: [docs/README.md](docs/README.md)
 
 ## Interface Preview
 
 The Home page centers the current input state, the primary shortcut, middle mouse, and right Alt in one compact voice card. After a successful input, VoxType shows that the text was copied and paste was attempted; the latest recognized text can be copied, viewed, or cleared immediately, then is cleared when the window is hidden, the app exits, or the next recording starts. Input performance cards show recent 24-hour input, recent 7-day input, average speed, and saved time. Saved time is estimated as manual typing time minus actual voice duration.
-
-<img src="screenshots/ScreenShot_2026-05-09_130803_332.png" alt="VoxType English Home page with voice input state and input performance" width="820">
 
 The sidebar is organized by task: Home, Prompts, API Config, Options, Privacy, and Analytics. Prompts prioritizes recognition terms, writing context, recent context, and automatic term suggestions, with low-frequency prompt parameters folded under Advanced settings. API Config shows required ASR/LLM credentials first, with region, model, language, and thinking compatibility fields folded under Advanced settings. Options keeps common settings first and folds extra start options and recording troubleshooting by default. The privacy page explains where the config file, logs, recent context, suggested-term history, usage stats, ASR audio, screen OCR, LLM polishing text, and clipboard snapshots are stored or sent, provides clearing actions for local context, suggested-term history, and stats, and links back to the relevant settings instead of duplicating switches.
 

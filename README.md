@@ -1,38 +1,59 @@
-# 声写 VoxType - 基于 Rust/Tauri 的 Windows AI 语音输入工具
+# VoxType — Privacy-conscious AI voice typing for Windows
+
+**声写 VoxType：面向 Windows 日常使用的隐私敏感型开源 AI 语音输入工具。**
 
 [English](README.en.md) | 简体中文
 
-声写（VoxType）是一个基于 Rust/Tauri 的 Windows 10/11 桌面 AI 语音输入、语音转文字和听写工具。把光标放到任意输入框后，按下全局热键开始说话，程序会录制麦克风音频，通过所选 ASR 服务实时识别语音（默认豆包流式 ASR，可切换阿里云 FunASR Realtime），可选调用 OpenAI 兼容大模型润色文本，并将最终结果写入剪贴板后自动粘贴到当前输入位置。
+[![Latest release](https://img.shields.io/github/v/release/zkwi/VoxType?display_name=tag&sort=semver)](https://github.com/zkwi/VoxType/releases/latest)
+[![CI](https://github.com/zkwi/VoxType/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zkwi/VoxType/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/zkwi/VoxType/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/zkwi/VoxType/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/github/license/zkwi/VoxType)](LICENSE)
+[![Platform: Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://github.com/zkwi/VoxType/releases/latest)
 
-当前代码已迁移为根目录 Tauri 项目：Rust 负责全局热键、输入钩子、音频采集、ASR 会话、剪贴板、系统托盘、悬浮字幕窗和系统音量；Svelte 负责主窗口 GUI。
+把光标放到任意输入框，按下 `Ctrl + Q` 开始说话。VoxType 通过所选云端 ASR（默认豆包流式 ASR，也支持阿里云 FunASR Realtime）显示实时字幕，等待最终结果后可选调用 OpenAI 兼容大模型轻度润色，再写入剪贴板、自动粘贴，并尽可能恢复原剪贴板。
 
-> 这是个人项目，目标是实用、轻量、易修改。请勿把真实密钥、个人热词、上下文或本地日志提交到仓库。
+[下载最新版](https://github.com/zkwi/VoxType/releases/latest) · [3 分钟快速开始](https://github.com/zkwi/VoxType/wiki/Setup-Guide) · [路线图](ROADMAP.md) · [架构](ARCHITECTURE.md) · [参与贡献](CONTRIBUTING.md)
 
-## 适合场景
+<img src="screenshots/ScreenShot_2026-05-09_130744_793.png" alt="VoxType 中文首页：语音输入状态、启动方式和输入表现" width="820">
 
-- 在 Windows 任意输入框中进行中文语音输入、英文听写或多语言语音转文字。
-- 用豆包流式 ASR 或阿里云 FunASR 获取实时字幕和最终转写结果，再自动粘贴到微信、浏览器、编辑器、表单或办公软件。
-- 对长句口述内容做轻度 LLM 润色，减少错别字、口语冗余和格式混乱。
-- 需要一个本地运行、可审计、默认不记录识别正文统计的开源语音输入工具。
+## Why VoxType / 为什么选择 VoxType
+
+- **为真实日常输入而做：** 全局热键、实时悬浮字幕、最终结果门禁、自动粘贴、托盘常驻和开机启动组成完整 Windows 工作流。
+- **Windows 原生集成：** Rust/Tauri 负责麦克风、全局输入、剪贴板、窗口、托盘和系统能力；Svelte 提供可读的配置与诊断界面。
+- **隐私边界明确：** 默认不把识别正文写入日志或统计；诊断报告会脱敏密钥和本机用户路径；最近上下文与自动热词历史默认关闭。
+- **可审计、持续维护：** 公开源代码、发布审计、回归测试、依赖审计、Secret Scanning、CodeQL、贡献规范和安全报告入口。
+
+## Quick Start / 快速开始
+
+1. 从 [GitHub Releases](https://github.com/zkwi/VoxType/releases/latest) 下载并安装最新的 `VoxType_*_x64-setup.exe`。
+2. 在 API 配置页选择豆包或阿里云 ASR，填写自己的服务凭据并执行连接测试；LLM 润色完全可选。
+3. 把光标放进任意输入框，按 `Ctrl + Q` 说话，再按一次结束；VoxType 收到 ASR 最终结果后才会进入润色与输出。
+
+> VoxType 在本机运行桌面控制逻辑，但语音会发送给你选择的云端 ASR；启用 LLM 润色时，最终文本及明确开启的参考上下文会发送给对应模型服务。请阅读[隐私说明](#配置和日志在哪里)和 [SECURITY.md](SECURITY.md)，并确认第三方服务的计费与数据政策。
+
+## Project Status / 项目状态
+
+| 项目 | 状态 |
+| --- | --- |
+| 维护状态 | Active maintenance；`main` 与最新 Release 受支持 |
+| 维护者 | [@zkwi](https://github.com/zkwi) |
+| 平台 | Windows 10 / 11，当前发布 x64 安装包 |
+| 许可证 | [MIT](LICENSE) |
+| 贡献 | 欢迎聚焦的 bug、测试、文档与小型体验改进；主链路或隐私改动请先开 Issue |
+
+项目入口：[Roadmap](ROADMAP.md) · [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Support](SUPPORT.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)
 
 ## 文档
 
-- 仓库内文档索引：[docs/README.md](docs/README.md)
 - Wiki 首页：<https://github.com/zkwi/VoxType/wiki>
 - 用户配置指南：<https://github.com/zkwi/VoxType/wiki/Setup-Guide>
 - 功能特性与使用优化：<https://github.com/zkwi/VoxType/wiki/Feature-Guide>
 - 常见问题与排障：<https://github.com/zkwi/VoxType/wiki/Troubleshooting>
-- 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
-- 安全策略：[SECURITY.md](SECURITY.md)
-- 支持说明：[SUPPORT.md](SUPPORT.md)
-- 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- 许可证：[MIT](LICENSE)
+- 工程文档索引：[docs/README.md](docs/README.md)
 
 ## 界面预览
 
 主界面采用蓝白配色和紧凑侧边栏，首页顶部语音卡片集中展示当前输入状态，并用单行紧凑标签展示三种启动方式（主快捷键、鼠标中键、右 Alt）。识别完成后，首页会显示本次输入已复制并尝试粘贴，用户可临时复制、查看或立即清空识别文本；文本只保留在当前窗口，隐藏窗口、退出或开始下一次录音后清除。下方展示最近 24 小时、最近 7 日、输入速度和节省时间等输入表现统计；节省时间按“手打等效时间 - 实际语音时长”估算。
-
-<img src="screenshots/ScreenShot_2026-05-09_130744_793.png" alt="VoxType 中文首页：语音输入状态、启动方式和输入表现" width="820">
 
 左侧导航按使用任务拆分为首页、热词与提示词、API配置、选项、隐私与本地数据和统计分析：热词与提示词页优先展示常用热词、场景上下文、最近上下文和自动热词候选，低频 Prompt 参数折叠在高级区；API配置页管理 ASR 服务商、豆包/阿里云必要认证字段与可选大模型 API，地域、模型、语言和 thinking 等兼容项折叠在高级区；选项页按常用设置、体验增强、应用维护组织快捷键、粘贴方式、麦克风、字幕外观、开机启动、关闭行为、更新和诊断，备用触发和录音排障默认折叠；隐私与本地数据页说明配置文件、日志、最近上下文、候选生成历史、统计、运行时数据的保存位置、上传边界和清理入口，并通过“管理设置”跳转回对应设置页。热词与提示词、API配置和选项页直接从正文分组开始，不再重复显示通用配置状态头部；可见设置按页面分组直接展示，协议地址、剪贴板快照、重试次数等底层参数仅支持通过 `config.toml` 修改。统计页展示最近 24 小时、最近 7 日、平均输入速度和按日使用情况，新识别结果写入后会刷新。
 

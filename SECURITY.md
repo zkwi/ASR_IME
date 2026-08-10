@@ -1,36 +1,48 @@
-# 安全策略
+# Security Policy / 安全策略
 
-VoxType 处理语音输入、剪贴板、API Key、本地日志、本地统计、屏幕 OCR 临时上下文和可选的本地上下文历史。安全与隐私问题请优先私下报告，避免在公开 Issue 中贴出真实密钥、日志全文、识别正文、屏幕 OCR 正文、热词、prompt 或本地路径。
+VoxType handles microphone audio, clipboard data, API keys, local logs, non-text usage statistics, temporary screen OCR context, and optional local text histories. Security and privacy reports are welcome and should avoid exposing the affected data.
 
-## 支持范围
+VoxType 会处理麦克风音频、剪贴板、API Key、本地日志、非正文统计、临时屏幕 OCR 上下文和可选本地正文历史。欢迎报告安全与隐私问题，但请勿在公开渠道暴露这些数据。
 
-- 当前 `main` 分支。
-- 最新 GitHub Release。
+## Supported Versions / 支持范围
 
-这是个人项目，无法承诺企业级响应 SLA，但会优先处理会导致密钥泄露、识别正文泄露、剪贴板误处理、远程更新风险或任意代码执行的问题。
+- The latest GitHub Release.
+- The current `main` branch.
 
-## 报告方式
+This is a personal project without a commercial response SLA. Credential disclosure, transcript or clipboard leakage, unsafe update execution, arbitrary code execution, and redaction failures receive priority.
 
-优先使用 GitHub 的私有漏洞报告功能（如果仓库已启用）。如果只能开公开 Issue，请只描述影响范围和复现环境，不要公开可直接利用的细节或敏感样本。
+## Report Privately / 私下报告
 
-报告中建议包含：
+Use [GitHub private vulnerability reporting](https://github.com/zkwi/VoxType/security/advisories/new). Include the affected version or commit, Windows version, installation method, impact, minimal redacted reproduction steps, and a suggested fix if available.
 
-- 受影响版本或 commit。
-- Windows 版本和安装方式。
-- 问题类型，例如密钥泄露、日志脱敏缺失、剪贴板隐私、更新链路、依赖漏洞。
-- 最小复现步骤。
-- 你认为合理的修复方向。
+If private reporting is temporarily unavailable, open a public Issue containing only a high-level impact summary and ask the maintainer for a private channel. Do not publish exploit details or sensitive samples.
 
-## 隐私边界
+Please do not include:
 
-- 统计只能记录时长、字数、速度等非正文数据。
-- 诊断报告和日志不应包含真实密钥、识别正文、热词、prompt、最近上下文、屏幕 OCR 正文、自动热词历史或 Windows 用户名路径。
-- 屏幕 OCR 上下文只应作为本轮临时上下文，不应写入日志、统计、配置或缓存。
-- 最近上下文和自动热词历史默认关闭；开启后也只能保存在本地忽略文件中。
+- Real Doubao, Alibaba Cloud, LLM, GitHub, or other credentials.
+- Transcript text, screen OCR text, personal hotwords, prompts, or recent context.
+- Raw logs, unredacted diagnostic reports, statistics files, or screenshots with personal data.
+- Full paths containing a Windows username.
 
-## 不要提交的内容
+## Security Boundaries / 安全边界
 
-- 真实豆包 ASR 或 LLM API Key。
-- 识别正文、屏幕 OCR 正文、个人热词、最近上下文、自动热词历史。
-- `voice_input.log`、`voice_input_stats.jsonl` 或未脱敏诊断报告。
-- 包含 Windows 用户名的完整本地路径截图或日志。
+- The desktop app runs locally, but microphone audio is sent to the selected cloud ASR provider.
+- Optional LLM editing sends final text and only the explicitly enabled reference context to the configured model provider.
+- Transcript, hotword, prompt, recent-context, and screen-OCR bodies must not enter normal logs or diagnostic reports.
+- Usage statistics contain duration, character counts, speed, and timestamps—not transcript text.
+- Recent context and automatic-hotword histories are disabled by default and stored only in ignored local files when enabled.
+- Secret fields are stored in local `config.toml`; the repository contains placeholders only.
+- The updater fetches a GitHub Release from the configured repository and starts the selected Windows installer. Artifact signing and provenance remain tracked hardening work; changing this trust model requires a dedicated design.
+
+## Repository Controls / 仓库防护
+
+- GitHub Secret Scanning and Push Protection are enabled.
+- Checked-in staged and repository-visible secret scans block known credential patterns and protected local files.
+- Dependabot covers npm, Cargo, and GitHub Actions.
+- CI runs frontend, Rust, governance, dependency, clippy, and Tauri build checks.
+- CodeQL analyzes JavaScript/TypeScript, Rust, and GitHub Actions workflows.
+- Reusable Actions are pinned to full commit SHAs and updated by Dependabot.
+
+## Disclosure Process / 处理流程
+
+The maintainer will acknowledge a complete report when practical, reproduce and assess it, prepare a focused fix, run the release checks, publish a release or advisory when appropriate, and credit the reporter unless anonymity is requested. Please allow a reasonable remediation window before public disclosure.
