@@ -70,3 +70,8 @@ The output boundary is intentionally strict:
 - UI: preserve controller/component boundaries and verify the real Tauri window when behavior changes.
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md), use `npm run ai:check` for ordinary work, and use `npm run ai:release-check` before publishing.
+
+## Maintenance
+
+- [English maintenance guide](docs/maintenance-guide.en.md)
+- [中文维护指南](docs/maintenance-guide.md)
