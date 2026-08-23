@@ -15,7 +15,7 @@
 - AI 和维护规则：[AGENTS.md](../AGENTS.md)
 - 公开路线图：[ROADMAP.md](../ROADMAP.md)
 - 贡献者架构入口：[ARCHITECTURE.md](../ARCHITECTURE.md)
-- 日常维护指南：[docs/maintenance-guide.md](maintenance-guide.md)
+- 日常维护指南：[docs/maintenance-guide.md](maintenance-guide.md) / [English](maintenance-guide.en.md)
 - 架构概览：[docs/architecture.md](architecture.md)
 - ASR 质量与延迟守门清单：[docs/asr-quality-latency-guardrails.md](asr-quality-latency-guardrails.md)
 - 代码规范：[docs/code-style.md](code-style.md)
